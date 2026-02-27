@@ -61,25 +61,55 @@ public sealed unsafe class Sqlite3 : IDisposable
     /// <exception cref="SqliteInteropException">Thrown if the database cannot be opened.</exception>
     public static Sqlite3 Open(string filename)
     {
+        return Open(filename, sqlite3.SQLITE_OPEN_READWRITE | sqlite3.SQLITE_OPEN_CREATE);
+    }
+
+    /// <summary>
+    /// Opening A New Database Connection with explicit <c>sqlite3_open_v2</c> flags.
+    /// </summary>
+    /// <param name="filename">The path (or URI) to the database file.</param>
+    /// <param name="flags">The SQLite open flags (for example <c>SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE</c>).</param>
+    /// <param name="useUri">If true, <c>SQLITE_OPEN_URI</c> is enforced to allow URI filenames.</param>
+    /// <param name="vfsName">Optional VFS module name. Use <c>null</c> to use SQLite default VFS.</param>
+    /// <returns>A new <see cref="Sqlite3"/> connection.</returns>
+    /// <exception cref="SqliteInteropException">Thrown if the database cannot be opened.</exception>
+    public static Sqlite3 Open(string filename, int flags, bool useUri = false, string? vfsName = null)
+    {
         nint pDb = default;
 
-        int dataLength = Encoding.UTF8.GetByteCount(filename);
-        int totalNeeded = dataLength + 1;
+        int openFlags = useUri ? flags | sqlite3.SQLITE_OPEN_URI : flags;
+
+        int filenameDataLength = Encoding.UTF8.GetByteCount(filename);
+        int filenameTotalNeeded = filenameDataLength + 1;
+
+        int vfsDataLength = vfsName is null ? 0 : Encoding.UTF8.GetByteCount(vfsName);
+        int vfsTotalNeeded = vfsDataLength + 1;
 
         byte[]? arrayFromPool = null;
+
+        int totalNeeded = filenameTotalNeeded + (vfsName is null ? 0 : vfsTotalNeeded);
         Span<byte> buffer = totalNeeded <= 1024
             ? stackalloc byte[totalNeeded]
             : (arrayFromPool = ArrayPool<byte>.Shared.Rent(totalNeeded)).AsSpan(0, totalNeeded);
 
         try
         {
-            Encoding.UTF8.GetBytes(filename, buffer);
-            buffer[dataLength] = 0;
+            Span<byte> filenameBuffer = buffer[..filenameTotalNeeded];
+            Encoding.UTF8.GetBytes(filename, filenameBuffer);
+            filenameBuffer[filenameDataLength] = 0;
 
-            fixed (byte* pBuf = buffer)
+            if (vfsName is not null)
             {
-                // Chiamata nativa
-                int result = sqlite3.sqlite3_open(pBuf, &pDb);
+                Span<byte> vfsBuffer = buffer.Slice(filenameTotalNeeded, vfsTotalNeeded);
+                Encoding.UTF8.GetBytes(vfsName, vfsBuffer);
+                vfsBuffer[vfsDataLength] = 0;
+            }
+
+            fixed (byte* pBuffer = buffer)
+            {
+                byte* pFilename = pBuffer;
+                byte* pVfs = vfsName is null ? null : pBuffer + filenameTotalNeeded;
+                int result = sqlite3.sqlite3_open_v2(pFilename, &pDb, openFlags, pVfs);
 
                 // Se l'apertura fallisce, Dobbiamo COMUNQUE recuperare l'errore 
                 // PRIMA di chiudere l'handle, altrimenti pDb diventa invalido.
@@ -186,6 +216,19 @@ public sealed unsafe class Sqlite3 : IDisposable
     /// <exception cref="SqliteInteropException">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
     public Sqlite3Stmt Prepare(string sql)
     {
+        return Prepare(sql, 0);
+    }
+
+    /// <summary>
+    /// Compiles an SQL statement using <c>sqlite3_prepare_v3</c>, enabling explicit prepare flags.
+    /// </summary>
+    /// <param name="sql">The SQL query string to compile.</param>
+    /// <param name="prepareFlags">Flags such as <c>SQLITE_PREPARE_PERSISTENT</c> or <c>SQLITE_PREPARE_NO_VTAB</c>.</param>
+    /// <returns>A new <see cref="Sqlite3Stmt"/> instance wrapping the compiled statement.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
+    /// <exception cref="SqliteInteropException">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
+    public Sqlite3Stmt Prepare(string sql, uint prepareFlags)
+    {
         ThrowIfInvalid();
 
         int dataLength = Encoding.UTF8.GetByteCount(sql);
@@ -202,10 +245,11 @@ public sealed unsafe class Sqlite3 : IDisposable
             {
                 // Chiamata nativa
                 nint pStmt = default;
-                int result = sqlite3.sqlite3_prepare_v2(
+                int result = sqlite3.sqlite3_prepare_v3(
                     _handle.DangerousGetHandle(),
                     pBuf,
                     dataLength, // Lunghezza esatta dei dati
+                    prepareFlags,
                     &pStmt,
                     null);
 
@@ -248,6 +292,41 @@ public sealed unsafe class Sqlite3 : IDisposable
     {
         ThrowIfInvalid();
         return sqlite3.sqlite3_changes(_handle.DangerousGetHandle());
+    }
+
+    /// <summary>
+    /// Sets a busy timeout on this connection.
+    /// </summary>
+    /// <param name="milliseconds">The timeout in milliseconds.</param>
+    public void SetBusyTimeout(int milliseconds)
+    {
+        ThrowIfInvalid();
+        SqliteErrorHelper.ThrowOnError(
+            sqlite3.sqlite3_busy_timeout(_handle.DangerousGetHandle(), milliseconds),
+            _handle.DangerousGetHandle(),
+            "SQLite busy timeout");
+    }
+
+    /// <summary>
+    /// Enables or disables extended result codes for this connection.
+    /// </summary>
+    /// <param name="enabled">True to enable extended result codes.</param>
+    public void SetExtendedResultCodes(bool enabled)
+    {
+        ThrowIfInvalid();
+        SqliteErrorHelper.ThrowOnError(
+            sqlite3.sqlite3_extended_result_codes(_handle.DangerousGetHandle(), enabled ? 1 : 0),
+            _handle.DangerousGetHandle(),
+            "SQLite extended result codes");
+    }
+
+    /// <summary>
+    /// Interrupts any pending operation running on this connection.
+    /// </summary>
+    public void Interrupt()
+    {
+        ThrowIfInvalid();
+        sqlite3.sqlite3_interrupt(_handle.DangerousGetHandle());
     }
 
 
