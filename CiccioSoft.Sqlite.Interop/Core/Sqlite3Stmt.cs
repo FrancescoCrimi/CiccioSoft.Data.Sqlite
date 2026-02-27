@@ -116,6 +116,57 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
         return sqlite3.sqlite3_column_count(_handle.DangerousGetHandle());
     }
 
+    /// <summary>
+    /// Returns the number of SQL parameters in this prepared statement.
+    /// </summary>
+    public int ParameterCount()
+    {
+        ThrowIfInvalid();
+        return sqlite3.sqlite3_bind_parameter_count(_handle.DangerousGetHandle());
+    }
+
+    /// <summary>
+    /// Returns the name of the SQL parameter at the specified 1-based index.
+    /// </summary>
+    public string? GetParameterName(int index)
+    {
+        ThrowIfInvalid();
+        byte* pName = sqlite3.sqlite3_bind_parameter_name(_handle.DangerousGetHandle(), index);
+        return pName is null ? null : Marshal.PtrToStringUTF8((nint)pName);
+    }
+
+    /// <summary>
+    /// Returns the 1-based index for a named SQL parameter (for example <c>@name</c> or <c>:name</c>).
+    /// </summary>
+    public int GetParameterIndex(string parameterName)
+    {
+        ThrowIfInvalid();
+
+        int dataLength = Encoding.UTF8.GetByteCount(parameterName);
+        int totalNeeded = dataLength + 1;
+
+        byte[]? arrayFromPool = null;
+        Span<byte> buffer = totalNeeded <= 256
+            ? stackalloc byte[totalNeeded]
+            : (arrayFromPool = ArrayPool<byte>.Shared.Rent(totalNeeded)).AsSpan(0, totalNeeded);
+
+        try
+        {
+            Encoding.UTF8.GetBytes(parameterName, buffer);
+            buffer[dataLength] = 0;
+
+            fixed (byte* pBuf = buffer)
+            {
+                return sqlite3.sqlite3_bind_parameter_index(_handle.DangerousGetHandle(), pBuf);
+            }
+        }
+        finally
+        {
+            if (arrayFromPool != null)
+                ArrayPool<byte>.Shared.Return(arrayFromPool);
+        }
+    }
+
     #endregion
 
 
@@ -143,6 +194,46 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
 
         // Converte il puntatore UTF-8 null-terminated in stringa gestita
         return Marshal.PtrToStringUTF8((nint)pName);
+    }
+
+    /// <summary>
+    /// Returns the declared type for the specified result column, if available.
+    /// </summary>
+    public string? GetColumnDeclType(int index)
+    {
+        ThrowIfInvalid();
+        byte* pText = sqlite3.sqlite3_column_decltype(_handle.DangerousGetHandle(), index);
+        return pText is null ? null : Marshal.PtrToStringUTF8((nint)pText);
+    }
+
+    /// <summary>
+    /// Returns the source database name for the specified result column, if available.
+    /// </summary>
+    public string? GetColumnDatabaseName(int index)
+    {
+        ThrowIfInvalid();
+        byte* pText = sqlite3.sqlite3_column_database_name(_handle.DangerousGetHandle(), index);
+        return pText is null ? null : Marshal.PtrToStringUTF8((nint)pText);
+    }
+
+    /// <summary>
+    /// Returns the source table name for the specified result column, if available.
+    /// </summary>
+    public string? GetColumnTableName(int index)
+    {
+        ThrowIfInvalid();
+        byte* pText = sqlite3.sqlite3_column_table_name(_handle.DangerousGetHandle(), index);
+        return pText is null ? null : Marshal.PtrToStringUTF8((nint)pText);
+    }
+
+    /// <summary>
+    /// Returns the source column name for the specified result column, if available.
+    /// </summary>
+    public string? GetColumnOriginName(int index)
+    {
+        ThrowIfInvalid();
+        byte* pText = sqlite3.sqlite3_column_origin_name(_handle.DangerousGetHandle(), index);
+        return pText is null ? null : Marshal.PtrToStringUTF8((nint)pText);
     }
 
     #endregion
