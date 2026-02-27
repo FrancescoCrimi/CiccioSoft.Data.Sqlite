@@ -16,8 +16,9 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     }
 
     /// <summary>
-    /// Evaluate An SQL Statement.
+    /// Advances the prepared statement to the next execution state.
     /// </summary>
+    /// <returns><c>true</c> when a row is available; <c>false</c> when execution is completed.</returns>
     public bool Step()
     {
         CheckDisposed();
@@ -28,11 +29,11 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     }
 
     /// <summary>
-    /// Reset A Prepared Statement Object.
+    /// Resets the prepared statement so it can be executed again.
     /// </summary>
     /// <remarks>
-    /// Riporta lo statement all'inizio, pronto per un nuovo Step()
-    /// <remarks>
+    /// This keeps current bindings unless <see cref="ClearBindings"/> is called.
+    /// </remarks>
     public void Reset()
     {
         CheckDisposed();
@@ -44,11 +45,11 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     }
 
     /// <summary>
-    /// Reset All Bindings On A Prepared Statement.
+    /// Clears all parameter bindings for the prepared statement.
     /// </summary>
     /// <remarks>
-    /// Pulisce i parametri precedenti se vuoi evitare 
-    /// che valori vecchi rimangano bindati per errore
+    /// Call this before reusing the same statement when you want to avoid
+    /// carrying old bound values across executions.
     /// </remarks>
     public void ClearBindings()
     {
@@ -61,7 +62,7 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     }
 
     /// <summary>
-    /// Number Of Columns In A Result Set.
+    /// Returns the number of columns in the current result set.
     /// </summary>
     public int ColumnCount()
     {
@@ -70,19 +71,19 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     }
 
     /// <summary>
-    /// Column Names In A Result Set.
+    /// Returns the column name at the specified zero-based index.
     /// </summary>
     public string? GetColumnName(int index)
     {
         CheckDisposed();
 
-        // sqlite3_column_name restituisce un byte* UTF-8 (null-terminated)
+        // sqlite3_column_name returns a UTF-8 null-terminated string pointer.
         byte* pName = sqlite3.sqlite3_column_name(_stmt, index);
 
-        // Se l'indice è fuori intervallo o il nome non è disponibile, SQLite restituisce NULL
+        // SQLite returns NULL if the index is out of range or metadata is unavailable.
         if (pName == null) return null;
 
-        // Converte il puntatore UTF-8 null-terminated in stringa gestita
+        // Convert UTF-8 unmanaged memory to managed string.
         return Marshal.PtrToStringUTF8((nint)pName);
     }
 
@@ -110,14 +111,14 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     {
         CheckDisposed();
 
-        // Otteniamo il puntatore alla stringa UTF-8
+        // Obtain direct pointer to UTF-8 text managed by SQLite
         byte* pText = sqlite3.sqlite3_column_text(_stmt, index);
         if (pText == null) return null;
 
-        // SQLite sa già la lunghezza, non serve scorrere la stringa per cercare \0
+        // SQLite already tracks the byte length, so no null-scan is required
         int byteLength = sqlite3.sqlite3_column_bytes(_stmt, index);
 
-        // Creiamo la stringa C# direttamente dai byte non gestiti
+        // Create a managed string directly from unmanaged bytes
         return System.Text.Encoding.UTF8.GetString(pText, byteLength);
     }
 
@@ -134,7 +135,7 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
         return new ReadOnlySpan<byte>(pBlob, length);
     }
 
-    // Le costanti corrispondenti sono tipicamente: 1 (Int), 2 (Float), 3 (Text), 4 (Blob), 5 (Null)
+    // SQLite storage classes: 1=Integer, 2=Float, 3=Text, 4=Blob, 5=Null.
     public int GetColumnType(int index)
     {
         CheckDisposed();
@@ -181,7 +182,7 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     {
         CheckDisposed();
 
-        // Se la stringa è nulla o vuota, bindiamo NULL
+        // Keep current semantics: null or empty string are both bound as SQL NULL.
         if (string.IsNullOrEmpty(s))
         {
             int res = sqlite3.sqlite3_bind_null(_stmt, index);
@@ -241,7 +242,7 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
         {
             if (disposing)
             {
-                // TODO: eliminare lo stato gestito (oggetti gestiti)
+                // No managed resources to release here.
             }
 
             if (_stmt != nint.Zero)
