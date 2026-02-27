@@ -335,7 +335,7 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     /// Binds a string value to a prepared statement parameter at the specified index.
     /// </summary>
     /// <param name="index">The 1-based index of the parameter to bind.</param>
-    /// <param name="s">The string value to bind. If null or empty, a SQL NULL is bound instead.</param>
+    /// <param name="s">The string value to bind. If null, a SQL NULL is bound instead.</param>
     /// <remarks>
     /// <b>High-Performance Implementation:</b>
     /// <list type="bullet">
@@ -355,8 +355,9 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     {
         ThrowIfInvalid();
 
-        // Se la stringa è nulla o vuota, bindiamo NULL
-        if (string.IsNullOrEmpty(s))
+        // Se la stringa è nulla, bindiamo NULL.
+        // Una stringa vuota deve restare una stringa vuota, non SQL NULL.
+        if (s is null)
         {
             CheckResult(sqlite3.sqlite3_bind_null(_handle.DangerousGetHandle(), index), index);
             return;
