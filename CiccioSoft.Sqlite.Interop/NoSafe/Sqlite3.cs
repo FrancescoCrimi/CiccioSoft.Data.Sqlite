@@ -16,6 +16,15 @@ public sealed unsafe class Sqlite3 : IDisposable
 
     #region Opening A New Database Connection
 
+    /// <summary>
+    /// Opens a SQLite database connection using <c>sqlite3_open</c>.
+    /// </summary>
+    /// <param name="filename">Path of the database file.</param>
+    /// <returns>A new non-safe SQLite connection wrapper.</returns>
+    /// <remarks>
+    /// This variant is intentionally straightforward and favors readability over
+    /// advanced allocation optimizations used in the safe/core implementation.
+    /// </remarks>
     public static Sqlite3 Open(string filename)
     {
         nint pDb = default;
@@ -36,6 +45,14 @@ public sealed unsafe class Sqlite3 : IDisposable
 
     #region One-Step Query Execution Interface
 
+    /// <summary>
+    /// Executes a SQL statement with <c>sqlite3_exec</c>.
+    /// </summary>
+    /// <param name="sql">The SQL command text to execute.</param>
+    /// <remarks>
+    /// Use this API for one-shot commands such as DDL or quick non-parameterized statements.
+    /// For reusable or parameterized statements, prefer <see cref="Prepare(string)"/>.
+    /// </remarks>
     public void Execute(string sql)
     {
         CheckDisposed();
@@ -52,8 +69,13 @@ public sealed unsafe class Sqlite3 : IDisposable
 
     #endregion
 
-    #region One-Step Query Execution Interface
+    #region Compiling An SQL Statement
 
+    /// <summary>
+    /// Compiles SQL text into a prepared statement.
+    /// </summary>
+    /// <param name="sql">The SQL query to compile.</param>
+    /// <returns>A prepared statement wrapper.</returns>
     public Sqlite3Stmt Prepare(string sql)
     {
         CheckDisposed();
@@ -82,7 +104,7 @@ public sealed unsafe class Sqlite3 : IDisposable
     public void Dispose()
     {
         Dispose(disposing: true);
-        // Dice al GC che l'oggetto è già pulito, non serve chiamare il finalizzatore
+        // Tells the GC the object has already released resources.
         GC.SuppressFinalize(this);
     }
 
@@ -92,11 +114,10 @@ public sealed unsafe class Sqlite3 : IDisposable
         {
             if (disposing)
             {
-                // TODO: eliminare lo stato gestito (oggetti gestiti)
+                // No managed resources to release here.
             }
 
-            // TODO: liberare risorse non gestite (oggetti non gestiti) ed eseguire l'override del finalizzatore
-            // TODO: impostare campi di grandi dimensioni su Null
+            // Releases the native sqlite3* handle if still valid.
             if (_db != nint.Zero)
             {
                 sqlite3.sqlite3_close_v2(_db);
@@ -107,7 +128,7 @@ public sealed unsafe class Sqlite3 : IDisposable
         }
     }
 
-    // Finalizzatore: interviene se ti dimentichi il Dispose()
+    // Finalizer fallback: runs only when Dispose is not called.
     ~Sqlite3()
     {
         Dispose(disposing: false);
