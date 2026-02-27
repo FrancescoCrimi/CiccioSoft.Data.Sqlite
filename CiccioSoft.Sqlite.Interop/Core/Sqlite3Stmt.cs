@@ -373,6 +373,57 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
         return sqlite3.sqlite3_column_type(_handle.DangerousGetHandle(), index);
     }
 
+    /// <summary>
+    /// Returns <c>true</c> if this prepared statement is read-only.
+    /// </summary>
+    public bool IsReadOnly()
+    {
+        ThrowIfInvalid();
+        return sqlite3.sqlite3_stmt_readonly(_handle.DangerousGetHandle()) != 0;
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> if this prepared statement has been stepped but not yet reset/finalized.
+    /// </summary>
+    public bool IsBusy()
+    {
+        ThrowIfInvalid();
+        return sqlite3.sqlite3_stmt_busy(_handle.DangerousGetHandle()) != 0;
+    }
+
+    /// <summary>
+    /// Returns the expanded SQL text with currently bound parameters.
+    /// </summary>
+    public string? GetExpandedSql()
+    {
+        ThrowIfInvalid();
+
+        byte* pExpanded = sqlite3.sqlite3_expanded_sql(_handle.DangerousGetHandle());
+        if (pExpanded == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return Marshal.PtrToStringUTF8((nint)pExpanded);
+        }
+        finally
+        {
+            sqlite3.sqlite3_free(pExpanded);
+        }
+    }
+
+    /// <summary>
+    /// Returns the original SQL text used to prepare this statement.
+    /// </summary>
+    public string? GetSql()
+    {
+        ThrowIfInvalid();
+        byte* pSql = sqlite3.sqlite3_sql(_handle.DangerousGetHandle());
+        return pSql is null ? null : Marshal.PtrToStringUTF8((nint)pSql);
+    }
+
 
     #endregion
 
