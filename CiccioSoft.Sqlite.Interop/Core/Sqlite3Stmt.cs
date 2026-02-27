@@ -41,7 +41,9 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
         int res = sqlite3.sqlite3_step(_handle.DangerousGetHandle());
         if (res == sqlite3.SQLITE_ROW) return true;
         if (res == sqlite3.SQLITE_DONE) return false;
-        throw new Exception($"Errore durante lo step: {res}");
+
+        ThrowOnError(res, "SQLite step");
+        return false;
     }
 
     #endregion
@@ -62,8 +64,7 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     {
         ThrowIfInvalid();
         int res = sqlite3.sqlite3_reset(_handle.DangerousGetHandle());
-        if (res != sqlite3.SQLITE_OK)
-            throw new Exception($"Errore reset: {res}");
+        ThrowOnError(res, "SQLite reset");
     }
 
     #endregion
@@ -90,8 +91,7 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     {
         ThrowIfInvalid();
         int res = sqlite3.sqlite3_clear_bindings(_handle.DangerousGetHandle());
-        if (res != sqlite3.SQLITE_OK)
-            throw new Exception($"Errore clear bindings: {res}");
+        ThrowOnError(res, "SQLite clear bindings");
     }
 
     #endregion
@@ -448,8 +448,17 @@ public sealed unsafe class Sqlite3Stmt : IDisposable
     // Piccolo helper per centralizzare il controllo degli errori
     private void CheckResult(int res, int index)
     {
-        if (res != sqlite3.SQLITE_OK)
-            throw new Exception($"Errore nel binding al parametro {index}: {res}");
+        ThrowOnError(res, $"SQLite bind parameter {index}");
+    }
+
+    private void ThrowOnError(int result, string operation)
+    {
+        SqliteErrorHelper.ThrowOnError(result, GetDbHandle(), operation);
+    }
+
+    private nint GetDbHandle()
+    {
+        return sqlite3.sqlite3_db_handle(_handle.DangerousGetHandle());
     }
 
     private void ThrowIfInvalid()
