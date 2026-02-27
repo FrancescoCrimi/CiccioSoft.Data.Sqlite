@@ -295,6 +295,131 @@ public sealed unsafe class Sqlite3 : IDisposable
     }
 
     /// <summary>
+    /// Returns the total number of rows modified, inserted, or deleted since this connection was opened.
+    /// </summary>
+    public long TotalChanges()
+    {
+        ThrowIfInvalid();
+        return sqlite3.sqlite3_total_changes64(_handle.DangerousGetHandle());
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> if the connection is currently in auto-commit mode.
+    /// </summary>
+    public bool IsAutoCommit()
+    {
+        ThrowIfInvalid();
+        return sqlite3.sqlite3_get_autocommit(_handle.DangerousGetHandle()) != 0;
+    }
+
+    /// <summary>
+    /// Returns the SQLite transaction state for the requested schema.
+    /// </summary>
+    /// <param name="schemaName">Schema name (for example "main"); pass <c>null</c> to let SQLite use the default schema.</param>
+    /// <returns>
+    /// One of SQLite transaction state constants:
+    /// <list type="bullet">
+    /// <item><description><c>SQLITE_TXN_NONE</c></description></item>
+    /// <item><description><c>SQLITE_TXN_READ</c></description></item>
+    /// <item><description><c>SQLITE_TXN_WRITE</c></description></item>
+    /// </list>
+    /// </returns>
+    public int GetTransactionState(string? schemaName = null)
+    {
+        ThrowIfInvalid();
+
+        if (schemaName is null)
+        {
+            return sqlite3.sqlite3_txn_state(_handle.DangerousGetHandle(), null);
+        }
+
+        int dataLength = Encoding.UTF8.GetByteCount(schemaName);
+        int totalNeeded = dataLength + 1;
+
+        byte[]? arrayFromPool = null;
+        Span<byte> buffer = totalNeeded <= 256
+            ? stackalloc byte[totalNeeded]
+            : (arrayFromPool = ArrayPool<byte>.Shared.Rent(totalNeeded)).AsSpan(0, totalNeeded);
+
+        try
+        {
+            Encoding.UTF8.GetBytes(schemaName, buffer);
+            buffer[dataLength] = 0;
+
+            fixed (byte* pSchema = buffer)
+            {
+                return sqlite3.sqlite3_txn_state(_handle.DangerousGetHandle(), pSchema);
+            }
+        }
+        finally
+        {
+            if (arrayFromPool != null)
+                ArrayPool<byte>.Shared.Return(arrayFromPool);
+        }
+    }
+
+    /// <summary>
+    /// Returns whether the specified schema is opened in read-only mode.
+    /// </summary>
+    /// <param name="schemaName">Schema name, usually "main" or "temp".</param>
+    /// <returns>
+    /// <c>true</c> if the schema is read-only; <c>false</c> if it is read-write.
+    /// </returns>
+    public bool IsReadOnly(string schemaName = "main")
+    {
+        ThrowIfInvalid();
+
+        int dataLength = Encoding.UTF8.GetByteCount(schemaName);
+        int totalNeeded = dataLength + 1;
+
+        byte[]? arrayFromPool = null;
+        Span<byte> buffer = totalNeeded <= 256
+            ? stackalloc byte[totalNeeded]
+            : (arrayFromPool = ArrayPool<byte>.Shared.Rent(totalNeeded)).AsSpan(0, totalNeeded);
+
+        try
+        {
+            Encoding.UTF8.GetBytes(schemaName, buffer);
+            buffer[dataLength] = 0;
+
+            fixed (byte* pSchema = buffer)
+            {
+                int result = sqlite3.sqlite3_db_readonly(_handle.DangerousGetHandle(), pSchema);
+                if (result < 0)
+                {
+                    SqliteErrorHelper.ThrowOnError(sqlite3.SQLITE_ERROR, _handle.DangerousGetHandle(), "SQLite db readonly");
+                }
+
+                return result != 0;
+            }
+        }
+        finally
+        {
+            if (arrayFromPool != null)
+                ArrayPool<byte>.Shared.Return(arrayFromPool);
+        }
+    }
+
+    /// <summary>
+    /// Returns the latest extended SQLite error code for this connection.
+    /// </summary>
+    public int GetLastExtendedErrorCode()
+    {
+        ThrowIfInvalid();
+        return sqlite3.sqlite3_extended_errcode(_handle.DangerousGetHandle());
+    }
+
+    /// <summary>
+    /// Returns the byte offset in SQL text where the latest parse error was detected.
+    /// </summary>
+    /// <returns>The zero-based offset, or -1 if unavailable.</returns>
+    public int GetLastErrorOffset()
+    {
+        ThrowIfInvalid();
+        return sqlite3.sqlite3_error_offset(_handle.DangerousGetHandle());
+    }
+
+    /// <summary>
     /// Sets a busy timeout on this connection.
     /// </summary>
     /// <param name="milliseconds">The timeout in milliseconds.</param>

@@ -6,17 +6,22 @@ namespace CiccioSoft.Data.Sqlite;
 
 public class SqliteParameter : DbParameter
 {
-    public override DbType DbType { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public override ParameterDirection Direction { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public override bool IsNullable { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public override string ParameterName { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public override int Size { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public override string SourceColumn { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public override bool SourceColumnNullMapping { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public override object? Value { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    public SqliteParameter() { }
 
-    public override void ResetDbType()
+    public SqliteParameter(string name, object? value)
     {
-        throw new NotImplementedException();
+        ParameterName = name;
+        Value = value;
     }
+
+    public override DbType DbType { get; set; } = DbType.Object;
+    public override ParameterDirection Direction { get; set; } = ParameterDirection.Input;
+    public override bool IsNullable { get; set; }
+    public override string ParameterName { get; set; } = string.Empty;
+    public override int Size { get; set; }
+    public override string SourceColumn { get; set; } = string.Empty;
+    public override bool SourceColumnNullMapping { get; set; }
+    public override object? Value { get; set; }
+
+    public override void ResetDbType() => DbType = DbType.Object;
 }
