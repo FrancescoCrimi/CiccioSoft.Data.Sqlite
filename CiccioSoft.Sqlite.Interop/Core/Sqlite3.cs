@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using System.Runtime.InteropServices;
 using System.Buffers;
 using CiccioSoft.Sqlite.Interop.Handles;
 using CiccioSoft.Sqlite.Interop.Native;
@@ -59,7 +58,7 @@ public sealed unsafe class Sqlite3 : IDisposable
     /// </item>
     /// </list>
     /// </remarks>
-    /// <exception cref="Exception">Thrown if the database cannot be opened, containing the specific SQLite error code and message.</exception>
+    /// <exception cref="SqliteInteropException">Thrown if the database cannot be opened.</exception>
     public static Sqlite3 Open(string filename)
     {
         nint pDb = default;
@@ -86,22 +85,16 @@ public sealed unsafe class Sqlite3 : IDisposable
                 // PRIMA di chiudere l'handle, altrimenti pDb diventa invalido.
                 if (result != sqlite3.SQLITE_OK)
                 {
-                    string errorMessage = "Errore sconosciuto";
+                    SqliteInteropException exception = SqliteErrorHelper.CreateException(result, pDb, "SQLite open");
 
-                    // Se pDb non è nullo, SQLite ha dei dettagli sull'errore
+                    // IMPORTANTE: SQLite alloca memoria anche se open fallisce.
+                    // Dobbiamo chiudere pDb manualmente o tramite l'handle.
                     if (pDb != nint.Zero)
                     {
-                        // Leggiamo l'errore mentre pDb è ancora vivo
-                        byte* pErr = sqlite3.sqlite3_errmsg(pDb);
-                        if (pErr != null)
-                            errorMessage = Marshal.PtrToStringUTF8((nint)pErr) ?? "Errore illeggibile";
-
-                        // IMPORTANTE: SQLite alloca memoria anche se open fallisce.
-                        // Dobbiamo chiudere pDb manualmente o tramite l'handle.
                         sqlite3.sqlite3_close_v2(pDb);
                     }
 
-                    throw new Exception($"SQLite Open Error ({result}): {errorMessage}");
+                    throw exception;
                 }
 
                 // Se tutto è andato bene, incapsuliamo l'handle sicuro
@@ -134,7 +127,7 @@ public sealed unsafe class Sqlite3 : IDisposable
     /// </list>
     /// </remarks>
     /// <exception cref="ObjectDisposedException">Thrown if the database connection is closed.</exception>
-    /// <exception cref="Exception">Thrown if SQLite returns an error during execution, including a detailed message from <c>sqlite3_errmsg</c>.</exception>
+    /// <exception cref="SqliteInteropException">Thrown if SQLite returns an error during execution.</exception>
     public void Execute(string sql)
     {
         ThrowIfInvalid();
@@ -160,11 +153,7 @@ public sealed unsafe class Sqlite3 : IDisposable
                     null,
                     null,
                     null);
-                if (result != sqlite3.SQLITE_OK)
-                {
-                    string msg = GetLastErrorMessage(); // Recupera il dettaglio dell'errore SQL
-                    throw new Exception($"Errore SQL: ({result}): {msg}");
-                }
+                SqliteErrorHelper.ThrowOnError(result, _handle.DangerousGetHandle(), "SQLite exec");
             }
         }
         finally
@@ -194,7 +183,7 @@ public sealed unsafe class Sqlite3 : IDisposable
     /// </list>
     /// </remarks>
     /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
-    /// <exception cref="Exception">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
+    /// <exception cref="SqliteInteropException">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
     public Sqlite3Stmt Prepare(string sql)
     {
         ThrowIfInvalid();
@@ -222,13 +211,13 @@ public sealed unsafe class Sqlite3 : IDisposable
 
                 if (result != sqlite3.SQLITE_OK)
                 {
-                    string msg = GetLastErrorMessage(); // Recupera il dettaglio dell'errore SQL
+                    SqliteInteropException exception = SqliteErrorHelper.CreateException(result, _handle.DangerousGetHandle(), "SQLite prepare");
 
                     // Se pStmt è stato allocato nonostante l'errore, va chiuso.
                     if (pStmt != nint.Zero)
                         sqlite3.sqlite3_finalize(pStmt);
 
-                    throw new Exception($"Errore preparazione ({result}): {msg}");
+                    throw exception;
                 }
 
                 return new Sqlite3Stmt(new Sqlite3StmtHandle(pStmt));
@@ -261,12 +250,6 @@ public sealed unsafe class Sqlite3 : IDisposable
         return sqlite3.sqlite3_changes(_handle.DangerousGetHandle());
     }
 
-
-    private string GetLastErrorMessage()
-    {
-        byte* pErr = sqlite3.sqlite3_errmsg(_handle.DangerousGetHandle());
-        return Marshal.PtrToStringUTF8((nint)pErr) ?? "Errore illeggibile";
-    }
 
     private void ThrowIfInvalid()
     {
