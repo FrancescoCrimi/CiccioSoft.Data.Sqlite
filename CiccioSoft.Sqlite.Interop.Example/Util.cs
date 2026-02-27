@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Text;
 using System.Runtime.InteropServices;
 
-namespace SqliteBinding.Safe;
+namespace CiccioSoft.Sqlite.Interop.Example;
 
 public static class Util
 {

@@ -9,8 +9,8 @@ class Program
             nomeDaInserire = args[0];
 
         new UserRepository(nomeDaInserire);
-        new ImageRepository();
-        SqliteBenchmark.Run();
-        RawComparisonBenchmark2.Run();
+        // new ImageRepository();
+        // SqliteBenchmark.Run();
+        // RawComparisonBenchmark2.Run();
     }
 }
