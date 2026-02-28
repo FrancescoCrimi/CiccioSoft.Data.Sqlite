@@ -172,7 +172,8 @@ public class SqliteDataReader : DbDataReader
         return Task.CompletedTask;
     }
 
-    public override bool IsDBNull(string name) => IsDBNull(GetOrdinal(name));
+    // non override don't exist
+    public bool IsDBNull(string name) => IsDBNull(GetOrdinal(name));
 
     protected override void Dispose(bool disposing)
     {

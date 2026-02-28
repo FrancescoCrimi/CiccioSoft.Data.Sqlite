@@ -25,7 +25,6 @@ public class SqliteConnection : DbConnection
     public override string ConnectionString
     {
         get => _connectionString;
-        [AllowNull]
         set
         {
             if (_state != ConnectionState.Closed) throw new InvalidOperationException("Connection must be closed.");

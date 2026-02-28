@@ -28,7 +28,6 @@ public class SqliteCommand : DbCommand
     public override string CommandText
     {
         get => _commandText;
-        [AllowNull]
         set => _commandText = value ?? string.Empty;
     }
     public override int CommandTimeout { get; set; } = 30;

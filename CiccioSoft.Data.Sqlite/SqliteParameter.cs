@@ -24,7 +24,6 @@ public class SqliteParameter : DbParameter
     public override string ParameterName
     {
         get => _parameterName;
-        [AllowNull]
         set => _parameterName = value ?? string.Empty;
     }
 
@@ -33,7 +32,6 @@ public class SqliteParameter : DbParameter
     public override string SourceColumn
     {
         get => _sourceColumn;
-        [AllowNull]
         set => _sourceColumn = value ?? string.Empty;
     }
     public override bool SourceColumnNullMapping { get; set; }

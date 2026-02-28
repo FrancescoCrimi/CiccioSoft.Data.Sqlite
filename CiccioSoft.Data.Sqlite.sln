@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CiccioSoft.Sqlite.Interop.E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CiccioSoft.Data.Sqlite", "CiccioSoft.Data.Sqlite\CiccioSoft.Data.Sqlite.csproj", "{6FC2BE3C-51AB-48D7-AE4C-469F663A46F3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CiccioSoft.Data.Sqlite.Tests", "CiccioSoft.Data.Sqlite.Tests\CiccioSoft.Data.Sqlite.Tests.csproj", "{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{6FC2BE3C-51AB-48D7-AE4C-469F663A46F3}.Release|x64.Build.0 = Release|Any CPU
 		{6FC2BE3C-51AB-48D7-AE4C-469F663A46F3}.Release|x86.ActiveCfg = Release|Any CPU
 		{6FC2BE3C-51AB-48D7-AE4C-469F663A46F3}.Release|x86.Build.0 = Release|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Debug|x64.Build.0 = Debug|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Debug|x86.Build.0 = Debug|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Release|x64.ActiveCfg = Release|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Release|x64.Build.0 = Release|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Release|x86.ActiveCfg = Release|Any CPU
+		{B935DB18-26E1-4ED7-92AA-572EE28CB5B6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
