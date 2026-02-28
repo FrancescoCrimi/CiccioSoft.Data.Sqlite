@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using CiccioSoft.Sqlite.Interop;
@@ -22,7 +23,14 @@ public class SqliteCommand : DbCommand
         Connection = connection;
     }
 
-    public override string CommandText { get; set; } = string.Empty;
+    private string _commandText = string.Empty;
+
+    public override string CommandText
+    {
+        get => _commandText;
+        [AllowNull]
+        set => _commandText = value ?? string.Empty;
+    }
     public override int CommandTimeout { get; set; } = 30;
     public override CommandType CommandType { get; set; } = CommandType.Text;
     public override bool DesignTimeVisible { get; set; }
@@ -68,7 +76,7 @@ public class SqliteCommand : DbCommand
         }
         catch (SqliteInteropException ex)
         {
-            throw new SqliteException(ex.Message, ex.BaseCode, ex.ExtendedCode, ex);
+            throw new SqliteException(ex.Message, ex.BaseErrorCode, ex.ExtendedErrorCode, ex);
         }
         finally
         {
@@ -96,7 +104,7 @@ public class SqliteCommand : DbCommand
         }
         catch (SqliteInteropException ex)
         {
-            throw new SqliteException(ex.Message, ex.BaseCode, ex.ExtendedCode, ex);
+            throw new SqliteException(ex.Message, ex.BaseErrorCode, ex.ExtendedErrorCode, ex);
         }
         finally
         {
@@ -121,7 +129,7 @@ public class SqliteCommand : DbCommand
         }
         catch (SqliteInteropException ex)
         {
-            throw new SqliteException(ex.Message, ex.BaseCode, ex.ExtendedCode, ex);
+            throw new SqliteException(ex.Message, ex.BaseErrorCode, ex.ExtendedErrorCode, ex);
         }
         finally
         {

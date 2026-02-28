@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using CiccioSoft.Sqlite.Interop;
@@ -24,6 +25,7 @@ public class SqliteConnection : DbConnection
     public override string ConnectionString
     {
         get => _connectionString;
+        [AllowNull]
         set
         {
             if (_state != ConnectionState.Closed) throw new InvalidOperationException("Connection must be closed.");
@@ -82,7 +84,7 @@ public class SqliteConnection : DbConnection
         }
         catch (SqliteInteropException ex)
         {
-            throw new SqliteException(ex.Message, ex.BaseCode, ex.ExtendedCode, ex);
+            throw new SqliteException(ex.Message, ex.BaseErrorCode, ex.ExtendedErrorCode, ex);
         }
     }
 
