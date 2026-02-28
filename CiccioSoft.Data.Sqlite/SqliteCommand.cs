@@ -155,10 +155,50 @@ public class SqliteCommand : DbCommand
         Sqlite3Stmt stmt = session.Native.Prepare(CommandText);
         for (int i = 0; i < _parameters.Count; i++)
         {
-            BindParameter(stmt, i + 1, (SqliteParameter)_parameters[i]!);
+            SqliteParameter parameter = (SqliteParameter)_parameters[i]!;
+            int parameterIndex = ResolveParameterIndex(stmt, parameter, i);
+            BindParameter(stmt, parameterIndex, parameter);
         }
 
         return stmt;
+    }
+
+    private static int ResolveParameterIndex(Sqlite3Stmt stmt, SqliteParameter parameter, int ordinal)
+    {
+        string parameterName = parameter.ParameterName;
+        if (string.IsNullOrWhiteSpace(parameterName))
+        {
+            return ordinal + 1;
+        }
+
+        int index = stmt.GetParameterIndex(parameterName);
+        if (index > 0)
+        {
+            return index;
+        }
+
+        if (parameterName[0] is not ('@' or ':' or '$'))
+        {
+            index = stmt.GetParameterIndex($"@{parameterName}");
+            if (index > 0)
+            {
+                return index;
+            }
+
+            index = stmt.GetParameterIndex($":{parameterName}");
+            if (index > 0)
+            {
+                return index;
+            }
+
+            index = stmt.GetParameterIndex($"${parameterName}");
+            if (index > 0)
+            {
+                return index;
+            }
+        }
+
+        throw new InvalidOperationException($"Parameter '{parameterName}' does not exist in the command text.");
     }
 
     private static void BindParameter(Sqlite3Stmt stmt, int index, SqliteParameter parameter)
