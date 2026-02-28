@@ -6,23 +6,61 @@ namespace CiccioSoft.Data.Sqlite;
 
 public class SqliteTransaction : DbTransaction
 {
-    public override IsolationLevel IsolationLevel => throw new NotImplementedException();
+    private readonly SqliteConnection _connection;
+    private bool _completed;
 
-    protected override DbConnection? DbConnection
+    internal SqliteTransaction(SqliteConnection connection, IsolationLevel isolationLevel)
     {
-        get
-        {
-            throw new NotImplementedException();
-        }
+        _connection = connection;
+        IsolationLevel = isolationLevel;
+        Execute("BEGIN TRANSACTION;");
     }
+
+    public override IsolationLevel IsolationLevel { get; }
+
+    protected override DbConnection? DbConnection => _connection;
 
     public override void Commit()
     {
-        throw new NotImplementedException();
+        EnsureActive();
+        Execute("COMMIT;");
+        _completed = true;
     }
 
     public override void Rollback()
     {
-        throw new NotImplementedException();
+        EnsureActive();
+        Execute("ROLLBACK;");
+        _completed = true;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && !_completed && _connection.State == ConnectionState.Open)
+        {
+            try { Rollback(); } catch { }
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private void EnsureActive()
+    {
+        if (_completed) throw new InvalidOperationException("Transaction already completed.");
+        _connection.EnsureOpen();
+    }
+
+    private void Execute(string sql)
+    {
+        SqliteSession session = _connection.GetSession();
+        session.Gate.Wait();
+        try
+        {
+            session.Native.Execute(sql);
+        }
+        finally
+        {
+            session.Gate.Release();
+        }
     }
 }
