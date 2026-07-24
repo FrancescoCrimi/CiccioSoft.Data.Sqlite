@@ -617,7 +617,8 @@ public sealed unsafe class Statement : IDisposable
 
     private void ThrowIfInvalid()
     {
-        if (_handle.IsInvalid) throw new ObjectDisposedException(nameof(Statement));
+        if (_handle.IsClosed || _handle.IsInvalid)
+            throw new ObjectDisposedException(nameof(Statement));
     }
 
     private void CheckResult(ResultCodes res, [CallerMemberName] string caller = "")

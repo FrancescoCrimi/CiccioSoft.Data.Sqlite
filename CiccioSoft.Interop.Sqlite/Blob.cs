@@ -47,7 +47,8 @@ public sealed unsafe class Blob : IDisposable
                             string databaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(connection);
-        if (connection.Handle.IsInvalid) throw new ObjectDisposedException(nameof(Connection));
+        if (connection.Handle.IsClosed || connection.Handle.IsInvalid)
+            throw new ObjectDisposedException(nameof(Connection));
         ArgumentException.ThrowIfNullOrWhiteSpace(tableName);
         ArgumentException.ThrowIfNullOrWhiteSpace(columnName);
         ArgumentException.ThrowIfNullOrWhiteSpace(databaseName);
@@ -154,7 +155,8 @@ public sealed unsafe class Blob : IDisposable
 
     private void ThrowIfInvalid()
     {
-        if (_handle.IsInvalid) throw new ObjectDisposedException(nameof(Blob));
+        if (_handle.IsClosed || _handle.IsInvalid)
+            throw new ObjectDisposedException(nameof(Blob));
     }
 
     private void CheckResult(ResultCodes res, [CallerMemberName] string caller = "")

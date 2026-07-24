@@ -6,6 +6,7 @@
   </Configurations>
 
   <Project Path="CiccioSoft.Interop.Sqlite/CiccioSoft.Interop.Sqlite.csproj" />
+  <Project Path="CiccioSoft.Interop.Sqlite.Tests/CiccioSoft.Interop.Sqlite.Tests.csproj" />
   <Project Path="CiccioSoft.Interop.Sqlite.WpfExample/CiccioSoft.Interop.Sqlite.WpfExample.csproj" />
   <Project Path="CiccioSoft.Interop.Sqlite.Benchmark/CiccioSoft.Interop.Sqlite.Benchmark.csproj" />
 

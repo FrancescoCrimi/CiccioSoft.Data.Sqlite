@@ -43,7 +43,7 @@ CiccioSoft.Sqlite è organizzato su **architettura two-layer**:
 │  CiccioSoft.Interop.Sqlite                                       │
 │                                                                  │
 │  • Sqlite3 (P/Invoke declarations, cdecl)                        │
-│  • Sqlite3Handle (SafeHandle)             │
+│  • Sqlite3Handle (SafeHandle)                                    │
 │  • SqliteErrorHelper (Error code translation)                    │
 │  • Memory strategies (ArrayPool, stackalloc, Span<T>)            │
 │  • Platform abstraction (Windows/Linux/macOS)                    │

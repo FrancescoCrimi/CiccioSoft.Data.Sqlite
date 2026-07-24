@@ -545,7 +545,8 @@ public sealed unsafe class Connection : IDisposable
 
     private void ThrowIfInvalid()
     {
-        if (_handle.IsInvalid) throw new ObjectDisposedException(nameof(Connection));
+        if (_handle.IsClosed || _handle.IsInvalid)
+            throw new ObjectDisposedException(nameof(Connection));
     }
 
     private void CheckResult(ResultCodes result, [CallerMemberName] string caller = "")

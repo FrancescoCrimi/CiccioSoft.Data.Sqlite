@@ -20,10 +20,12 @@ public sealed unsafe class Backup : IDisposable
     public static Backup InitBackup(Connection destination, Connection source, string destinationDatabaseName = "main", string sourceDatabaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(destination);
-        if (destination.Handle.IsInvalid) throw new ObjectDisposedException(nameof(Connection));
+        if (destination.Handle.IsClosed || destination.Handle.IsInvalid)
+            throw new ObjectDisposedException(nameof(Connection));
 
         ArgumentNullException.ThrowIfNull(source);
-        if (source.Handle.IsInvalid) throw new ObjectDisposedException(nameof(Connection));
+        if (source.Handle.IsClosed || source.Handle.IsInvalid)
+            throw new ObjectDisposedException(nameof(Connection));
 
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationDatabaseName);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceDatabaseName);
