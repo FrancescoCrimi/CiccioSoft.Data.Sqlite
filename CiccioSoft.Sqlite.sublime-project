@@ -8,15 +8,17 @@
     "debugger_configurations":
     [
         {
-            "name": "Sqlite1",
+            "name": "Test1",
             "type": "netcoredbg",
             "request": "launch",
-            "program": "${folder}/CiccioSoft.Interop.Sqlite.Example/bin/Debug/net10.0/CiccioSoft.Interop.Sqlite.Example.exe",
+            "program": "${folder}/CiccioSoft.Interop.Sqlite.Tests/bin/Debug/net10.0/CiccioSoft.Interop.Sqlite.Tests.exe",
             "args": [
+                "-filter", 
+                "//CiccioSoft.Interop.Sqlite.Tests/StatementBindAndColumnTests/BindText_EmptyString_CurrentImplementationStoresSqlNull",
                 "-parallel",
                 "none"
             ],
-            "cwd": "${folder}/CiccioSoft.Interop.Sqlite.Example",
+            "cwd": "${folder}/CiccioSoft.Interop.Sqlite.Tests",
             "stopAtEntry": false
         },
         {

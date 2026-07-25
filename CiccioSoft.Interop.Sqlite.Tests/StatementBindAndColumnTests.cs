@@ -61,7 +61,7 @@ public sealed class StatementBindAndColumnTests
     }
 
     [Fact]
-    public void BindText_NullBindsSqlNull()
+    public void BindText_NullString_BindsSqlNull()
     {
         using var connection = ConnectionFactory.OpenMemory();
         connection.Execute("CREATE TABLE t (v TEXT);");
@@ -79,12 +79,8 @@ public sealed class StatementBindAndColumnTests
     }
 
     [Fact]
-    public void BindText_EmptyString_CurrentImplementationStoresSqlNull()
+    public void BindText_EmptyString_BindsEmptyTextNotSqlNull()
     {
-        // Characterization: empty managed strings currently flow through an empty UTF-8 span.
-        // `fixed` on a zero-length span yields a null pointer, and sqlite3_bind_text(NULL)
-        // stores SQL NULL. Documented intentional design wants empty TEXT; this test locks
-        // today's interop behavior so regressions (or a future fix) are visible.
         using var connection = ConnectionFactory.OpenMemory();
         connection.Execute("CREATE TABLE t (v TEXT);");
 
@@ -94,35 +90,78 @@ public sealed class StatementBindAndColumnTests
             insert.Step();
         }
 
-        using var select = connection.Prepare("SELECT v IS NULL FROM t;");
+        using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v), v FROM t;");
         Assert.True(select.Step());
-        Assert.Equal(1, select.GetInt(0));
+        Assert.Equal(0, select.GetInt(0));
+        Assert.Equal("text", select.GetTextString(1), ignoreCase: true);
+        Assert.Equal(0, select.GetInt(2));
+        Assert.Equal(string.Empty, select.GetTextString(3));
+        Assert.Equal(SqliteType.Text, select.GetColumnType(3));
+        Assert.True(select.GetText(3).IsEmpty);
     }
 
     [Fact]
-    public void BindText_SpanDefaultAndEmpty_BothBindSqlNullToday()
+    public void BindText_DefaultSpan_BindsSqlNull()
     {
         using var connection = ConnectionFactory.OpenMemory();
         connection.Execute("CREATE TABLE t (v TEXT);");
 
         using (var insert = connection.Prepare("INSERT INTO t VALUES (?);"))
         {
-            ReadOnlySpan<byte> nullSpan = default;
-            insert.BindText(1, nullSpan);
+            ReadOnlySpan<byte> defaultSpan = default;
+            insert.BindText(1, defaultSpan);
             insert.Step();
-            insert.Reset();
+        }
 
+        using var select = connection.Prepare("SELECT v IS NULL FROM t;");
+        Assert.True(select.Step());
+        Assert.Equal(1, select.GetInt(0));
+    }
+
+    [Fact]
+    public void BindText_EmptyStaticSpan_BindsSqlNull_BecauseIndistinguishableFromDefault()
+    {
+        // ReadOnlySpan<T>.Empty is alias of default: GetReference is a null ref, so the API
+        // cannot distinguish "missing" from "Empty". Enterprise contract: both → SQL NULL.
+        // Real zero-length payloads must come from a non-default empty span (see next test).
+        using var connection = ConnectionFactory.OpenMemory();
+        connection.Execute("CREATE TABLE t (v TEXT);");
+
+        using (var insert = connection.Prepare("INSERT INTO t VALUES (?);"))
+        {
             insert.BindText(1, ReadOnlySpan<byte>.Empty);
             insert.Step();
         }
 
-        using var select = connection.Prepare("SELECT COUNT(*) FROM t WHERE v IS NULL;");
+        using var select = connection.Prepare("SELECT v IS NULL FROM t;");
         Assert.True(select.Step());
-        Assert.Equal(2, select.GetInt(0));
+        Assert.Equal(1, select.GetInt(0));
     }
 
     [Fact]
-    public void BindBlob_SpanDefaultAndEmpty_BothBindSqlNullToday()
+    public void BindText_RealEmptySpan_BindsEmptyTextNotSqlNull()
+    {
+        using var connection = ConnectionFactory.OpenMemory();
+        connection.Execute("CREATE TABLE t (v TEXT);");
+
+        Span<byte> scratch = stackalloc byte[1];
+        ReadOnlySpan<byte> realEmpty = scratch[..0];
+
+        using (var insert = connection.Prepare("INSERT INTO t VALUES (?);"))
+        {
+            insert.BindText(1, realEmpty);
+            insert.Step();
+        }
+
+        using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v) FROM t;");
+        Assert.True(select.Step());
+        Assert.Equal(0, select.GetInt(0));
+        Assert.Equal("text", select.GetTextString(1), ignoreCase: true);
+        Assert.Equal(0, select.GetInt(2));
+    }
+
+    [Fact]
+    public void BindBlob_DefaultSpan_BindsSqlNull()
     {
         using var connection = ConnectionFactory.OpenMemory();
         connection.Execute("CREATE TABLE t (v BLOB);");
@@ -131,15 +170,77 @@ public sealed class StatementBindAndColumnTests
         {
             insert.BindBlob(1, default);
             insert.Step();
-            insert.Reset();
+        }
 
+        using var select = connection.Prepare("SELECT v IS NULL FROM t;");
+        Assert.True(select.Step());
+        Assert.Equal(1, select.GetInt(0));
+    }
+
+    [Fact]
+    public void BindBlob_EmptyStaticSpan_BindsSqlNull_BecauseIndistinguishableFromDefault()
+    {
+        using var connection = ConnectionFactory.OpenMemory();
+        connection.Execute("CREATE TABLE t (v BLOB);");
+
+        using (var insert = connection.Prepare("INSERT INTO t VALUES (?);"))
+        {
             insert.BindBlob(1, ReadOnlySpan<byte>.Empty);
             insert.Step();
         }
 
-        using var select = connection.Prepare("SELECT COUNT(*) FROM t WHERE v IS NULL;");
+        using var select = connection.Prepare("SELECT v IS NULL FROM t;");
         Assert.True(select.Step());
-        Assert.Equal(2, select.GetInt(0));
+        Assert.Equal(1, select.GetInt(0));
+    }
+
+    [Fact]
+    public void BindBlob_RealEmptySpan_BindsEmptyBlobNotSqlNull()
+    {
+        using var connection = ConnectionFactory.OpenMemory();
+        connection.Execute("CREATE TABLE t (v BLOB);");
+
+        Span<byte> scratch = stackalloc byte[1];
+        ReadOnlySpan<byte> realEmpty = scratch[..0];
+
+        using (var insert = connection.Prepare("INSERT INTO t VALUES (?);"))
+        {
+            insert.BindBlob(1, realEmpty);
+            insert.Step();
+        }
+
+        using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v), v FROM t;");
+        Assert.True(select.Step());
+        Assert.Equal(0, select.GetInt(0));
+        Assert.Equal("blob", select.GetTextString(1), ignoreCase: true);
+        Assert.Equal(0, select.GetInt(2));
+        Assert.Equal(SqliteType.Blob, select.GetColumnType(3));
+        Assert.True(select.GetBlob(3).IsEmpty);
+    }
+
+    [Fact]
+    public void BindText_EmptyThenNonEmpty_RoundTripsWithoutCrossContamination()
+    {
+        using var connection = ConnectionFactory.OpenMemory();
+        connection.Execute("CREATE TABLE t (v TEXT);");
+
+        using (var insert = connection.Prepare("INSERT INTO t VALUES (?);"))
+        {
+            insert.BindText(1, string.Empty);
+            insert.Step();
+            insert.Reset();
+            insert.ClearBindings();
+
+            insert.BindText(1, "after-empty");
+            insert.Step();
+        }
+
+        using var select = connection.Prepare("SELECT v FROM t ORDER BY rowid;");
+        Assert.True(select.Step());
+        Assert.Equal(string.Empty, select.GetTextString(0));
+        Assert.True(select.Step());
+        Assert.Equal("after-empty", select.GetTextString(0));
+        Assert.False(select.Step());
     }
 
     [Fact]
