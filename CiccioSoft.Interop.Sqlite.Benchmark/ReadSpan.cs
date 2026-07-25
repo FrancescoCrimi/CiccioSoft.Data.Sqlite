@@ -1,3 +1,9 @@
+// Copyright (c) 2026 Francesco Crimi
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
 using System;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
@@ -72,6 +78,7 @@ public class ReadSpan
     [GlobalSetup(Target = nameof(ReadSpan_Interop))]
     public void Setup_Interop()
     {
+        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
         _db2 = Connection.Open(DbFile);
         _db2.Execute("PRAGMA synchronous = OFF;");
         _db2.Execute("DROP TABLE IF EXISTS Users;");

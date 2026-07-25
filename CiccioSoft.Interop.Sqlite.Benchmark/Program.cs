@@ -1,3 +1,9 @@
+// Copyright (c) 2026 Francesco Crimi
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
 using System;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
@@ -10,16 +16,15 @@ class Program
 {
     static void Main(string[] args)
     {
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
         // SqliteBenchmark.Run();
         // RawComparisonBenchmark2.Run();
         // RawComparisonBenchmark.Run();
 
         var config = new MyBenchmarkDotNetConfig();
         BenchmarkRunner.Run<ReadString>(config);
-        // BenchmarkRunner.Run<ReadSpan>(config);
-        // BenchmarkRunner.Run<WriteString>(config);
-        // BenchmarkRunner.Run<WriteSpan>(config);
+        BenchmarkRunner.Run<ReadSpan>(config);
+        BenchmarkRunner.Run<WriteString>(config);
+        BenchmarkRunner.Run<WriteSpan>(config);
     }
 }
 

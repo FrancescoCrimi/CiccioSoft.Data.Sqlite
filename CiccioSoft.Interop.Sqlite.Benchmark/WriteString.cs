@@ -1,3 +1,9 @@
+// Copyright (c) 2026 Francesco Crimi
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
 using System;
 using BenchmarkDotNet.Attributes;
 using SQLitePCL;
@@ -56,6 +62,7 @@ public class WriteString
     [GlobalSetup(Target = nameof(WriteString_Interop))]
     public void GlobalSetup_Interop()
     {
+        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
         _db2 = Connection.Open(DbFile);
         _db2.Execute("PRAGMA journal_mode = WAL;");
         _db2.Execute("PRAGMA synchronous = OFF;");

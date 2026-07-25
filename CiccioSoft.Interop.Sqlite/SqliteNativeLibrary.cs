@@ -22,6 +22,7 @@ namespace CiccioSoft.Interop.Sqlite
     public static class SqliteNativeLibrary
     {
         private static bool _initialized;
+        // private static IntPtr _cachedHandle;
 
         public static void Configure(SqliteNativeSource source, string? customPath = null)
         {
@@ -31,14 +32,11 @@ namespace CiccioSoft.Interop.Sqlite
 
             string target = source switch
             {
-                // SqliteNativeSource.Bundled or SqliteNativeSource.SourceGear
-                //     => NativeMethods.SQLITE_DLL, // risolto via probing RID standard del nuget
-
-                SqliteNativeSource.Bundled          => "sqlite3",
-                SqliteNativeSource.SourceGear       => "e_sqlite3",
-                SqliteNativeSource.WindowsBuiltIn   => "winsqlite3",
-                SqliteNativeSource.LinuxDistro      => "libsqlite3.so.0",
-                SqliteNativeSource.Msys2            => "libsqlite3-0",
+                SqliteNativeSource.Bundled => "sqlite3",
+                SqliteNativeSource.SourceGear => "e_sqlite3",
+                SqliteNativeSource.WindowsBuiltIn => "winsqlite3",
+                SqliteNativeSource.LinuxDistro => "libsqlite3.so.0",
+                SqliteNativeSource.Msys2 => "libsqlite3-0",
                 SqliteNativeSource.Custom
                     => customPath ?? throw new ArgumentException(
                         $"{source} richiede customPath valorizzato.", nameof(customPath)),
@@ -51,31 +49,28 @@ namespace CiccioSoft.Interop.Sqlite
                     : throw new DllNotFoundException(
                         $"Impossibile caricare '{target}' per la sorgente {source}."));
 
+
+            // Possibile miglioramento da misurare sotto stress
+            // Nessun miglioramento riscontrato sotto stress
+            // NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, (name, asm, path) =>
+            // {
+            //     if (name != "SqliteLibraryName")
+            //         return IntPtr.Zero;
+
+            //     if (_cachedHandle != IntPtr.Zero)
+            //         return _cachedHandle;
+
+            //     if (NativeLibrary.TryLoad(target, asm, path, out var h))
+            //     {
+            //         _cachedHandle = h;
+            //         return h;
+            //     }
+
+            //     throw new DllNotFoundException(
+            //         $"Impossibile caricare '{target}' per la sorgente {source}.");
+            // });
+
             _initialized = true;
         }
     }
-
-
-// Possibile miglioramento da misurare sotto stress
-
-// private static IntPtr _cachedHandle;
-
-// NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, (name, asm, path) =>
-// {
-//     if (name != NativeMethods.LibraryName)
-//         return IntPtr.Zero;
-
-//     if (_cachedHandle != IntPtr.Zero)
-//         return _cachedHandle;
-
-//     if (NativeLibrary.TryLoad(target, asm, path, out var h))
-//     {
-//         _cachedHandle = h;
-//         return h;
-//     }
-
-//     throw new DllNotFoundException(
-//         $"Impossibile caricare '{target}' per la sorgente {source}.");
-// });
-
 }
