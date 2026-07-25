@@ -10,15 +10,16 @@ class Program
 {
     static void Main(string[] args)
     {
+        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
         // SqliteBenchmark.Run();
         // RawComparisonBenchmark2.Run();
         // RawComparisonBenchmark.Run();
 
         var config = new MyBenchmarkDotNetConfig();
         BenchmarkRunner.Run<ReadString>(config);
-        BenchmarkRunner.Run<ReadSpan>(config);
-        BenchmarkRunner.Run<WriteString>(config);
-        BenchmarkRunner.Run<WriteSpan>(config);
+        // BenchmarkRunner.Run<ReadSpan>(config);
+        // BenchmarkRunner.Run<WriteString>(config);
+        // BenchmarkRunner.Run<WriteSpan>(config);
     }
 }
 

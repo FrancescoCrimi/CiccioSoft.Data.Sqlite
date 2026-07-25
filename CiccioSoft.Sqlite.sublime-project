@@ -11,14 +11,12 @@
             "name": "Test1",
             "type": "netcoredbg",
             "request": "launch",
-            "program": "${folder}/CiccioSoft.Interop.Sqlite.Tests/bin/Debug/net10.0/CiccioSoft.Interop.Sqlite.Tests.exe",
+            "program": "${folder}/CiccioSoft.Interop.Sqlite.Example/bin/Debug/net10.0/CiccioSoft.Interop.Sqlite.Example.exe",
             "args": [
-                "-filter", 
-                "//CiccioSoft.Interop.Sqlite.Tests/StatementBindAndColumnTests/BindText_EmptyString_CurrentImplementationStoresSqlNull",
                 "-parallel",
                 "none"
             ],
-            "cwd": "${folder}/CiccioSoft.Interop.Sqlite.Tests",
+            "cwd": "${folder}/CiccioSoft.Interop.Sqlite.Example",
             "stopAtEntry": false
         },
         {
