@@ -22,7 +22,6 @@ namespace CiccioSoft.Interop.Sqlite
     public static class SqliteNativeLibrary
     {
         private static bool _initialized;
-        // private static IntPtr _cachedHandle;
 
         public static void Configure(SqliteNativeSource source, string? customPath = null)
         {
@@ -48,27 +47,6 @@ namespace CiccioSoft.Interop.Sqlite
                     ? h
                     : throw new DllNotFoundException(
                         $"Impossibile caricare '{target}' per la sorgente {source}."));
-
-
-            // Possibile miglioramento da misurare sotto stress
-            // Nessun miglioramento riscontrato sotto stress
-            // NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, (name, asm, path) =>
-            // {
-            //     if (name != "SqliteLibraryName")
-            //         return IntPtr.Zero;
-
-            //     if (_cachedHandle != IntPtr.Zero)
-            //         return _cachedHandle;
-
-            //     if (NativeLibrary.TryLoad(target, asm, path, out var h))
-            //     {
-            //         _cachedHandle = h;
-            //         return h;
-            //     }
-
-            //     throw new DllNotFoundException(
-            //         $"Impossibile caricare '{target}' per la sorgente {source}.");
-            // });
 
             _initialized = true;
         }
