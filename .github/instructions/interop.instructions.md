@@ -1,12 +1,12 @@
 ---
 name: interop-instructions
-description: "Istruzioni file-scoped per layer CiccioSoft.Sqlite.Interop/. Si applica a dichiarazioni P/Invoke, pattern SafeHandle, gestione memoria, gestione errori nativi."
-applyTo: "**/CiccioSoft.Sqlite.Interop/**/*.cs"
+description: "Istruzioni file-scoped per layer CiccioSoft.Sqlite/. Si applica a dichiarazioni P/Invoke, pattern SafeHandle, gestione memoria, gestione errori nativi."
+applyTo: "**/CiccioSoft.Sqlite/**/*.cs"
 ---
 
-# Istruzioni Interop Layer
+# Istruzioni CiccioSoft.Sqlite Layer
 
-Questo file si applica a tutti i file sorgente C# in `CiccioSoft.Sqlite.Interop/`.
+Questo file si applica a tutti i file sorgente C# in `CiccioSoft.Sqlite/`.
 
 ## Vincoli P/Invoke
 
@@ -19,8 +19,8 @@ Questo file si applica a tutti i file sorgente C# in `CiccioSoft.Sqlite.Interop/
 ## Pattern SafeHandle Requisiti
 
 ```csharp
-// RICHIESTO: Eredita da SafeHandleZeroOrMinusOneIsInvalid
-internal sealed class Sqlite3Handle : SafeHandleZeroOrMinusOneIsInvalid
+// RICHIESTO: Eredita da SafeHandle
+internal sealed class Sqlite3Handle : SafeHandle
 {
     public override bool IsInvalid => handle == IntPtr.Zero;
 

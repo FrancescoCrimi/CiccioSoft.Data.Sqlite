@@ -1,18 +1,18 @@
 ### Agent Guidelines: CiccioSoft.Data.Sqlite (Modern ADO.NET Provider & OOP Wrapper)
 
-Questo componente implementa il provider ADO.NET moderno e il wrapper idiomatico OOP ad altissime prestazioni per SQLite, astraendo la complessità dei puntatori e costruendo un'interfaccia ad oggetti enterprise basata interamente su `CiccioSoft.Interop.Sqlite`. 
+Questo componente implementa il provider ADO.NET moderno e il wrapper idiomatico OOP ad altissime prestazioni per SQLite, astraendo la complessità dei puntatori e costruendo un'interfaccia ad oggetti enterprise basata interamente su `CiccioSoft.Sqlite`. 
 
 ### 1. Stack Tecnologico e Dipendenze
 
 * **Target Framework:** `net10.0` (LTS Esclusivo).
 * **Linguaggio:** C# 14 (Nativo).
-* **Dipendenza Unica Core:** CiccioSoft.Interop.Sqlite (Nessun utilizzo di SqlitePCL.raw o simili).
+* **Dipendenza Unica Core:** CiccioSoft.Sqlite (Nessun utilizzo di SqlitePCL.raw o simili).
 
 ### 2. Filosofia di Sviluppo Enterprise & AOT
 
 ### Zero-Allocation Data Streaming (ADO.NET)
 
-* **Slicing di Memoria:** Sfruttare `ReadOnlySpan<byte>` estratto direttamente dai puntatori di `CiccioSoft.Interop.Sqlite` per esporre i dati nel `SqliteDataReader` senza allocare array di byte intermedi nell'heap.
+* **Slicing di Memoria:** Sfruttare `ReadOnlySpan<byte>` estratto direttamente dai puntatori di `CiccioSoft.Sqlite` per esporre i dati nel `SqliteDataReader` senza allocare array di byte intermedi nell'heap.
 * **Asincronia Ottimizzata:** Implementare i metodi asincroni (`ExecuteReaderAsync`, `ReadAsync`) restituendo `ValueTask` e `ValueTask<T>` per azzerare la pressione sul Garbage Collector.
 
 ### Design Idiomatico OOP (C# 14)
@@ -61,7 +61,7 @@ public sealed class SqliteParameter<T> : DbParameter where T : struct
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\CiccioSoft.Interop.Sqlite\CiccioSoft.Interop.Sqlite.csproj" />
+    <ProjectReference Include="..\CiccioSoft.Sqlite\CiccioSoft.Sqlite.csproj" />
   </ItemGroup>
 </Project>
 

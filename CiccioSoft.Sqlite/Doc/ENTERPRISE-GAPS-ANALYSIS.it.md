@@ -1,4 +1,4 @@
-# Analisi delle Mancanze per Enterprise-Grade — CiccioSoft.Interop.Sqlite
+# Analisi delle Mancanze per Enterprise-Grade — CiccioSoft.Sqlite
 
 | Documento | Versione | Data | Lingua |
 |---|---|---|---|

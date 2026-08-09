@@ -1,4 +1,4 @@
-# CiccioSoft.Interop.Sqlite
+# CiccioSoft.Sqlite
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![.NET Version](https://img.shields.io/badge/.NET-10.0-purple.svg)
@@ -50,7 +50,7 @@ while (stmt.Step())
 
 ## Design Principles & Modern C# Interop
 
-`CiccioSoft.Interop.Sqlite` is not just a direct 1:1 P/Invoke translation; it acts as a modern, lightweight, and purely Object-Oriented bridge between the procedural C API of SQLite and idiomatic C# 10+.
+`CiccioSoft.Sqlite` is not just a direct 1:1 P/Invoke translation; it acts as a modern, lightweight, and purely Object-Oriented bridge between the procedural C API of SQLite and idiomatic C# 10+.
 
 ### 1. Object-Oriented Architecture & Type Safety
 The raw procedural API (`sqlite3*`) is encapsulated into clean, distinct classes like `Connection` and `Statement` (prepared statement).  

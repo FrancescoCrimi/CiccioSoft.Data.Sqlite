@@ -4,14 +4,14 @@
 |---|---|
 | **Status** | Accepted |
 | **Date** | 2026-07-22 |
-| **Component** | `CiccioSoft.Interop.Sqlite` |
+| **Component** | `CiccioSoft.Sqlite` |
 | **Deciders** | Francesco Crimi |
 | **Supersedes** | — |
 | **Related to** | ADR-0003 (retirement of the vtable/COM-like approach), `CiccioSoft.Data.Sqlite` (ADO.NET provider) |
 
 ## Context
 
-`CiccioSoft.Interop.Sqlite` exposes four owned native resources with explicit lifecycles — database connection (`sqlite3`), prepared statement (`sqlite3_stmt`), backup operation (`sqlite3_backup`), and incremental BLOB handle (`sqlite3_blob`) — each encapsulated in a `SafeXxxHandle` (derived from `SafeHandle`) paired with a sealed public class (`Connection`, `Statement`, `Backup`, `Blob`).
+`CiccioSoft.Sqlite` exposes four owned native resources with explicit lifecycles — database connection (`sqlite3`), prepared statement (`sqlite3_stmt`), backup operation (`sqlite3_backup`), and incremental BLOB handle (`sqlite3_blob`) — each encapsulated in a `SafeXxxHandle` (derived from `SafeHandle`) paired with a sealed public class (`Connection`, `Statement`, `Backup`, `Blob`).
 
 The original pattern extracts the raw native pointer from the `SafeHandle` via an internal method (`AsStructPointer()`) and passes it directly to P/Invoke signatures declared with raw pointer parameters (`sqlite3*`, `sqlite3_stmt*`, etc.).
 

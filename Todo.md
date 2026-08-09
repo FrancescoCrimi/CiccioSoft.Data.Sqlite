@@ -1,8 +1,8 @@
 # Todo
 
 
-## CiccioSoft.Interop.Sqlite
-1)	Implementare SqliteBlob come meccanismo per la gestione dei blob.
+## CiccioSoft.Sqlite
+1)	Implementare SqliteBlob come meccanismo per la gestione dei blob. (fatto)
 2)	Creare overload per tutti i metodi che prendono string come parametro con equivalenti che accettano
 	span<byte> direttamente in in utf8.
 3)	Verificare funzionalita ed helper dell'eccezzione

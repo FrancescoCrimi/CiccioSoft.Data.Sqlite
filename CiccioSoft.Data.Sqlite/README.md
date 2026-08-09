@@ -8,7 +8,7 @@ The ADO.NET provider layer for CiccioSoft.Data.Sqlite, inspired by `Microsoft.Da
 
 ## Overview
 
-This project contains the high-level provider abstractions built on top of `CiccioSoft.Interop.Sqlite`. It provides:
+This project contains the high-level provider abstractions built on top of `CiccioSoft.Sqlite`. It provides:
 
 - **Idiomatic C# APIs**: Modern .NET patterns for database operations
 - **ADO.NET Provider**: Implementation of `DbConnection`, `DbCommand`, `DbDataReader`, and related ADO.NET types

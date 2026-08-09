@@ -19,16 +19,16 @@ This provider is designed with a strong emphasis on **truly asynchronous operati
 
 This repository is organized into multiple projects, each with its own README:
 
-### 1. **CiccioSoft.Interop.Sqlite** (Raw Binding Layer)
+### 1. **CiccioSoft.Sqlite** (Raw Binding Layer)
 - Pure P/Invoke raw bindings to SQLite
 - Low-level, unmanaged FFI (Foreign Function Interface)
 - Minimal abstraction over native SQLite C library
 - Direct SQLite API exposure for advanced use cases
-- [📖 Project README](CiccioSoft.Interop.Sqlite/README.md)
+- [📖 Project README](CiccioSoft.Sqlite/README.md)
 
 ### 2. **CiccioSoft.Data.Sqlite** (OOP Abstraction Layer)
 - Idiomatic C# object-oriented wrapper
-- Higher-level abstractions built on top of `CiccioSoft.Interop.Sqlite`
+- Higher-level abstractions built on top of `CiccioSoft.Sqlite`
 - Type-safe operations and modern C# patterns
 - More accessible API for typical database tasks
 - [📖 Project README](CiccioSoft.Data.Sqlite/README.md)
@@ -143,7 +143,7 @@ These are useful in long-running applications where you want deterministic WAL f
 
 ### Requirements
 
-- **.NET 10.0** or later. The CiccioSoft.Data.Sqlite, CiccioSoft.Data.Sqlite.Tests, and CiccioSoft.Interop.Sqlite projects target `net10.0` as their minimum supported TFM; no `net9.0`, `netstandard`, or earlier targets are provided.
+- **.NET 10.0** or later. The CiccioSoft.Data.Sqlite, CiccioSoft.Data.Sqlite.Tests, and CiccioSoft.Sqlite projects target `net10.0` as their minimum supported TFM; no `net9.0`, `netstandard`, or earlier targets are provided.
 - SQLite 3.x (embedded with the library)
 
 ### Installation
@@ -159,10 +159,10 @@ dotnet build
 
 ### Basic Usage
 
-#### Using the Raw Interop Layer (CiccioSoft.Interop.Sqlite)
+#### Using the Raw Interop Layer (CiccioSoft.Sqlite)
 
 ```csharp
-using CiccioSoft.Interop.Sqlite;
+using CiccioSoft.Sqlite;
 
 // Direct SQLite API access
 using var db = Sqlite3.Open("mydata.db");
@@ -194,7 +194,7 @@ while (reader.Read())
 
 ```
 CiccioSoft.Sqlite/
-├── CiccioSoft.Interop.Sqlite/           # Raw P/Invoke bindings
+├── CiccioSoft.Sqlite/                   # Raw P/Invoke bindings
 │   ├── NativeMethods.cs                 # Native function declarations
 │   └── *.cs                             # Interop helpers
 ├── CiccioSoft.Data.Sqlite/              # OOP abstraction layer
@@ -204,7 +204,7 @@ CiccioSoft.Sqlite/
 │   └── *.cs                             # Additional abstractions
 ├── CiccioSoft.Data.Sqlite.Tests/        # Core provider tests (net10.0 only)
 │   └── *.cs                             # xUnit test cases
-├── CiccioSoft.Interop.Sqlite.Example/   # Example applications
+├── CiccioSoft.Sqlite.Example/           # Example applications
 │   └── Program.cs                       # Usage examples
 ├── CiccioSoft.Sqlite.slnx               # Solution file
 ├── LICENSE                              # MIT License
@@ -230,7 +230,7 @@ CiccioSoft.Sqlite/
 
 ## 📖 Examples
 
-For practical examples and use cases, see the [CiccioSoft.Interop.Sqlite.Example](./CiccioSoft.Interop.Sqlite.Example/) project.
+For practical examples and use cases, see the [CiccioSoft.Sqlite.Example](./CiccioSoft.Sqlite.Example/) project.
 
 ### Example: Creating a Table
 
@@ -320,7 +320,7 @@ This project is not intended for production use, but rather as an educational to
 
 ## 🙋 Questions & Support
 
-- 📚 Check out the [CiccioSoft.Interop.Sqlite.Example](./CiccioSoft.Interop.Sqlite.Example/) for practical examples
+- 📚 Check out the [CiccioSoft.Sqlite.Example](./CiccioSoft.Sqlite.Example/) for practical examples
 - 📬 Open an [Issue](https://github.com/FrancescoCrimi/CiccioSoft.Sqlite/issues) for questions or problems
 - 💬 Start a [Discussion](https://github.com/FrancescoCrimi/CiccioSoft.Sqlite/discussions) for ideas and feedback
 

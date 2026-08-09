@@ -1,4 +1,4 @@
-# Enterprise-Grade Feature Gap Analysis — CiccioSoft.Interop.Sqlite
+# Enterprise-Grade Feature Gap Analysis — CiccioSoft.Sqlite
 
 | Document | Version | Date | Language |
 |---|---|---|---|

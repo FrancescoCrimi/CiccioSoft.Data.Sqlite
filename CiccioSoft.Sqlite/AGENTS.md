@@ -1,4 +1,4 @@
-### Agent Guidelines: CiccioSoft.Interop.Sqlite (Low-Level Native Bridge)
+### Agent Guidelines: CiccioSoft.Sqlite (Low-Level Native Bridge)
 
 Questo componente costituisce lo strato di interazione a bassissimo livello (Zero-Overhead) con la libreria C nativa di SQLite, progettato per garantire le massime performance possibili in ambiente NativeAOT. 
 

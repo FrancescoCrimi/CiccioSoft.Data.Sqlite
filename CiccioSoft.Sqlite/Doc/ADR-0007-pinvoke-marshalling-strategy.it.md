@@ -4,14 +4,14 @@
 |---|---|
 | **Stato** | Accettato |
 | **Data** | 2026-07-22 |
-| **Componente** | `CiccioSoft.Interop.Sqlite` |
+| **Componente** | `CiccioSoft.Sqlite` |
 | **Decisori** | Francesco Crimi |
 | **Sostituisce** | — |
 | **Correlato a** | ADR-0003 (abbandono dell'approccio vtable/COM-like), `CiccioSoft.Data.Sqlite` (provider ADO.NET) |
 
 ## Contesto
 
-`CiccioSoft.Interop.Sqlite` espone quattro risorse native possedute e a ciclo di vita esplicito — connessione (`sqlite3`), statement preparato (`sqlite3_stmt`), operazione di backup (`sqlite3_backup`) e handle BLOB incrementale (`sqlite3_blob`) — ciascuna incapsulata in una coppia `SafeXxxHandle` (derivata da `SafeHandle`) + classe pubblica sealed (`Connection`, `Statement`, `Backup`, `Blob`).
+`CiccioSoft.Sqlite` espone quattro risorse native possedute e a ciclo di vita esplicito — connessione (`sqlite3`), statement preparato (`sqlite3_stmt`), operazione di backup (`sqlite3_backup`) e handle BLOB incrementale (`sqlite3_blob`) — ciascuna incapsulata in una coppia `SafeXxxHandle` (derivata da `SafeHandle`) + classe pubblica sealed (`Connection`, `Statement`, `Backup`, `Blob`).
 
 Il pattern originario estrae il puntatore nativo dalla `SafeHandle` tramite un metodo interno (`AsStructPointer()`) e lo passa direttamente alle firme P/Invoke dichiarate a puntatore grezzo (`sqlite3*`, `sqlite3_stmt*`, ecc.).
 
