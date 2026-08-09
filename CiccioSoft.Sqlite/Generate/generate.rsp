@@ -21,7 +21,7 @@ CiccioSoft.Sqlite
 
 # Nome della DLL/libreria nativa inserito nei [DllImport] (es. sqlite3)
 --libraryPath
-SqliteLibraryName
+CiccioSoftSqliteLibraryPlaceholder
 
 # Nome della classe statica C# che conterrà i metodi P/Invoke generati
 --methodClassName

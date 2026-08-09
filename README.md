@@ -150,7 +150,7 @@ These are useful in long-running applications where you want deterministic WAL f
 
 ```bash
 # Clone the repository
-git clone https://github.com/FrancescoCrimi/CiccioSoft.Data.Sqlite.git
+git clone https://github.com/FrancescoCrimi/CiccioSoft.Sqlite.git
 cd CiccioSoft.Data.Sqlite
 
 # Build the project

@@ -67,7 +67,6 @@ public class ConfigurazioneSessioneFixture : IAsyncLifetime
 {
     public ValueTask InitializeAsync()
     {
-        // 🚀 QUESTO CODICE GIRA SOLO QUANDO I TEST PARTONO DAVVERO
         // Viene eseguito una sola volta all'avvio della sessione per questo assembly
         SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
         return ValueTask.CompletedTask;

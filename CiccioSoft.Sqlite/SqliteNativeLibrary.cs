@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT.
 
 using System;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace CiccioSoft.Sqlite
@@ -22,6 +23,8 @@ namespace CiccioSoft.Sqlite
     public static class SqliteNativeLibrary
     {
         private static bool _initialized;
+        // private static string _target = "";
+        private static nint _cachedHandle;
 
         public static void Configure(SqliteNativeSource source, string? customPath = null)
         {
@@ -42,13 +45,31 @@ namespace CiccioSoft.Sqlite
                 _ => throw new ArgumentOutOfRangeException(nameof(source))
             };
 
-            NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, (name, asm, path) =>
-                name == "SqliteLibraryName" && NativeLibrary.TryLoad(target, asm, path, out var h)
-                    ? h
-                    : throw new DllNotFoundException(
-                        $"Impossibile caricare '{target}' per la sorgente {source}."));
+            // NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, (name, asm, path) =>
+            //     name == "SqliteLibraryName" && NativeLibrary.TryLoad(target, asm, path, out var h)
+            //         ? h
+            //         : throw new DllNotFoundException(
+            //             $"Impossibile caricare '{target}' per la sorgente {source}."));
+
+
+            if (NativeLibrary.TryLoad(target, typeof(NativeMethods).Assembly, null, out nint handle))
+                _cachedHandle = handle;
+            else
+                throw new DllNotFoundException(
+                    $"Impossibile caricare '{target}' per la sorgente {source}.");
+
+            NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, Resolver);
 
             _initialized = true;
+        }
+
+        private static nint Resolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+        {
+            if (libraryName == "CiccioSoftSqliteLibraryPlaceholder")
+                // se arrivato qui _cachedHandle è stata gia risolta
+                return _cachedHandle;
+            else
+                return nint.Zero;
         }
     }
 }
