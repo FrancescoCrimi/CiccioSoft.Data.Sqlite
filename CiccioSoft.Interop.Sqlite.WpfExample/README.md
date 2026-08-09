@@ -1,1 +1,0 @@
-# CiccioSoft.Interop.Sqlite.WpfExample

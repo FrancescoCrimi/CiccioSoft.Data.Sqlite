@@ -5,15 +5,17 @@
     <Platform Name="x86" />
   </Configurations>
 
-  <Project Path="CiccioSoft.Interop.Sqlite/CiccioSoft.Interop.Sqlite.csproj" />
-  <Project Path="CiccioSoft.Interop.Sqlite.Tests/CiccioSoft.Interop.Sqlite.Tests.csproj" />
-  <Project Path="CiccioSoft.Interop.Sqlite.WpfExample/CiccioSoft.Interop.Sqlite.WpfExample.csproj" />
-  <Project Path="CiccioSoft.Interop.Sqlite.Benchmark/CiccioSoft.Interop.Sqlite.Benchmark.csproj" />
+  <Project Path="CiccioSoft.Sqlite/CiccioSoft.Sqlite.csproj" />
+  <Project Path="CiccioSoft.Sqlite.Tests/CiccioSoft.Sqlite.Tests.csproj" />
+  <Project Path="CiccioSoft.Sqlite.Example/CiccioSoft.Sqlite.Example.csproj" />
+  <Project Path="CiccioSoft.Sqlite.WpfExample/CiccioSoft.Sqlite.WpfExample.csproj" />
+  <Project Path="CiccioSoft.Sqlite.Benchmark/CiccioSoft.Sqlite.Benchmark.csproj" />
 
   <Project Path="CiccioSoft.Data.Sqlite/CiccioSoft.Data.Sqlite.csproj" />
   <Project Path="CiccioSoft.Data.Sqlite.Tests/CiccioSoft.Data.Sqlite.Tests.csproj" />
   <Project Path="CiccioSoft.Data.Sqlite.Tests.Extra/CiccioSoft.Data.Sqlite.Tests.Extra.csproj" />
 
+<!-- 
   <Project Path="SQLitePCL.raw/src/SQLitePCLRaw.batteries.e_sqlite3.dllimport/SQLitePCLRaw.batteries_v2.csproj" />   
   <Project Path="SQLitePCL.raw/src/SQLitePCLRaw.bundle_e_sqlite3/SQLitePCLRaw.bundle_e_sqlite3.csproj" /> 
   <Project Path="SQLitePCL.raw/src/SQLitePCLRaw.config.e_sqlite3/SQLitePCLRaw.config.e_sqlite3.csproj" /> 
@@ -23,5 +25,6 @@
   <Project Path="Microsoft.Data.Sqlite/Microsoft.Data.Sqlite.csproj" />
   <Project Path="Microsoft.Data.Sqlite.Core/Microsoft.Data.Sqlite.Core.csproj" />
   <Project Path="Microsoft.Data.Sqlite.Tests/Microsoft.Data.Sqlite.Tests.csproj" />
+-->
 
 </Solution>

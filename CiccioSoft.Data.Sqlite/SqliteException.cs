@@ -6,7 +6,7 @@
 
 using System;
 using System.Data.Common;
-using CiccioSoft.Interop.Sqlite;
+using CiccioSoft.Sqlite;
 
 namespace CiccioSoft.Data.Sqlite;
 

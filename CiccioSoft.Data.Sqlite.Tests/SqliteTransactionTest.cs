@@ -5,10 +5,10 @@ using System;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
-using CiccioSoft.Interop.Sqlite;
+using CiccioSoft.Sqlite;
 using CiccioSoft.Data.Sqlite.Properties;
 using Xunit;
-using static CiccioSoft.Interop.Sqlite.NativeMethods;
+using static CiccioSoft.Sqlite.NativeMethods;
 
 namespace CiccioSoft.Data.Sqlite;
 
