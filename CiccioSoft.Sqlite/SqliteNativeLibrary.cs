@@ -12,18 +12,15 @@ namespace CiccioSoft.Sqlite
 {
     public enum SqliteNativeSource
     {
-        Bundled,        // e_sqlite3 imbustato nel nuget (default)
-        SourceGear,     // stesso binding, provenienza SourceGear
-        WindowsBuiltIn, // winsqlite3.dll
-        LinuxDistro,    // libsqlite3.so.0
-        Msys2,          // path esplicito richiesto dal chiamante
+        Bundled,        // libreria nativa inclusa nel pacchetto NuGet
+        SourceGear,     // bundled provenienza SourceGear
+        System,         // libreria di sistema già presente (es. libsqlite3.so.0 su Linux, winsqlite3.dll fornita dall'host su Windows)
         Custom          // path esplicito qualsiasi, per casi non previsti
     }
 
     public static class SqliteNativeLibrary
     {
         private static bool _initialized;
-        // private static string _target = "";
         private static nint _cachedHandle;
 
         public static void Configure(SqliteNativeSource source, string? customPath = null)
@@ -34,23 +31,17 @@ namespace CiccioSoft.Sqlite
 
             string target = source switch
             {
-                SqliteNativeSource.Bundled => "sqlite3",
-                SqliteNativeSource.SourceGear => "e_sqlite3",
-                SqliteNativeSource.WindowsBuiltIn => "winsqlite3",
-                SqliteNativeSource.LinuxDistro => "libsqlite3.so.0",
-                SqliteNativeSource.Msys2 => "libsqlite3-0",
+                SqliteNativeSource.Bundled =>
+                    OperatingSystem.IsWindows() ? "sqlite3" : "libsqlite3",
+                SqliteNativeSource.SourceGear =>
+                    OperatingSystem.IsWindows() ? "e_sqlite3" : "libe_sqlite3",
+                SqliteNativeSource.System =>
+                    OperatingSystem.IsWindows() ? "winsqlite3" : "libsqlite3",
                 SqliteNativeSource.Custom
                     => customPath ?? throw new ArgumentException(
                         $"{source} richiede customPath valorizzato.", nameof(customPath)),
                 _ => throw new ArgumentOutOfRangeException(nameof(source))
             };
-
-            // NativeLibrary.SetDllImportResolver(typeof(NativeMethods).Assembly, (name, asm, path) =>
-            //     name == "SqliteLibraryName" && NativeLibrary.TryLoad(target, asm, path, out var h)
-            //         ? h
-            //         : throw new DllNotFoundException(
-            //             $"Impossibile caricare '{target}' per la sorgente {source}."));
-
 
             if (NativeLibrary.TryLoad(target, typeof(NativeMethods).Assembly, null, out nint handle))
                 _cachedHandle = handle;

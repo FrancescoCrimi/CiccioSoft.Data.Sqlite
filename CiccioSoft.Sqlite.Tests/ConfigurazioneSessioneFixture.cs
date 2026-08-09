@@ -69,6 +69,31 @@ public class ConfigurazioneSessioneFixture : IAsyncLifetime
     {
         // Viene eseguito una sola volta all'avvio della sessione per questo assembly
         SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+
+        // Se viene generata eccezzione interrompi la sessione di Test
+        // try
+        // {
+        //     // Forza il caricamento errato per il test
+        //     SqliteNativeLibrary.Configure(SqliteNativeSource.Custom, "asdfg");
+        // }
+        // catch (Exception ex)
+        // {
+        //     // 🚨 STAMPA L'ERRORE DIRETTAMENTE SULLO STANDARD ERROR DELLA CONSOLE
+        //     Console.ForegroundColor = ConsoleColor.Red;
+        //     Console.Error.WriteLine("\n==========================================================================");
+        //     Console.Error.WriteLine("[CICCIOSOFT.SQLITE - ERRORE CRITICO DI INIZIALIZZAZIONE]");
+        //     Console.Error.WriteLine("Il caricamento del binario nativo è fallito all'avvio dell'assembly.");
+        //     Console.Error.WriteLine($"Dettaglio: {ex.Message}");
+        //     Console.Error.WriteLine("L'esecuzione dei test viene interrotta immediatamente per evitare log a cascata.");
+        //     Console.Error.WriteLine("==========================================================================\n");
+        //     Console.ResetColor();
+
+        //     // 🚀 ABBATTI IL PROCESSO IMMEDIATAMENTE
+        //     // Il codice di uscita diverso da 0 (es. 1) dice alla CLI 'dotnet test' o a GitHub Actions 
+        //     // che la sessione è fallita, interrompendo l'esecuzione all'istante.
+        //     Environment.Exit(1);
+        // }
+
         return ValueTask.CompletedTask;
     }
 
