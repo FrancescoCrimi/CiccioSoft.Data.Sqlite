@@ -25,7 +25,7 @@ public partial class MainWindow : Window
 
         try
         {
-            NativeLibrary.Configure(SqliteNativeSource.SourceGear);
+            NativeLibrary.Configure(NativeSource.SourceGear);
             _connection = Connection.Open("test.db");
         }
         catch

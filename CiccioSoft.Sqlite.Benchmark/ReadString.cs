@@ -77,7 +77,7 @@ public class ReadString
     [GlobalSetup(Target = nameof(ReadString_Interop))]
     public void Setup_Interop()
     {
-        NativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        NativeLibrary.Configure(NativeSource.SourceGear);
         _db2 = Connection.Open(DbFile);
         _db2.Execute("PRAGMA synchronous = OFF;");
         _db2.Execute("DROP TABLE IF EXISTS Users;");
