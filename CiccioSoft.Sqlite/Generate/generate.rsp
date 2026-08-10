@@ -43,6 +43,7 @@ sqlite3_blob=internal
 # Function
 sqlite3_libversion=internal
 sqlite3_libversion_number=internal
+sqlite3_threadsafe=internal
 sqlite3_close_v2=internal
 sqlite3_exec=internal
 sqlite3_extended_result_codes=internal
@@ -146,7 +147,6 @@ sqlite3_str
 sqlite3_sourceid
 sqlite3_compileoption_used
 sqlite3_compileoption_get
-sqlite3_threadsafe
 sqlite3_close
 sqlite3_initialize
 sqlite3_shutdown

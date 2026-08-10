@@ -1,5 +1,6 @@
 sqlite3_libversion									//  186
 sqlite3_libversion_number							//  188
+sqlite3_threadsafe                                  //  256
 sqlite3_close_v2									//  354
 sqlite3_exec										//  427
 sqlite3_extended_result_codes						// 2681

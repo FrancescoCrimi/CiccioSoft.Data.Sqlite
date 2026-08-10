@@ -13,6 +13,9 @@ namespace CiccioSoft.Sqlite
         internal static extern int sqlite3_libversion_number();
 
         [DllImport("CiccioSoftSqliteLibraryPlaceholder", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+        internal static extern int sqlite3_threadsafe();
+
+        [DllImport("CiccioSoftSqliteLibraryPlaceholder", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
         internal static extern int sqlite3_close_v2(sqlite3* param0);
 
         [DllImport("CiccioSoftSqliteLibraryPlaceholder", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]

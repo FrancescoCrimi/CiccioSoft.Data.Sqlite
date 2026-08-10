@@ -1,7 +1,6 @@
 sqlite3_sourceid
 sqlite3_compileoption_used
 sqlite3_compileoption_get
-sqlite3_threadsafe
 sqlite3_close
 sqlite3_initialize
 sqlite3_shutdown
