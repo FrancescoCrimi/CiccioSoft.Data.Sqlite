@@ -11,4 +11,4 @@ using CiccioSoft.Sqlite.Tests;
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 // Questo dice a xUnit v3 di applicare la fixture a tutto l'assembly automaticamente
-[assembly: AssemblyFixture(typeof(ConfigurazioneSessioneFixture))]
+[assembly: AssemblyFixture(typeof(SessionConfigurationFixture))]

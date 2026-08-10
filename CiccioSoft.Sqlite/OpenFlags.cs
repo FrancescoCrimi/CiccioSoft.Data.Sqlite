@@ -35,3 +35,17 @@ public enum OpenFlags
     Exrescode       = NativeMethods.SQLITE_OPEN_EXRESCODE,
     MasterJournal   = NativeMethods.SQLITE_OPEN_MASTER_JOURNAL
 }
+
+internal static class OpenFlagsDefaults
+{
+    // Baseline di riferimento sotto modalità Multi-thread (§6.2): NOMUTEX, non FULLMUTEX.
+    public const OpenFlags PoolConnection =
+        OpenFlags.ReadWrite | OpenFlags.Create |
+        OpenFlags.NoMutex   | OpenFlags.Uri;
+
+    // Usato solo come deviazione dichiarata (§20) quando sqlite3_threadsafe() riporta Serialized
+    // e il chiamante non può altrimenti garantire I2 per una connessione specifica.
+    public const OpenFlags PoolConnectionFullMutexFallback =
+        OpenFlags.ReadWrite | OpenFlags.Create |
+        OpenFlags.FullMutex | OpenFlags.Uri;
+}

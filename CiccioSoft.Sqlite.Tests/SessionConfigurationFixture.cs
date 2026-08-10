@@ -33,7 +33,7 @@ public class MyTestConfigFixture : IDisposable
     public MyTestConfigFixture()
     {
         // Chiamata al tuo metodo statico di configurazione
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        NativeLibrary.Configure(SqliteNativeSource.SourceGear);
     }
 
     public void Dispose()
@@ -58,23 +58,23 @@ public class ConfigCollection : ICollectionFixture<MyTestConfigFixture>
 // Per usarla in xUnit v3, aggiungi la seguente riga nel file 'AssemblyInfo.cs' 
 // (oppure in cima a un file di setup globale, fuori dal namespace):
 //
-// [assembly: AssemblyFixture(typeof(CiccioSoft.Interop.Sqlite.Tests.ConfigurazioneSessioneFixture))]
+// [assembly: AssemblyFixture(typeof(CiccioSoft.Interop.Sqlite.Tests.SessionConfigurationFixture))]
 //
 // Questo farà girare 'InitializeAsync' una sola volta all'avvio dell'intera sessione
 // di test per questo progetto, in modo sicuro (solo in fase di Execution, NON in Discovery).
 // =================================================================================
-public class ConfigurazioneSessioneFixture : IAsyncLifetime
+public class SessionConfigurationFixture : IAsyncLifetime
 {
     public ValueTask InitializeAsync()
     {
         // Viene eseguito una sola volta all'avvio della sessione per questo assembly
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        NativeLibrary.Configure(SqliteNativeSource.SourceGear);
 
         // Se viene generata eccezzione interrompi la sessione di Test
         // try
         // {
         //     // Forza il caricamento errato per il test
-        //     SqliteNativeLibrary.Configure(SqliteNativeSource.Custom, "asdfg");
+        //     NativeLibrary.Configure(SqliteNativeSource.Custom, "asdfg");
         // }
         // catch (Exception ex)
         // {

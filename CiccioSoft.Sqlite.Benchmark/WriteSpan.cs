@@ -62,7 +62,7 @@ public class WriteSpan
     [GlobalSetup(Target = nameof(WriteSpan_Interop))]
     public void GlobalSetup_Interop()
     {
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        NativeLibrary.Configure(SqliteNativeSource.SourceGear);
         _db2 = Connection.Open(DbFile);
         _db2.Execute("PRAGMA journal_mode = WAL;");
         _db2.Execute("PRAGMA synchronous = OFF;");

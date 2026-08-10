@@ -12,7 +12,7 @@ class Program
     {
         Console.WriteLine("Hello, World!");
 
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        NativeLibrary.Configure(SqliteNativeSource.SourceGear);
 
         // var utf8Buffer = Utils.GenUtf8LoremIpsum(1048576);          // Gen Utf8
         // Console.OutputEncoding = Encoding.UTF8;                  // Forza la console in UTF-8

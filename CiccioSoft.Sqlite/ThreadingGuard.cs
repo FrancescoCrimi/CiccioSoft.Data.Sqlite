@@ -2,7 +2,7 @@ using System;
 
 namespace CiccioSoft.Sqlite;
 
-internal static class SqliteThreadingGuard
+internal static class ThreadingGuard
 {
     private static bool _verified;
     private static readonly System.Threading.Lock _gate = new();

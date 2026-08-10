@@ -18,7 +18,7 @@ public enum SqliteNativeSource
     Custom          // path esplicito qualsiasi, per casi non previsti
 }
 
-public static class SqliteNativeLibrary
+public static class NativeLibrary
 {
     private static nint _cachedHandle;
     private static SqliteNativeSource? _configured;
