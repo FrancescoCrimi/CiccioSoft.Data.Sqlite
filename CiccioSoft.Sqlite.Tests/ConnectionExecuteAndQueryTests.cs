@@ -48,7 +48,7 @@ public sealed class ConnectionExecuteAndQueryTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Execute("CREATE TABL broken (id INTEGER);"));
 
-        Assert.Equal(BaseResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
         Assert.False(string.IsNullOrWhiteSpace(ex.ErrorMessage));
         Assert.False(string.IsNullOrWhiteSpace(ex.ErrorString));
         Assert.Contains("Execute", ex.Message, StringComparison.Ordinal);
@@ -185,8 +185,8 @@ public sealed class ConnectionExecuteAndQueryTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Execute("INSERT INTO t VALUES (1);"));
 
-        Assert.Equal(BaseResultCodes.Constraint, ex.BaseResultCode);
-        Assert.Equal(BaseResultCodes.Constraint, (BaseResultCodes)((int)connection.ExtendedErrCode() & 0xFF));
+        Assert.Equal(ResultCodes.Constraint, ex.BaseResultCode);
+        Assert.Equal(ResultCodes.Constraint, (ResultCodes)((int)connection.ExtendedErrCode() & 0xFF));
     }
 
     [Fact]

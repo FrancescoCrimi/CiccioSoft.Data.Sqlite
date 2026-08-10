@@ -50,7 +50,7 @@ public sealed class ConnectionLifecycleTests
         var ex = Assert.Throws<EngineException>(() =>
             Connection.Open(missing, OpenFlags.ReadOnly));
 
-        Assert.Equal(BaseResultCodes.CantOpen, ex.BaseResultCode);
+        Assert.Equal(ResultCodes.CantOpen, ex.BaseResultCode);
         Assert.Contains("Open", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -22,11 +22,11 @@ public sealed class EngineExceptionTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Execute("INSERT INTO t VALUES (2, 'a@x.com');"));
 
-        Assert.Equal(BaseResultCodes.Constraint, ex.BaseResultCode);
+        Assert.Equal(ResultCodes.Constraint, ex.BaseResultCode);
         Assert.True(
             ex.ResultCode == ResultCodes.Constraint
             || ex.ResultCode == ResultCodes.ConstraintUnique
-            || ((int)ex.ResultCode & 0xFF) == (int)BaseResultCodes.Constraint);
+            || ((int)ex.ResultCode & 0xFF) == (int)ResultCodes.Constraint);
 
         Assert.False(string.IsNullOrWhiteSpace(ex.ErrorString));
         Assert.False(string.IsNullOrWhiteSpace(ex.ErrorMessage));
@@ -42,7 +42,7 @@ public sealed class EngineExceptionTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Prepare("NOT VALID SQL !!!"));
 
-        Assert.Equal(BaseResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
         Assert.Contains("Prepare", ex.Message, StringComparison.Ordinal);
         Assert.Contains(ex.ErrorString!, ex.Message, StringComparison.Ordinal);
     }
@@ -58,7 +58,7 @@ public sealed class EngineExceptionTests
         var ex = Assert.Throws<EngineException>(() =>
             Connection.Open(path, OpenFlags.ReadWrite));
 
-        Assert.Equal(BaseResultCodes.CantOpen, ex.BaseResultCode);
+        Assert.Equal(ResultCodes.CantOpen, ex.BaseResultCode);
         Assert.Contains("Open", ex.Message, StringComparison.Ordinal);
         Assert.NotNull(ex.ErrorString);
     }
@@ -73,6 +73,6 @@ public sealed class EngineExceptionTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Execute("INSERT INTO t VALUES (1);"));
 
-        Assert.Equal((BaseResultCodes)((int)ex.ResultCode & 0xFF), ex.BaseResultCode);
+        Assert.Equal((ResultCodes)((int)ex.ResultCode & 0xFF), ex.BaseResultCode);
     }
 }

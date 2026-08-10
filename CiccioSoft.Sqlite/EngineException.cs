@@ -19,7 +19,7 @@ public sealed unsafe class EngineException : Exception
     private EngineException(ResultCodes result, string errorMessage, string operation)
     {
         ResultCode = result;
-        BaseResultCode = (BaseResultCodes)(((int)result) & 0xFF);
+        BaseResultCode = (ResultCodes)(((int)result) & 0xFF);
         ErrorMessage = errorMessage;
         _operation = operation;
 
@@ -38,7 +38,7 @@ public sealed unsafe class EngineException : Exception
     /// <summary>
     /// Gets the base SQLite error code (lowest 8 bits).
     /// </summary>
-    public BaseResultCodes BaseResultCode { get; }
+    public ResultCodes BaseResultCode { get; }
 
     /// <summary>
     /// Gets the extended SQLite error code.
