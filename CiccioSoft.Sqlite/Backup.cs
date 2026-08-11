@@ -30,8 +30,8 @@ public sealed unsafe class Backup : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationDatabaseName);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceDatabaseName);
 
-        using var destinationNameBuffer = new Utf8SafeStackBuffer(destinationDatabaseName, stackalloc byte[512]);
-        using var sourceNameBuffer = new Utf8SafeStackBuffer(sourceDatabaseName, stackalloc byte[512]);
+        using var destinationNameBuffer = new Utf8CStringBuffer(destinationDatabaseName, stackalloc byte[512]);
+        using var sourceNameBuffer = new Utf8CStringBuffer(sourceDatabaseName, stackalloc byte[512]);
 
         fixed (byte* pDest = destinationNameBuffer, pSource = sourceNameBuffer)
         {

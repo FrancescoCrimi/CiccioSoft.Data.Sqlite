@@ -6,6 +6,7 @@
 
 using System;
 using System.Buffers;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -52,21 +53,29 @@ public sealed unsafe class Connection : IDisposable
     /// <exception cref="EngineException">Thrown if the database cannot be opened.</exception>
     public static Connection Open(string filename, OpenFlags flags, bool useUri = false, string? vfs = null)
     {
+        // Controllo immediato sul null
+        ArgumentNullException.ThrowIfNull(filename);
+        // Controllo multipiattaforma sui caratteri non validi (Es. | < > * in Windows)
+        if (filename.IndexOfAny(Path.GetInvalidPathChars()) != -1)
+            throw new ArgumentException("Il percorso contiene caratteri non validi per il sistema operativo corrente.", nameof(filename));
+
+        string vfsSafe = vfs ?? string.Empty;
+
         OpenFlags openFlags = useUri ? flags | OpenFlags.Uri : flags;
         openFlags |= OpenFlags.Exrescode;
 
-        using var filenameBuffer = new Utf8SafeStackBuffer(filename, stackalloc byte[512]);
-        using var vfsBuffer = new Utf8SafeStackBuffer(vfs, stackalloc byte[512]);
+        using var filenameBuffer = new Utf8CStringBuffer(filename, stackalloc byte[512]);
+        using var vfsBuffer = new Utf8CStringBuffer(vfsSafe, stackalloc byte[512]);
 
-        fixed (byte* pFilename = filenameBuffer, pVfsRaw = vfsBuffer)
+        fixed (byte* pFilenameRaw = filenameBuffer, pVfsRaw = vfsBuffer)
         {
             // SOLUZIONE DEL BUG: Se il parametro originale C# era nullo/vuoto, 
             // passiamo un puntatore 'null' effettivo a SQLite, altrimenti usiamo pVfsRaw.
-            byte* pVfs = string.IsNullOrEmpty(vfs) ? null : pVfsRaw;
+            byte* pVfs = vfsSafe.Length == 0 ? null : pVfsRaw;
 
             // 1. Chiamata nativa
             sqlite3* pDb = default;
-            var result = (ResultCodes)NativeMethods.sqlite3_open_v2(pFilename, &pDb, (int)openFlags, pVfs);
+            var result = (ResultCodes)NativeMethods.sqlite3_open_v2(pFilenameRaw, &pDb, (int)openFlags, pVfs);
             var connectionSafeHandle = new ConnectionSafeHandle(pDb);
 
             // Se l'apertura fallisce, Dobbiamo COMUNQUE recuperare l'errore 
@@ -116,7 +125,7 @@ public sealed unsafe class Connection : IDisposable
     {
         ThrowIfInvalid();
 
-        using var utf8Buffer = new Utf8SafeStackBuffer(sql, stackalloc byte[1024]);
+        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
         Execute(utf8Buffer.AsSpan());
     }
 
@@ -144,7 +153,7 @@ public sealed unsafe class Connection : IDisposable
     {
         ThrowIfInvalid();
 
-        using var utf8Buffer = new Utf8SafeStackBuffer(sql, stackalloc byte[1024]);
+        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
 
         fixed (byte* pBuf = utf8Buffer)
         {
@@ -187,7 +196,7 @@ public sealed unsafe class Connection : IDisposable
     {
         ThrowIfInvalid();
 
-        using var utf8Buffer = new Utf8SafeStackBuffer(sql, stackalloc byte[1024]);
+        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
         int dataLength = utf8Buffer.Length + 1; // +1 per il null terminator
 
         if ((uint)sqlByteOffset > (uint)dataLength)
@@ -311,7 +320,7 @@ public sealed unsafe class Connection : IDisposable
 
         else
         {
-            using var utf8Buffer = new Utf8SafeStackBuffer(schemaName, stackalloc byte[512]);
+            using var utf8Buffer = new Utf8CStringBuffer(schemaName, stackalloc byte[512]);
             fixed (byte* pSchema = utf8Buffer)
             {
                 result = NativeMethods.sqlite3_txn_state(_handle.AsStructPointer(), pSchema);
@@ -339,7 +348,7 @@ public sealed unsafe class Connection : IDisposable
     {
         ThrowIfInvalid();
 
-        using var utf8Buffer = new Utf8SafeStackBuffer(databaseName, stackalloc byte[512]);
+        using var utf8Buffer = new Utf8CStringBuffer(databaseName, stackalloc byte[512]);
 
         fixed (byte* pSchema = utf8Buffer)
         {

@@ -53,9 +53,9 @@ public sealed unsafe class Blob : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(columnName);
         ArgumentException.ThrowIfNullOrWhiteSpace(databaseName);
 
-        using var dbBuffer = new Utf8SafeStackBuffer(databaseName, stackalloc byte[256]);
-        using var tableBuffer = new Utf8SafeStackBuffer(tableName, stackalloc byte[256]);
-        using var columnBuffer = new Utf8SafeStackBuffer(columnName, stackalloc byte[256]);
+        using var dbBuffer = new Utf8CStringBuffer(databaseName, stackalloc byte[256]);
+        using var tableBuffer = new Utf8CStringBuffer(tableName, stackalloc byte[256]);
+        using var columnBuffer = new Utf8CStringBuffer(columnName, stackalloc byte[256]);
 
         fixed (byte* pDb = dbBuffer, pTable = tableBuffer, pColumn = columnBuffer)
         {

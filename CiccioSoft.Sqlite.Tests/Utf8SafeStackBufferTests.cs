@@ -21,7 +21,7 @@ public sealed class Utf8SafeStackBufferTests
     [Fact]
     public void EmptyString_ProducesZeroLengthSpanWithNonNullReference()
     {
-        using var buffer = new Utf8SafeStackBuffer(string.Empty, stackalloc byte[64]);
+        using var buffer = new Utf8CStringBuffer(string.Empty, stackalloc byte[64]);
 
         Assert.Equal(0, buffer.Length);
         ReadOnlySpan<byte> span = buffer.AsSpan();
@@ -30,19 +30,44 @@ public sealed class Utf8SafeStackBufferTests
     }
 
     [Fact]
-    public void NullString_ProducesSameEmptyLayoutAsEmptyString()
+    public void NullString_ThrowsArgumentNullException()
     {
-        // Helper coalesces null/empty for buffer construction; callers that need SQL NULL
-        // must short-circuit before marshalling (as Statement.BindText(string) does).
-        using var fromNull = new Utf8SafeStackBuffer(null, stackalloc byte[64]);
-        using var fromEmpty = new Utf8SafeStackBuffer(string.Empty, stackalloc byte[64]);
+        // Il costruttore primario tratta null come errore di programmazione: la distinzione
+        // tra SQL NULL e stringa vuota è responsabilità del chiamante (vedi Statement.BindText),
+        // che deve instradare i valori null verso un binding NULL prima di raggiungere l'helper.
+        try
+        {
+            _ = new Utf8CStringBuffer(null!, stackalloc byte[64]);
+            Assert.Fail("Expected ArgumentNullException.");
+        }
+        catch (ArgumentNullException)
+        {
+            // atteso
+        }
+    }
 
-        Assert.Equal(0, fromNull.Length);
+    [Fact]
+    public void EmptyString_ProducesEmptyLayout()
+    {
+        using var fromEmpty = new Utf8CStringBuffer(string.Empty, stackalloc byte[64]);
+
         Assert.Equal(0, fromEmpty.Length);
-        Assert.True(fromNull.AsSpan().IsEmpty);
         Assert.True(fromEmpty.AsSpan().IsEmpty);
-        Assert.False(Unsafe.IsNullRef(ref MemoryMarshal.GetReference(fromNull.AsSpan())));
         Assert.False(Unsafe.IsNullRef(ref MemoryMarshal.GetReference(fromEmpty.AsSpan())));
+    }
+
+    [Fact]
+    public void EmptyStackStorage_ThrowsArgumentException()
+    {
+        try
+        {
+            _ = new Utf8CStringBuffer(string.Empty, stackalloc byte[0]);
+            Assert.Fail("Expected ArgumentException.");
+        }
+        catch (ArgumentException)
+        {
+            // atteso
+        }
     }
 
     [Fact]
@@ -50,7 +75,7 @@ public sealed class Utf8SafeStackBufferTests
     {
         const string value = "café";
         Span<byte> stack = stackalloc byte[128];
-        using var buffer = new Utf8SafeStackBuffer(value, stack);
+        using var buffer = new Utf8CStringBuffer(value, stack);
 
         Assert.Equal(Encoding.UTF8.GetByteCount(value), buffer.Length);
         Assert.Equal(Encoding.UTF8.GetBytes(value), buffer.AsSpan().ToArray());
@@ -64,7 +89,7 @@ public sealed class Utf8SafeStackBufferTests
         string value = new string('Z', 4096);
         // Force pool path: stack storage smaller than UTF-8 need.
         Span<byte> tinyStack = stackalloc byte[32];
-        using var buffer = new Utf8SafeStackBuffer(value, tinyStack);
+        using var buffer = new Utf8CStringBuffer(value, tinyStack);
 
         Assert.Equal(Encoding.UTF8.GetByteCount(value), buffer.Length);
         Assert.Equal(Encoding.UTF8.GetBytes(value), buffer.AsSpan().ToArray());
@@ -74,7 +99,7 @@ public sealed class Utf8SafeStackBufferTests
     [Fact]
     public void AsSpan_ExcludesNullTerminator()
     {
-        using var buffer = new Utf8SafeStackBuffer("abc", stackalloc byte[32]);
+        using var buffer = new Utf8CStringBuffer("abc", stackalloc byte[32]);
 
         Assert.Equal(3, buffer.Length);
         Assert.Equal(3, buffer.AsSpan().Length);
@@ -84,8 +109,8 @@ public sealed class Utf8SafeStackBufferTests
     [Fact]
     public void GetPinnableReference_AllowsFixedPinAcrossEmptyAndNonEmpty()
     {
-        using var empty = new Utf8SafeStackBuffer(string.Empty, stackalloc byte[16]);
-        using var text = new Utf8SafeStackBuffer("x", stackalloc byte[16]);
+        using var empty = new Utf8CStringBuffer(string.Empty, stackalloc byte[16]);
+        using var text = new Utf8CStringBuffer("x", stackalloc byte[16]);
 
         unsafe
         {
@@ -105,7 +130,7 @@ public sealed class Utf8SafeStackBufferTests
     public void Dispose_IsIdempotent_WhenPoolWasUsed()
     {
         string value = new string('A', 2048);
-        var buffer = new Utf8SafeStackBuffer(value, stackalloc byte[8]);
+        var buffer = new Utf8CStringBuffer(value, stackalloc byte[8]);
         buffer.Dispose();
         buffer.Dispose();
     }
@@ -114,7 +139,7 @@ public sealed class Utf8SafeStackBufferTests
     public void Unicode_PreservesCodePointsInUtf8Bytes()
     {
         const string value = "東京🎉";
-        using var buffer = new Utf8SafeStackBuffer(value, stackalloc byte[64]);
+        using var buffer = new Utf8CStringBuffer(value, stackalloc byte[64]);
 
         Assert.Equal(Encoding.UTF8.GetBytes(value), buffer.AsSpan().ToArray());
         Assert.Equal(value, Encoding.UTF8.GetString(buffer.AsSpan()));

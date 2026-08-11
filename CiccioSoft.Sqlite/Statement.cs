@@ -161,7 +161,7 @@ public sealed unsafe class Statement : IDisposable
         if (string.IsNullOrEmpty(parameterName))
             throw new ArgumentException("Parameter name cannot be null or empty.", nameof(parameterName));
 
-        using var utf8Buffer = new Utf8SafeStackBuffer(parameterName, stackalloc byte[512]);
+        using var utf8Buffer = new Utf8CStringBuffer(parameterName, stackalloc byte[512]);
 
         fixed (byte* pBuf = utf8Buffer)
         {
@@ -613,7 +613,7 @@ public sealed unsafe class Statement : IDisposable
 
         // Alloca la memoria base nello stack
         // 512 byte bastano per la maggior parte delle stringhe standard
-        using var utf8Buffer = new Utf8SafeStackBuffer(text, stackalloc byte[1024]);
+        using var utf8Buffer = new Utf8CStringBuffer(text, stackalloc byte[1024]);
         BindText(index, utf8Buffer.AsSpan());
     }
 
