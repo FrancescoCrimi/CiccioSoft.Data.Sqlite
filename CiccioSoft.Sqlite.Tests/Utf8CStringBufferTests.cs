@@ -16,7 +16,7 @@ namespace CiccioSoft.Sqlite.Tests;
 /// Contract tests for the hybrid stack/ArrayPool UTF-8 marshalling helper used on every
 /// string→native boundary in the interop layer.
 /// </summary>
-public sealed class Utf8SafeStackBufferTests
+public sealed class Utf8CStringBufferTests
 {
     [Fact]
     public void EmptyString_ProducesZeroLengthSpanWithNonNullReference()
