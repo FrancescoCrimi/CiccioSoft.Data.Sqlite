@@ -172,6 +172,14 @@ public sealed class SqliteConnection : IDisposable
                 "SqliteConcurrencyMode.ReadOnly non è ammesso per DataSource=\":memory:\": " +
                 "un database privato in memoria aperto in sola lettura è permanentemente vuoto " +
                 "(Tier 0 §11, matrice identità×modalità)."),
+
+            // Ramo di chiusura richiesto dal compilatore (CS8524): IdentityKind è un enum,
+            // quindi un valore ottenuto per cast diretto da un intero fuori dai membri
+            // nominati (es. (IdentityKind)3) resta teoricamente rappresentabile a runtime
+            // anche se questo tipo è privato e mai costruito così in questo file. Nessuna
+            // combinazione reale può raggiungere questo ramo: è difesa contro un cast
+            // esplicito, non un caso d'uso previsto.
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Valore di IdentityKind non riconosciuto."),
         };
 
     // ------------------------------------------------------------------
