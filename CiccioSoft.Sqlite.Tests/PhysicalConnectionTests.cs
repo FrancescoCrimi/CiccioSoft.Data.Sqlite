@@ -45,7 +45,7 @@ public sealed class PhysicalConnectionTests
     }
 
     [Fact]
-    public void AsStructPointer_AfterDispose_ThrowsObjectDisposedException()
+    public unsafe void AsStructPointer_AfterDispose_ThrowsObjectDisposedException()
     {
         var connection = PhysicalConnection.Open(":memory:", OpenFlags.ReadWrite | OpenFlags.Create);
         connection.Dispose();
