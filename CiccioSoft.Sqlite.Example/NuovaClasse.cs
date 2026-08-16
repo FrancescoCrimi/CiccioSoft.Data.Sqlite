@@ -8,7 +8,7 @@ public class NuovaClasse
 {
     public NuovaClasse()
     {
-        using var conn = Connection.Open("app.db", OpenFlagsDefaults.PoolConnection);
+        using var conn = Connection.Open("app.db", OpenFlagsDefaults.Coordinated);
         conn.Execute("DROP TABLE IF EXISTS files");
         conn.Execute("""
     CREATE TABLE IF NOT EXISTS files (

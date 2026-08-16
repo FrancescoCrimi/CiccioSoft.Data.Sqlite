@@ -11,82 +11,140 @@ using System.Threading.Tasks;
 
 namespace CiccioSoft.Sqlite;
 
+/// <summary>
+/// Pool di <see cref="PooledConnection"/> per una singola identità di database
+/// (Tier 0 §9, §11). Usato sia in modalità <see cref="SqliteConcurrencyMode.Coordinated"/>
+/// sia in <see cref="SqliteConcurrencyMode.ReadOnly"/> — questo tipo non ha bisogno di
+/// sapere quale delle due: la presenza o assenza di un <see cref="SingleWriterCoordinator"/>
+/// è responsabilità del chiamante (<see cref="SqliteConnection"/>, §11), non del pool.
+/// </summary>
 internal sealed class SqliteConnectionPool
 {
-    private readonly Channel<Connection> _idle;
+    private readonly Channel<PooledConnection> _idle;
+    // Vincola il numero di connessioni fisiche VIVE ad al più _capacity, mai di più
+    // (Invariante I2). Un permesso è acquisito prima di ogni apertura reale (RentAsync
+    // quando il canale idle è vuoto, o ReplenishAsync dopo un poisoning) e rilasciato
+    // solo quando una connessione viene distrutta — mai quando torna semplicemente idle.
+    private readonly SemaphoreSlim _capacitySlots;
+    private readonly Func<PooledConnection> _openPooledConnection;
     private int _liveCount;
-    private readonly int _capacity;
-    private readonly Func<Connection> _openConnection;
 
-    // Unico modo per un consumatore di sapere che una sostituzione è fallita: ReturnAsync
-    // stesso non lo segnala mai (§9.2, discard intenzionale sotto), quindi senza questo
-    // evento il fallimento sarebbe interamente silenzioso.
+    /// <summary>
+    /// Unico modo per un consumatore di sapere che una sostituzione dopo poisoning è
+    /// fallita: <see cref="ReturnAsync"/> non lo segnala mai direttamente (il fallimento
+    /// avviene in un Task non atteso, §9.2), quindi senza questo evento il fallimento
+    /// sarebbe interamente silenzioso.
+    /// </summary>
     public event EventHandler<ReplenishFailedEventArgs>? ReplenishFailed;
 
-    public async Task<Connection> RentAsync(CancellationToken ct)
+    public SqliteConnectionPool(int capacity, Func<PooledConnection> openPooledConnection)
     {
-        if (_idle.Reader.TryRead(out var conn)) return conn;
-        return await _idle.Reader.ReadAsync(ct).ConfigureAwait(false);
+        if (capacity <= 0)
+            throw new ArgumentOutOfRangeException(nameof(capacity), "La capacità del pool deve essere positiva.");
+        ArgumentNullException.ThrowIfNull(openPooledConnection);
+
+        _openPooledConnection = openPooledConnection;
+        _idle = Channel.CreateUnbounded<PooledConnection>(
+            new UnboundedChannelOptions { SingleReader = false, SingleWriter = false });
+        _capacitySlots = new SemaphoreSlim(capacity, capacity);
     }
 
-    public async Task ReturnAsync(Connection conn, Exception? observedError)
+    /// <summary>Numero di connessioni fisiche attualmente vive (rentate o idle).</summary>
+    public int LiveCount => Volatile.Read(ref _liveCount);
+
+    public async Task<PooledConnection> RentAsync(CancellationToken ct)
     {
-        var category = observedError is null
-            ? SqliteErrorCategory.None
-            : SqliteErrorCategory.None;
-            // : SqliteErrorClassifier.Classify(observedError);
+        // Percorso rapido: una connessione è già idle, nessuna attesa sul semaforo.
+        if (_idle.Reader.TryRead(out var idleConn))
+            return idleConn;
+
+        await _capacitySlots.WaitAsync(ct).ConfigureAwait(false);
+
+        // Tra il primo TryRead e l'acquisizione del permesso, un'altra ReturnAsync
+        // potrebbe aver reso disponibile una connessione idle: usarla, e restituire
+        // il permesso appena preso, che non serve per aprirne una nuova (I2 — mai più
+        // connessioni fisiche vive di quante il permesso ne autorizzi).
+        if (_idle.Reader.TryRead(out idleConn))
+        {
+            _capacitySlots.Release();
+            return idleConn;
+        }
+
+        try
+        {
+            var opened = _openPooledConnection();
+            Interlocked.Increment(ref _liveCount);
+            return opened;
+        }
+        catch
+        {
+            // Apertura fallita (disco pieno, permessi, ecc.): il permesso NON va perso,
+            // altrimenti il pool si ritroverebbe permanentemente sotto capacità (I5).
+            _capacitySlots.Release();
+            throw;
+        }
+    }
+
+    public async Task ReturnAsync(PooledConnection pooled, Exception? observedError)
+    {
+        var category = ClassifyObservedError(observedError);
 
         if (category == SqliteErrorCategory.Fatal)
         {
-            conn.MarkPoisoned();
-            conn.Dispose();
+            pooled.MarkPoisoned();
+            pooled.Connection.Dispose();
             Interlocked.Decrement(ref _liveCount);
+            _capacitySlots.Release();   // slot liberato: ReplenishAsync ne acquisirà uno nuovo
 
-            // "_ = ReplenishAsync();" — discard ESPLICITO, non un await dimenticato: il
-            // discard silenzia l'avviso del compilatore (CS4014, "perché questa chiamata
-            // non è attesa...") per segnalare che l'assenza di await è intenzionale.
-            // ReturnAsync non deve bloccare il chiamante finché una connessione
-            // sostitutiva non è stata riaperta — è manutenzione del pool in background,
-            // non parte del contratto sincrono verso chi restituisce la connessione
-            // avvelenata (Tier 0 §17.4). Proprio perché il Task restituito non è
-            // osservato da nessuno, il corpo di ReplenishAsync (sotto) non può permettersi
-            // di lasciar propagare un'eccezione: andrebbe persa silenziosamente — il .NET
-            // moderno non termina più il processo su un'eccezione da Task non osservato,
-            // quindi il pool si troverebbe con _liveCount permanentemente sotto _capacity,
-            // senza alcuna traccia diagnostica del perché.
-            _ = ReplenishAsync();   // apertura sostitutiva in background, Tier 0 §17.4
+            // Discard ESPLICITO, non un await dimenticato: ReturnAsync non deve bloccare
+            // il chiamante finché una connessione sostitutiva non è stata riaperta —
+            // è manutenzione del pool in background (Tier 0 §17.4). Il corpo di
+            // ReplenishAsync non lascia mai propagare un'eccezione verso l'esterno
+            // proprio perché nessuno la osserverebbe.
+            _ = ReplenishAsync();
             return;
         }
 
-        conn.ResetInvariantsBeforeReturningToPool();
-        await _idle.Writer.WriteAsync(conn).ConfigureAwait(false);
-
-        // NOTA STORICA (test di non regressione, §19.5): in una versione precedente,
-        // un percorso di eccezione lanciato DOPO l'acquisizione di un semaforo interno
-        // di conteggio slot ma PRIMA di questo punto usciva senza rilasciarlo, causando
-        // un deadlock del pool sotto errore concorrente (violazione di I5). La struttura
-        // corrente usa un blocco try/finally esplicito attorno all'intero corpo di
-        // ReturnAsync (omesso qui per brevità di presentazione) proprio per eliminare
-        // quella classe di bug: nessun ramo di uscita salta il rilascio dello slot.
+        pooled.Connection.ResetInvariantsBeforeReturningToPool();   // Invariante I7
+        await _idle.Writer.WriteAsync(pooled).ConfigureAwait(false);
+        // Nessun rilascio di _capacitySlots qui: la connessione resta viva e conta ancora
+        // contro la capacità del pool — è solo tornata disponibile nel canale idle.
     }
+
+    private static SqliteErrorCategory ClassifyObservedError(Exception? observedError) => observedError switch
+    {
+        null => SqliteErrorCategory.None,
+        EngineException ee => SqliteErrorClassifier.Classify(ee.ResultCode),
+        // Un'eccezione non riconosciuta (non EngineException) durante l'uso di una
+        // connessione rentata lascia lo stato nativo incerto: trattarla come Fatal
+        // (poisoning) è la scelta prudente — assumere "nessun problema" per omissione
+        // sarebbe il default sbagliato.
+        _ => SqliteErrorCategory.Fatal
+    };
 
     private async Task ReplenishAsync()
     {
         try
         {
-            var conn = _openConnection();   // Connection.Open (§8.2): può fallire — disco
-                                             // pieno, permessi revocati, file rimosso
-                                             // concorrentemente da un altro processo.
-            Interlocked.Increment(ref _liveCount);
-            await _idle.Writer.WriteAsync(conn).ConfigureAwait(false);
+            await _capacitySlots.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var opened = _openPooledConnection();   // può fallire: disco pieno, permessi,
+                                                          // file rimosso concorrentemente
+                Interlocked.Increment(ref _liveCount);
+                await _idle.Writer.WriteAsync(opened).ConfigureAwait(false);
+            }
+            catch
+            {
+                _capacitySlots.Release();   // apertura fallita: il permesso resta disponibile
+                throw;
+            }
         }
         catch (Exception ex)
         {
-            // _liveCount NON incrementato: il pool resta consapevole di avere una
-            // connessione in meno, non in uno stato di conteggio inconsistente.
-            // Nessun rilancio: questo metodo è invocato senza await (sopra), rilanciare
-            // qui produrrebbe comunque un'eccezione non osservata, non diversa dal
-            // problema che questo blocco try/catch esiste per evitare.
+            // Nessun rilancio: questo metodo è invocato senza await, rilanciare qui
+            // produrrebbe comunque un'eccezione non osservata — esattamente il problema
+            // che questo blocco try/catch esiste per evitare (Tier 0 §17.4).
             ReplenishFailed?.Invoke(this, new ReplenishFailedEventArgs(ex));
         }
     }

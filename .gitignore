@@ -511,3 +511,5 @@ SQLitePCL.raw/
 Microsoft.Data.Sqlite/
 Microsoft.Data.Sqlite.Core/
 Microsoft.Data.Sqlite.Tests/
+
+files.zip

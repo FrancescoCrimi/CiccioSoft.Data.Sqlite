@@ -25,26 +25,33 @@ public enum ConnectionPhysicalState { Created, Configuring, Idle, Leased, Active
 public sealed unsafe class Connection : IDisposable
 {
     private readonly ConnectionSafeHandle _handle;
-    internal StatementCache StatementCache { get; }
-    public ConnectionPhysicalState State { get; private set; } = ConnectionPhysicalState.Created;
+    public ConnectionPhysicalState State { get; internal set; } = ConnectionPhysicalState.Created;
 
-    private Connection(ConnectionSafeHandle handle, int statementCacheCapacity)
+    // NOTA (Tier 0 v6.0.0, §8): questa classe non possiede più una StatementCache propria
+    // dalla revisione a tre livelli. La cache esiste solo per le connessioni gestite da un
+    // pool attivo (SqliteConcurrencyMode.Coordinated o .ReadOnly) ed è incapsulata in
+    // PooledConnection.Cache (§9.2), non qui — una connessione Native non ha mai una cache
+    // né transita mai per gli stati Leased/Poisoned di ConnectionPhysicalState.
+    private Connection(ConnectionSafeHandle handle)
     {
         _handle = handle;
-        StatementCache = new StatementCache(this, statementCacheCapacity);
     }
 
     internal ConnectionSafeHandle Handle => _handle;
 
     /// <summary>
-    /// Opening A New Database Connection.
+    /// Opening A New Database Connection in modalità Native (Tier 0 §11): applica solo
+    /// i flag di Baseline (<see cref="OpenFlagsDefaults.Baseline"/>) più ReadWrite|Create,
+    /// senza alcun profilo denominato — quelli sono riservati a Coordinated/ReadOnly (I25).
+    /// Per aprire una connessione destinata a un pool, usare l'overload con <see cref="OpenFlags"/>
+    /// esplicito e un profilo di <see cref="OpenFlagsDefaults"/>.
     /// </summary>
     /// <param name="filename">The path to the database file to be opened.</param>
     /// <returns>A new <see cref="Connection"/> instance representing the database connection.</returns>
     /// <exception cref="EngineException">Thrown if the database cannot be opened.</exception>
     public static Connection Open(string filename)
     {
-        return Open(filename, OpenFlagsDefaults.PoolConnection);
+        return Open(filename, OpenFlagsDefaults.Baseline | OpenFlags.ReadWrite | OpenFlags.Create);
     }
 
     /// <summary>
@@ -99,7 +106,7 @@ public sealed unsafe class Connection : IDisposable
             }
 
             // Se tutto è andato bene, incapsuliamo l'handle sicuro
-            var conn = new Connection(connectionSafeHandle, 32);
+            var conn = new Connection(connectionSafeHandle);
             conn.Configure();
             return conn;
         }
@@ -149,17 +156,17 @@ public sealed unsafe class Connection : IDisposable
         // fallimenti di test intermittenti (violazione di I7, ora coperta dal test §19.5).
         Execute("PRAGMA read_uncommitted=0;");
 
-        // La StatementCache NON viene svuotata qui: gli statement compilati restano
-        // validi e riutilizzabili attraverso più cicli di prestito (Tier 0 §12, §13).
+        // Chi possiede la StatementCache (PooledConnection, §9.2) decide se e quando
+        // svuotarla: questo metodo si limita allo stato della connessione fisica nuda.
     }
 
-    internal void MarkPoisoned()
-    {
-        ThrowIfInvalid();
-
-        State = ConnectionPhysicalState.Poisoned;
-        StatementCache.ClearAll();   // Invariante I14: svuotamento integrale della cache
-    }
+    // MarkPoisoned() non vive più qui dalla revisione a tre livelli (Tier 0 v6.0.0):
+    // il poisoning è per costruzione un concetto di Livello 3 (esiste solo dove esiste
+    // un Pool da cui evitare il riuso di una connessione compromessa). Vedi
+    // PooledConnection.MarkPoisoned() (§9.2), che imposta State tramite il setter
+    // internal sopra e svuota la Cache che possiede (Invariante I14). Una connessione
+    // Native che incontra un errore fatale si limita a propagare l'eccezione: non
+    // esiste alcuno stato interno da marcare.
 
 
     #region method aka Sqlite function

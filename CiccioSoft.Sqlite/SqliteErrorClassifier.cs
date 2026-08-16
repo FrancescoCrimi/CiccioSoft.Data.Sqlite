@@ -34,17 +34,13 @@ internal static class SqliteErrorClassifier
     };
 
     // La categoria è SEMPRE determinata dalla proiezione a granularità primaria (Tier 0
-    // §17.1, §17.6); la sotto-classificazione estesa non la altera mai, ma viene
-    // preservata per diagnostica ed esposta al chiamante tramite ResultCode (§13.3).
-    // nativeMessage: testo da sqlite3_errmsg(), quando disponibile (§8.2) — opzionale,
-    // perché non ogni punto di chiamata ha un handle da cui leggerlo (es. un fallimento
-    // di sqlite3_prepare_v2 su una connessione già aperta lo ha sempre; un fallimento di
-    // sqlite3_open_v2 con OOM sull'oggetto sqlite3 stesso, §8.2, non lo ha).
-    public static SqliteException ToException(ResultCode rc, string context, string? nativeMessage = null)
-    {
-        return new SqliteException(rc, context, nativeMessage)
-        {
-            Category = Classify(rc)
-        };
-    }
+    // §19); la sotto-classificazione estesa non la altera mai, ma viene preservata per
+    // diagnostica ed esposta al chiamante tramite ResultCode (Invariante I24).
+    //
+    // NOTA (consolidamento eccezioni): questa libreria usa un solo tipo di eccezione,
+    // EngineException (vedi EngineException.CreateException) — un precedente tipo
+    // SqliteException, mai effettivamente collegato ad alcun punto di sollevamento reale,
+    // è stato rimosso per evitare la duplicazione. Il prefisso "Sqlite" resta comunque
+    // motivato per SqliteConfigurationException (collisione con System.Exception non
+    // applicabile lì, ma continuità di convenzione col resto della libreria, §1.6).
 }

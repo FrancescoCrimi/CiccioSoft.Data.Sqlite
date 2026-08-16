@@ -16,10 +16,18 @@ public sealed unsafe class Statement : IDisposable
     private readonly StatementSafeHandle _handle;
     private readonly ConnectionSafeHandle _connectionSafeHandle;
 
+    // Invariante I9 (Tier 0 §13): calcolato una sola volta qui, mai ricalcolato a ogni
+    // interrogazione — sqlite3_stmt_readonly() non cambia mai per la vita di uno statement
+    // già compilato, quindi richiamarlo ripetutamente sarebbe solo un costo nativo evitabile,
+    // oltre a violare il contratto di stabilità che StatementCache (§11) assume.
+    private readonly bool _isReadOnly;
+
     internal Statement(StatementSafeHandle handle, ConnectionSafeHandle connectionSafeHandle)
     {
         _handle = handle;
         _connectionSafeHandle = connectionSafeHandle;
+        _isReadOnly = NativeMethods.sqlite3_stmt_readonly(handle.AsStructPointer()) != 0;
+        GC.KeepAlive(handle);
     }
 
 
@@ -394,14 +402,13 @@ public sealed unsafe class Statement : IDisposable
     }
 
     /// <summary>
-    /// Returns <c>true</c> if this prepared statement is read-only.
+    /// Indica se questo statement compilato è di sola lettura (Invariante I9): calcolato
+    /// una sola volta alla preparazione, mai ricalcolato — vedi il campo <c>_isReadOnly</c>.
     /// </summary>
     public bool IsReadOnly()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_stmt_readonly(_handle.AsStructPointer()) != 0;
-        GC.KeepAlive(_handle);
-        return rtn;
+        return _isReadOnly;
     }
 
     /// <summary>

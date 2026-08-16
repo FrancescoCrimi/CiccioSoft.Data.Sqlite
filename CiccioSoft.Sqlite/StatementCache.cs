@@ -74,7 +74,7 @@ internal sealed class StatementCache
         victim.Value.Statement.Dispose();   // sqlite3_finalize, Invariante I13: mai un leak
     }
 
-    public void ClearAll()   // invocato solo da Sqlite3.MarkPoisoned(), Invariante I14
+    public void ClearAll()   // invocato solo da PooledConnection.MarkPoisoned(), Invariante I14
     {
         foreach (var node in _lru)
             // node.Statement.Handle.Dispose();
