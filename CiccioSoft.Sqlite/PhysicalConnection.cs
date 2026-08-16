@@ -49,7 +49,6 @@ internal sealed unsafe class PhysicalConnection : IDisposable
     internal static PhysicalConnection Open(
         string filename,
         OpenFlags flags,
-        bool useUri = false,
         string? vfs = null)
     {
         ArgumentNullException.ThrowIfNull(filename);
@@ -62,8 +61,8 @@ internal sealed unsafe class PhysicalConnection : IDisposable
         }
 
         string vfsName = vfs ?? string.Empty;
-        OpenFlags openFlags = useUri ? flags | OpenFlags.Uri : flags;
-        openFlags |= OpenFlags.Exrescode;
+        flags |= OpenFlags.Uri;
+        flags |= OpenFlags.Exrescode;
 
         using var filenameBuffer = new Utf8CStringBuffer(filename, stackalloc byte[512]);
         using var vfsBuffer = new Utf8CStringBuffer(vfsName, stackalloc byte[512]);
@@ -71,14 +70,13 @@ internal sealed unsafe class PhysicalConnection : IDisposable
         fixed (byte* pFilename = filenameBuffer, pVfsBuffer = vfsBuffer)
         {
             byte* pVfs = vfsName.Length == 0 ? null : pVfsBuffer;
-            sqlite3* pDb = null;
 
+            sqlite3* pDb = null;
             ResultCodes result = (ResultCodes)NativeMethods.sqlite3_open_v2(
                 pFilename,
                 &pDb,
-                (int)openFlags,
+                (int)flags,
                 pVfs);
-
             var handle = new ConnectionSafeHandle(pDb);
 
             if (result != ResultCodes.OK)

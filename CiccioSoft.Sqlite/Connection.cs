@@ -51,7 +51,7 @@ public sealed unsafe class Connection : IDisposable
     /// <param name="vfs">Optional VFS module name. Use <c>null</c> to use SQLite default VFS.</param>
     /// <returns>A new <see cref="Connection"/> connection.</returns>
     /// <exception cref="EngineException">Thrown if the database cannot be opened.</exception>
-    public static Connection Open(string filename, OpenFlags flags, bool useUri = false, string? vfs = null)
+    public static Connection Open(string filename, OpenFlags flags, string? vfs = null)
     {
         // Controllo immediato sul null
         ArgumentNullException.ThrowIfNull(filename);
@@ -61,8 +61,8 @@ public sealed unsafe class Connection : IDisposable
 
         string vfsSafe = vfs ?? string.Empty;
 
-        OpenFlags openFlags = useUri ? flags | OpenFlags.Uri : flags;
-        openFlags |= OpenFlags.Exrescode;
+        flags |= OpenFlags.Uri;
+        flags |= OpenFlags.Exrescode;
 
         using var filenameBuffer = new Utf8CStringBuffer(filename, stackalloc byte[512]);
         using var vfsBuffer = new Utf8CStringBuffer(vfsSafe, stackalloc byte[512]);
@@ -75,7 +75,7 @@ public sealed unsafe class Connection : IDisposable
 
             // 1. Chiamata nativa
             sqlite3* pDb = default;
-            var result = (ResultCodes)NativeMethods.sqlite3_open_v2(pFilenameRaw, &pDb, (int)openFlags, pVfs);
+            var result = (ResultCodes)NativeMethods.sqlite3_open_v2(pFilenameRaw, &pDb, (int)flags, pVfs);
             var connectionSafeHandle = new ConnectionSafeHandle(pDb);
 
             // Se l'apertura fallisce, Dobbiamo COMUNQUE recuperare l'errore 
