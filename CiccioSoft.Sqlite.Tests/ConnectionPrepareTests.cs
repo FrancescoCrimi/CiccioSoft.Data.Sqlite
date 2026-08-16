@@ -33,7 +33,7 @@ public sealed class ConnectionPrepareTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Prepare("SELEC * FROM nowhere;"));
 
-        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Error, ex.PrimaryResultCode);
         Assert.Contains("Prepare", ex.Message, StringComparison.Ordinal);
     }
 
@@ -167,7 +167,7 @@ public sealed class ConnectionPrepareTests
                 out _,
                 out _));
 
-        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Error, ex.PrimaryResultCode);
     }
 
     [Theory]

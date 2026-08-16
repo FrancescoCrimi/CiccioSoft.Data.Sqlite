@@ -130,7 +130,7 @@ public sealed class StatementLifecycleTests
         using var stmt = connection.Prepare("INSERT INTO t VALUES (1);");
         var ex = Assert.Throws<EngineException>(() => stmt.Step());
 
-        Assert.Equal(ResultCodes.Constraint, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Constraint, ex.PrimaryResultCode);
         Assert.Contains("Step", ex.Message, StringComparison.Ordinal);
     }
 

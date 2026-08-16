@@ -9,7 +9,7 @@ namespace CiccioSoft.Sqlite;
 /// <summary>
 /// Represents SQLite Extended Result Codes.
 /// </summary>
-public enum ResultCodes
+public enum ResultCode
 {
     OK                      = NativeMethods.SQLITE_OK,
     Error                   = NativeMethods.SQLITE_ERROR,
@@ -132,4 +132,18 @@ public enum ResultCodes
 
     OkLoadPermanently       = NativeMethods.SQLITE_OK_LOAD_PERMANENTLY,
     OkSymlink               = NativeMethods.SQLITE_OK_SYMLINK
+}
+
+public static class ResultCodeExtensions
+{
+    // Invariante I24 (Tier 0 §17.6): la proiezione alla granularità primaria è SEMPRE un
+    // mascheramento del byte meno significativo, MAI una tabella di lookup separata —
+    // SQLite costruisce ogni codice esteso incorporando il primario per costruzione
+    // (es. SQLITE_CONSTRAINT_UNIQUE = SQLITE_CONSTRAINT | (8 << 8)), quindi
+    // "primario = esteso & 0xFF" è sempre vero, per ogni valore esistente e per ogni
+    // futuro codice esteso che SQLite dovesse aggiungere. Il risultato del mascheramento
+    // è già un valore valido di QUESTO STESSO enum (i ~30 valori primari elencati sopra),
+    // non di un tipo separato: è questo che rende superfluo un secondo tipo C#.
+    public static ResultCode ToPrimary(this ResultCode code) =>
+        (ResultCode)((int)code & 0xFF);
 }

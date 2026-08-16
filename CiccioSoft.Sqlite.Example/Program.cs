@@ -28,7 +28,7 @@ class Program
 
     static void blabla()
     {
-        using var conn = Connection.Open("app.db");
+        using var conn = Connection.Open("app.db", OpenFlagsDefaults.PoolConnection);
 
         conn.Execute("CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY, payload BLOB)");
 

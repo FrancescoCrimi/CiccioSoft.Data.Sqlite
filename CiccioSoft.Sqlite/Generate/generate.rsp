@@ -7,6 +7,10 @@
 --file
 sqlite3.h
 
+# header license
+--headerFile
+license.txt
+
 # Forza ClangSharp a elaborare e generare binding anche per i file inclusi (#include)
 # --traverse
 

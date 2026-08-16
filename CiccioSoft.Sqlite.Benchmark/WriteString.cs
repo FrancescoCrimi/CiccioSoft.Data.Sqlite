@@ -63,7 +63,7 @@ public class WriteString
     public void GlobalSetup_Interop()
     {
         NativeLibrary.Configure(NativeSource.SourceGear);
-        _db2 = Connection.Open(DbFile);
+        _db2 = Connection.Open(DbFile, OpenFlagsDefaults.PoolConnection);
         _db2.Execute("PRAGMA journal_mode = WAL;");
         _db2.Execute("PRAGMA synchronous = OFF;");
     }

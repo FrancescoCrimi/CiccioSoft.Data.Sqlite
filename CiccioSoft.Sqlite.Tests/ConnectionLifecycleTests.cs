@@ -50,7 +50,7 @@ public sealed class ConnectionLifecycleTests
         var ex = Assert.Throws<EngineException>(() =>
             Connection.Open(missing, OpenFlags.ReadOnly));
 
-        Assert.Equal(ResultCodes.CantOpen, ex.BaseResultCode);
+        Assert.Equal(ResultCode.CantOpen, ex.PrimaryResultCode);
         Assert.Contains("Open", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -69,8 +69,7 @@ public sealed class ConnectionLifecycleTests
     {
         using var connection = Connection.Open(
             "file:lifecycle_uri?mode=memory&cache=shared",
-            OpenFlags.ReadWrite | OpenFlags.Create,
-            useUri: true);
+            OpenFlags.ReadWrite | OpenFlags.Create);
 
         connection.Execute("CREATE TABLE t (id INTEGER);");
         connection.Execute("INSERT INTO t VALUES (42);");

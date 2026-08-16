@@ -61,7 +61,7 @@ public sealed unsafe class Blob : IDisposable
         {
             sqlite3_blob* pBlob = default;
 
-            var result = (ResultCodes)NativeMethods.sqlite3_blob_open(
+            var result = (ResultCode)NativeMethods.sqlite3_blob_open(
                 connection.Handle.AsStructPointer(),
                 pDb,
                 pTable,
@@ -72,7 +72,7 @@ public sealed unsafe class Blob : IDisposable
             GC.KeepAlive(connection.Handle);
             var blobSafeHandle = new BlobSafeHandle(pBlob);
 
-            if (result != ResultCodes.OK)
+            if (result != ResultCode.OK)
             {
                 blobSafeHandle.Dispose();
                 throw EngineException.CreateException(connection.Handle, result, $"{nameof(Blob)}.Open on {tableName}.{columnName} (rowid {rowId})");
@@ -107,7 +107,7 @@ public sealed unsafe class Blob : IDisposable
 
         fixed (byte* pDest = destination)
         {
-            var result = (ResultCodes)NativeMethods.sqlite3_blob_read(
+            var result = (ResultCode)NativeMethods.sqlite3_blob_read(
                 _handle.AsStructPointer(), pDest, destination.Length, blobOffset);
             GC.KeepAlive(_handle);
             CheckResult(result);
@@ -130,7 +130,7 @@ public sealed unsafe class Blob : IDisposable
 
         fixed (byte* pSrc = source)
         {
-            var result = (ResultCodes)NativeMethods.sqlite3_blob_write(
+            var result = (ResultCode)NativeMethods.sqlite3_blob_write(
                 _handle.AsStructPointer(), pSrc, source.Length, blobOffset);
             GC.KeepAlive(_handle);
             CheckResult(result);
@@ -146,7 +146,7 @@ public sealed unsafe class Blob : IDisposable
     public void Reopen(long rowId)
     {
         ThrowIfInvalid();
-        var result = (ResultCodes)NativeMethods.sqlite3_blob_reopen(_handle.AsStructPointer(), rowId);
+        var result = (ResultCode)NativeMethods.sqlite3_blob_reopen(_handle.AsStructPointer(), rowId);
         GC.KeepAlive(_handle);
         CheckResult(result);
     }
@@ -159,9 +159,9 @@ public sealed unsafe class Blob : IDisposable
             throw new ObjectDisposedException(nameof(Blob));
     }
 
-    private void CheckResult(ResultCodes res, [CallerMemberName] string caller = "")
+    private void CheckResult(ResultCode res, [CallerMemberName] string caller = "")
     {
-        if (res == ResultCodes.OK)
+        if (res == ResultCode.OK)
             return;
         throw EngineException.CreateException(_connectionSafeHandle, res, $"{nameof(Blob)}.{caller}");
     }

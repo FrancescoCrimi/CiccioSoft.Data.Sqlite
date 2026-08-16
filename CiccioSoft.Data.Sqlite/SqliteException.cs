@@ -44,10 +44,10 @@ public class SqliteException : DbException
     {
         if (innerException != null)
         {
-            Result = innerException.BaseResultCode;
+            Result = innerException.PrimaryResultCode;
             ExtendedResult = innerException.ResultCode;
 
-            SqliteErrorCode = (int)innerException.BaseResultCode;
+            SqliteErrorCode = (int)innerException.PrimaryResultCode;
             SqliteExtendedErrorCode = (int)innerException.ResultCode;
         }
     }
@@ -69,10 +69,10 @@ public class SqliteException : DbException
     /// <summary>
     /// Gets the base SQLite error code (lowest 8 bits).
     /// </summary>
-    public ResultCodes? Result { get; }
+    public ResultCode? Result { get; }
 
     /// <summary>
     /// Gets the extended SQLite error code.
     /// </summary>
-    public ResultCodes? ExtendedResult { get; }
+    public ResultCode? ExtendedResult { get; }
 }

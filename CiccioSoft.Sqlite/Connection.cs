@@ -13,6 +13,8 @@ using System.Text;
 
 namespace CiccioSoft.Sqlite;
 
+public enum ConnectionPhysicalState { Created, Configuring, Idle, Leased, Active, Poisoned, Closed }
+
 /// <summary>
 /// Provides a high-performance, low-allocation wrapper for a SQLite database connection.
 /// </summary>
@@ -23,10 +25,13 @@ namespace CiccioSoft.Sqlite;
 public sealed unsafe class Connection : IDisposable
 {
     private readonly ConnectionSafeHandle _handle;
+    internal StatementCache StatementCache { get; }
+    public ConnectionPhysicalState State { get; private set; } = ConnectionPhysicalState.Created;
 
-    private Connection(ConnectionSafeHandle handle)
+    private Connection(ConnectionSafeHandle handle, int statementCacheCapacity)
     {
         _handle = handle;
+        StatementCache = new StatementCache(this, statementCacheCapacity);
     }
 
     internal ConnectionSafeHandle Handle => _handle;
@@ -39,7 +44,7 @@ public sealed unsafe class Connection : IDisposable
     /// <exception cref="EngineException">Thrown if the database cannot be opened.</exception>
     public static Connection Open(string filename)
     {
-        return Open(filename, OpenFlags.ReadWrite | OpenFlags.Create);
+        return Open(filename, OpenFlagsDefaults.PoolConnection);
     }
 
     /// <summary>
@@ -47,11 +52,10 @@ public sealed unsafe class Connection : IDisposable
     /// </summary>
     /// <param name="filename">The path (or URI) to the database file.</param>
     /// <param name="flags">The SQLite open flags (for example <c>SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE</c>).</param>
-    /// <param name="useUri">If true, <c>SQLITE_OPEN_URI</c> is enforced to allow URI filenames.</param>
     /// <param name="vfs">Optional VFS module name. Use <c>null</c> to use SQLite default VFS.</param>
     /// <returns>A new <see cref="Connection"/> connection.</returns>
     /// <exception cref="EngineException">Thrown if the database cannot be opened.</exception>
-    public static Connection Open(string filename, OpenFlags flags, bool useUri = false, string? vfs = null)
+    public static Connection Open(string filename, OpenFlags flags, string? vfs = null)
     {
         // Controllo immediato sul null
         ArgumentNullException.ThrowIfNull(filename);
@@ -61,8 +65,9 @@ public sealed unsafe class Connection : IDisposable
 
         string vfsSafe = vfs ?? string.Empty;
 
-        OpenFlags openFlags = useUri ? flags | OpenFlags.Uri : flags;
-        openFlags |= OpenFlags.Exrescode;
+        // flag da attivare sempre
+        flags |= OpenFlags.Uri;
+        flags |= OpenFlags.Exrescode;
 
         using var filenameBuffer = new Utf8CStringBuffer(filename, stackalloc byte[512]);
         using var vfsBuffer = new Utf8CStringBuffer(vfsSafe, stackalloc byte[512]);
@@ -75,12 +80,12 @@ public sealed unsafe class Connection : IDisposable
 
             // 1. Chiamata nativa
             sqlite3* pDb = default;
-            var result = (ResultCodes)NativeMethods.sqlite3_open_v2(pFilenameRaw, &pDb, (int)openFlags, pVfs);
+            var result = (ResultCode)NativeMethods.sqlite3_open_v2(pFilenameRaw, &pDb, (int)flags, pVfs);
             var connectionSafeHandle = new ConnectionSafeHandle(pDb);
 
             // Se l'apertura fallisce, Dobbiamo COMUNQUE recuperare l'errore 
             // PRIMA di chiudere l'handle, altrimenti pDb diventa invalido.
-            if (result != ResultCodes.OK)
+            if (result != ResultCode.OK)
             {
                 // 2. Estraiamo il messaggio nativo MENTRE l'handle è ancora vivo
                 var ex = EngineException.CreateException(connectionSafeHandle, result, $"{nameof(Connection)}.Open");
@@ -94,9 +99,70 @@ public sealed unsafe class Connection : IDisposable
             }
 
             // Se tutto è andato bene, incapsuliamo l'handle sicuro
-            return new Connection(connectionSafeHandle);
+            var conn = new Connection(connectionSafeHandle, 32);
+            conn.Configure();
+            return conn;
         }
     }
+
+
+    private void Configure()
+    {
+        State = ConnectionPhysicalState.Configuring;
+
+        // Nessuna chiamata separata a sqlite3_extended_result_codes qui: la modalità
+        // estesa è già attiva fin da Open(), perché ogni SqliteOpenFlagsDefaults (§6.3)
+        // include SqliteOpenFlags.ExResCode — chiude la lacuna per cui un errore durante
+        // l'apertura stessa non era coperto da granularità estesa (Tier 0 §17.6).
+
+        // Execute("PRAGMA journal_mode=WAL;");
+        // var mode = Execute("PRAGMA journal_mode;");
+        // if (!string.Equals(mode, "wal", StringComparison.OrdinalIgnoreCase))
+        // {
+        //     State = ConnectionPhysicalState.Closed;
+        //     _handle.Dispose();
+        //     throw new SqliteConfigurationException(
+        //         $"Richiesto journal_mode=WAL ma il motore nativo ha applicato '{mode}': " +
+        //         "verificare che il file non sia su un filesystem che non supporta il " +
+        //         "memory-mapping richiesto da WAL (Tier 0 §12).");
+        // }
+
+        Execute("PRAGMA busy_timeout=5000;");
+
+        State = ConnectionPhysicalState.Idle;
+    }
+
+    // ResetInvariantiPrimaDiRientrareNelPool(): Tier 0 §12, "Leased -> Idle"
+    internal void ResetInvariantsBeforeReturningToPool()
+    {
+        ThrowIfInvalid();
+
+        if (!GetAutoCommit())
+        {
+            Execute("ROLLBACK;");   // rollback difensivo, Invariante I7
+        }
+
+        // Reset esplicito di ogni PRAGMA di sessione non-default che una transazione
+        // precedente potrebbe aver lasciato attiva. Storicamente, questo passo mancava
+        // per read_uncommitted: la connessione tornava Idle con read_uncommitted ancora
+        // a 1, propagando silenziosamente lo stato nella transazione successiva e causando
+        // fallimenti di test intermittenti (violazione di I7, ora coperta dal test §19.5).
+        Execute("PRAGMA read_uncommitted=0;");
+
+        // La StatementCache NON viene svuotata qui: gli statement compilati restano
+        // validi e riutilizzabili attraverso più cicli di prestito (Tier 0 §12, §13).
+    }
+
+    internal void MarkPoisoned()
+    {
+        ThrowIfInvalid();
+
+        State = ConnectionPhysicalState.Poisoned;
+        StatementCache.ClearAll();   // Invariante I14: svuotamento integrale della cache
+    }
+
+
+    #region method aka Sqlite function
 
     public void Execute(ReadOnlySpan<byte> sql)
     {
@@ -104,7 +170,7 @@ public sealed unsafe class Connection : IDisposable
 
         fixed (byte* pBuf = sql)
         {
-            var result = (ResultCodes)NativeMethods.sqlite3_exec(
+            var result = (ResultCode)NativeMethods.sqlite3_exec(
                 _handle.AsStructPointer(),
                 pBuf,
                 null,
@@ -159,7 +225,7 @@ public sealed unsafe class Connection : IDisposable
         {
             // Chiamata nativa
             sqlite3_stmt* pStmt = default;
-            var result = (ResultCodes)NativeMethods.sqlite3_prepare_v3(
+            var result = (ResultCode)NativeMethods.sqlite3_prepare_v3(
                 _handle.AsStructPointer(),
                 pBuf,
                 utf8Buffer.Length, // Lunghezza esatta dei dati
@@ -169,7 +235,7 @@ public sealed unsafe class Connection : IDisposable
             GC.KeepAlive(_handle);
             var stmtSafeHandle = new StatementSafeHandle(pStmt);
 
-            if (result != ResultCodes.OK)
+            if (result != ResultCode.OK)
             {
                 stmtSafeHandle.Dispose();
                 ThrowException(result);
@@ -209,7 +275,7 @@ public sealed unsafe class Connection : IDisposable
 
             sqlite3_stmt* pStmt = default;
             byte* pTail = null;
-            var result = (ResultCodes)NativeMethods.sqlite3_prepare_v3(
+            var result = (ResultCode)NativeMethods.sqlite3_prepare_v3(
                 _handle.AsStructPointer(),
                 pStart,
                 remainingLength,
@@ -219,7 +285,7 @@ public sealed unsafe class Connection : IDisposable
             GC.KeepAlive(_handle);
             var stmtSafeHandle = new StatementSafeHandle(pStmt);
 
-            if (result != ResultCodes.OK)
+            if (result != ResultCode.OK)
             {
                 stmtSafeHandle.Dispose();
                 ThrowException(result);
@@ -367,10 +433,10 @@ public sealed unsafe class Connection : IDisposable
     /// <summary>
     /// Returns the latest extended SQLite error code for this connection.
     /// </summary>
-    public ResultCodes ExtendedErrCode()
+    public ResultCode ExtendedErrCode()
     {
         ThrowIfInvalid();
-        var rtn = (ResultCodes)NativeMethods.sqlite3_extended_errcode(_handle.AsStructPointer());
+        var rtn = (ResultCode)NativeMethods.sqlite3_extended_errcode(_handle.AsStructPointer());
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -394,26 +460,26 @@ public sealed unsafe class Connection : IDisposable
     public void BusyTimeout(int milliseconds)
     {
         ThrowIfInvalid();
-        var result = (ResultCodes)NativeMethods.sqlite3_busy_timeout(_handle.AsStructPointer(), milliseconds);
+        var result = (ResultCode)NativeMethods.sqlite3_busy_timeout(_handle.AsStructPointer(), milliseconds);
         GC.KeepAlive(_handle);
-        if (result == ResultCodes.OK)
+        if (result == ResultCode.OK)
             return;
         CheckResult(result);
     }
 
-    /// <summary>
-    /// Enables or disables extended result codes for this connection.
-    /// </summary>
-    /// <param name="enabled">True to enable extended result codes.</param>
-    public void ExtendedResultCodes(bool enabled)
-    {
-        ThrowIfInvalid();
-        var result = (ResultCodes)NativeMethods.sqlite3_extended_result_codes(_handle.AsStructPointer(), enabled ? 1 : 0);
-        GC.KeepAlive(_handle);
-        if (result == ResultCodes.OK)
-            return;
-        CheckResult(result);
-    }
+    // /// <summary>
+    // /// Enables or disables extended result codes for this connection.
+    // /// </summary>
+    // /// <param name="enabled">True to enable extended result codes.</param>
+    // public void ExtendedResultCodes(bool enabled)
+    // {
+    //     ThrowIfInvalid();
+    //     var result = (ResultCode)NativeMethods.sqlite3_extended_result_codes(_handle.AsStructPointer(), enabled ? 1 : 0);
+    //     GC.KeepAlive(_handle);
+    //     if (result == ResultCode.OK)
+    //         return;
+    //     CheckResult(result);
+    // }
 
     /// <summary>
     /// Interrupts any pending operation running on this connection.
@@ -516,7 +582,7 @@ public sealed unsafe class Connection : IDisposable
             fixed (byte* pTableName = tableNameBuffer)
             fixed (byte* pColumnName = columnNameBuffer)
             {
-                var rc = (ResultCodes)NativeMethods.sqlite3_table_column_metadata(
+                var rc = (ResultCode)NativeMethods.sqlite3_table_column_metadata(
                     _handle.AsStructPointer(),
                     null,
                     pTableName,
@@ -528,7 +594,7 @@ public sealed unsafe class Connection : IDisposable
                     &autoInc);
                 GC.KeepAlive(_handle);
 
-                if (rc != ResultCodes.OK)
+                if (rc != ResultCode.OK)
                 {
                     string operation = $"Connection.GetTableColumnMetadata metadata lookup for column '{columnName}' in table '{tableName}'";
                     // throw new EngineException(rc, _handle, operation);
@@ -549,6 +615,8 @@ public sealed unsafe class Connection : IDisposable
         }
     }
 
+    #endregion
+
 
     #region Private Methods
 
@@ -558,14 +626,14 @@ public sealed unsafe class Connection : IDisposable
             throw new ObjectDisposedException(nameof(Connection));
     }
 
-    private void CheckResult(ResultCodes result, [CallerMemberName] string caller = "")
+    private void CheckResult(ResultCode result, [CallerMemberName] string caller = "")
     {
-        if (result == ResultCodes.OK)
+        if (result == ResultCode.OK)
             return;
         throw EngineException.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
     }
 
-    private void ThrowException(ResultCodes result, [CallerMemberName] string caller = "")
+    private void ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
         throw EngineException.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
     }

@@ -26,14 +26,14 @@ public sealed class BackupTests
             using var destination = destDb.Open();
             using var backup = Backup.InitBackup(destination, source);
 
-            ResultCodes rc;
+            ResultCode rc;
             do
             {
                 rc = backup.Step(pages: -1);
             }
-            while (rc == ResultCodes.OK);
+            while (rc == ResultCode.OK);
 
-            Assert.Equal(ResultCodes.Done, rc);
+            Assert.Equal(ResultCode.Done, rc);
             Assert.Equal(0, backup.Remaining());
             Assert.True(backup.PageCount() > 0);
             backup.Finish();
@@ -72,16 +72,16 @@ public sealed class BackupTests
         using var backup = Backup.InitBackup(destination, source);
 
         int steps = 0;
-        ResultCodes rc;
+        ResultCode rc;
         do
         {
             rc = backup.Step(pages: 1);
             steps++;
             Assert.True(steps < 10_000, "Backup did not complete within expected page steps.");
         }
-        while (rc == ResultCodes.OK || rc == ResultCodes.Busy);
+        while (rc == ResultCode.OK || rc == ResultCode.Busy);
 
-        Assert.Equal(ResultCodes.Done, rc);
+        Assert.Equal(ResultCode.Done, rc);
         Assert.Equal(0, backup.Remaining());
         Assert.True(backup.PageCount() > 0);
     }

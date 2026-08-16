@@ -47,7 +47,7 @@ public sealed unsafe class Backup : IDisposable
 
             if ((nint)backupHandle == nint.Zero)
             {
-                var result = (ResultCodes)NativeMethods.sqlite3_errcode(destination.Handle.AsStructPointer());
+                var result = (ResultCode)NativeMethods.sqlite3_errcode(destination.Handle.AsStructPointer());
                 GC.KeepAlive(destination.Handle);   // ridondante qui (destination.Handle è riusato subito sotto),
                                                     // presente per uniformità con l'invariante del progetto
                 throw EngineException.CreateException(destination.Handle, result, $"{nameof(Backup)}.Init");
@@ -57,10 +57,10 @@ public sealed unsafe class Backup : IDisposable
         }
     }
 
-    public ResultCodes Step(int pages = -1)
+    public ResultCode Step(int pages = -1)
     {
         ThrowIfInvalid();
-        var rtn = (ResultCodes)NativeMethods.sqlite3_backup_step(_handle.AsStructPointer(), pages);
+        var rtn = (ResultCode)NativeMethods.sqlite3_backup_step(_handle.AsStructPointer(), pages);
         GC.KeepAlive(_handle);
         return rtn;
     }
