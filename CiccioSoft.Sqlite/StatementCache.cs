@@ -55,6 +55,7 @@ internal sealed class StatementCache
         // var stmt = new Statement(handle);   // IsReadOnly calcolato qui, una sola volta (I9)
 
         var stmt = _owner.Prepare(sql);   // IsReadOnly calcolato qui, una sola volta (I9)
+        stmt.IsOwnedByCache = true;       // Dispose() del chiamante diventa da qui un no-op
         var entry = new CachedStatement { Sql = sql, Statement = stmt };
         var newNode = _lru.AddFirst(entry);
         _index[sql] = newNode;
@@ -70,15 +71,13 @@ internal sealed class StatementCache
         var victim = _lru.Last!;
         _lru.RemoveLast();
         _index.Remove(victim.Value.Sql);
-        // victim.Value.Statement.Handle.Dispose();   // sqlite3_finalize, Invariante I13: mai un leak
-        victim.Value.Statement.Dispose();   // sqlite3_finalize, Invariante I13: mai un leak
+        victim.Value.Statement.DisposeCore();   // sqlite3_finalize reale, Invariante I13: mai un leak
     }
 
     public void ClearAll()   // invocato solo da PooledConnection.MarkPoisoned(), Invariante I14
     {
         foreach (var node in _lru)
-            // node.Statement.Handle.Dispose();
-            node.Statement.Dispose();
+            node.Statement.DisposeCore();   // sqlite3_finalize reale, non il Dispose() pubblico
         _lru.Clear();
         _index.Clear();
     }

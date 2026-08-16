@@ -189,7 +189,10 @@ public sealed class SqliteConnection : IDisposable
     /// <summary>
     /// Compila uno statement. In Coordinated/ReadOnly passa attraverso la
     /// <see cref="StatementCache"/> del pool (Invariante I9, I11, I12); in Native prepara
-    /// direttamente, senza cache né automatismi di reset (Tier 0 §15).
+    /// direttamente, senza cache né automatismi di reset (Tier 0 §15). In ogni caso,
+    /// <see cref="Statement.Dispose"/> sullo statement restituito è sempre sicuro da
+    /// chiamare (Invariante I26): se proviene dalla cache non ha effetto — resta di
+    /// proprietà della cache — altrimenti lo finalizza.
     /// </summary>
     public Statement Prepare(string sql) =>
         _pooled is not null ? _pooled.Cache.GetOrPrepare(sql) : ActiveConnection.Prepare(sql);
@@ -208,12 +211,15 @@ public sealed class SqliteConnection : IDisposable
     // Livello 3 — primitiva di scrittura coordinata (Tier 0 §12, §17)
     // ------------------------------------------------------------------
 
+    /// <summary>Il coordinatore associato a questa connessione, o <c>null</c> in Native/ReadOnly (§11). Uso interno di <see cref="SqliteTransaction"/>.</summary>
+    internal SingleWriterCoordinator? Coordinator => _coordinator;
+
     /// <summary>
     /// Acquisisce il writer lease per l'intera transazione che segue (Invariante I1) —
     /// solo in modalità Coordinated. In Native e in ReadOnly restituisce sempre <c>null</c>:
-    /// nessun lease esiste da acquisire (§12, §11). Primitiva di basso livello: una
-    /// SqliteTransaction con Savepoint e SqliteTransactionMode, costruita sopra questa,
-    /// è un incremento successivo non ancora presente in questa revisione.
+    /// nessun lease esiste da acquisire (§12, §11). Primitiva di basso livello, esposta per
+    /// scenari avanzati: <see cref="BeginTransaction"/>/<see cref="BeginTransactionAsync"/>
+    /// la gestiscono già automaticamente, incluso l'upgrade lazy per <see cref="SqliteTransactionMode.Deferred"/>.
     /// </summary>
     public Task<WriterLease?> AcquireWriterLeaseAsync(CancellationToken ct = default) =>
         _coordinator is null
@@ -222,6 +228,35 @@ public sealed class SqliteConnection : IDisposable
 
     private static async Task<WriterLease?> AcquireCoreAsync(SingleWriterCoordinator coordinator, CancellationToken ct)
         => await coordinator.AcquireWriterLeaseAsync(ct).ConfigureAwait(false);
+
+    // ------------------------------------------------------------------
+    // Transazioni (Tier 0 §16)
+    // ------------------------------------------------------------------
+
+    public SqliteTransaction BeginTransaction(
+        SqliteTransactionMode mode = SqliteTransactionMode.Immediate, bool allowDirtyReads = false) =>
+        BeginTransactionAsync(mode, allowDirtyReads, CancellationToken.None).GetAwaiter().GetResult();
+
+    public async Task<SqliteTransaction> BeginTransactionAsync(
+        SqliteTransactionMode mode = SqliteTransactionMode.Immediate,
+        bool allowDirtyReads = false,
+        CancellationToken ct = default)
+    {
+        if (ConcurrencyMode == SqliteConcurrencyMode.ReadOnly && mode != SqliteTransactionMode.Deferred)
+        {
+            // Fail fast con un messaggio chiaro, invece di lasciare che BEGIN IMMEDIATE/
+            // EXCLUSIVE falliscano in modo criptico contro una connessione aperta con
+            // OpenFlags.ReadOnly (Tier 0 §11 — niente magia, l'errore va dichiarato qui).
+            throw new SqliteConfigurationException(
+                $"SqliteTransactionMode.{mode} non è ammesso su una SqliteConnection in modalità " +
+                "ReadOnly: nessuna scrittura è possibile, quindi non ha senso dichiararne " +
+                "l'intenzione fin dal BEGIN. Usare SqliteTransactionMode.Deferred.");
+        }
+
+        var tx = new SqliteTransaction(this, _coordinator, mode);
+        await tx.OpenAsync(allowDirtyReads, ct).ConfigureAwait(false);
+        return tx;
+    }
 
     // ------------------------------------------------------------------
     // Chiusura

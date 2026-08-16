@@ -714,5 +714,27 @@ public sealed unsafe class Statement : IDisposable
     #endregion
 
 
-    public void Dispose() => _handle.Dispose();
+    // Impostato SOLO da StatementCache.GetOrPrepare quando prende possesso di questo
+    // statement (§11): un consumatore che chiama Dispose() su uno statement condiviso
+    // dalla cache non deve mai finalizzarlo — la cache resta l'unica proprietaria del
+    // suo ciclo di vita nativo fino a eviction o poisoning (Invariante I11, I13, I14).
+    // Questo rende Dispose() sicuro da chiamare SEMPRE, in ogni modalità operativa
+    // (Invariante I26 — stesso comportamento osservabile della stessa chiamata pubblica,
+    // indipendentemente da cosa succede internamente).
+    internal bool IsOwnedByCache { get; set; }
+
+    /// <summary>
+    /// Se lo statement è di proprietà della StatementCache (§11), questa chiamata non ha
+    /// effetto: la cache ne resta proprietaria. Altrimenti finalizza lo statement nativo.
+    /// Sempre sicura da chiamare, in ogni modalità operativa.
+    /// </summary>
+    public void Dispose()
+    {
+        if (IsOwnedByCache) return;
+        DisposeCore();
+    }
+
+    // Percorso di finalizzazione reale, usato SOLO da StatementCache (eviction LRU,
+    // Invariante I13; svuotamento per poisoning, Invariante I14) — mai dal consumatore.
+    internal void DisposeCore() => _handle.Dispose();
 }
