@@ -30,11 +30,11 @@ public class SqliteTransactionTest
 
         using var connection = new SqliteConnection("Data Source=:memory:");
         if (async)
-            await connection.OpenAsync();
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
         else
             connection.Open();
 
-        using var transaction = async ? await connection.BeginTransactionAsync() : connection.BeginTransaction();
+        using var transaction = async ? await connection.BeginTransactionAsync(TestContext.Current.CancellationToken) : connection.BeginTransaction();
 
         // Simulate external rollback (e.g. by SQLite engine itself, or manually)
         // This causes the native SQLite connection to switch to AutoCommit mode.
@@ -42,7 +42,7 @@ public class SqliteTransactionTest
         {
             cmd.CommandText = "ROLLBACK;";
             if (async)
-                await cmd.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
             else
                 cmd.ExecuteNonQuery();
         }
@@ -60,7 +60,7 @@ public class SqliteTransactionTest
         Assert.Null(connection.Transaction);
 
         // Verify the connection is fully usable and we can start a new transaction
-        using var transaction2 = async ? await connection.BeginTransactionAsync() : connection.BeginTransaction();
+        using var transaction2 = async ? await connection.BeginTransactionAsync(TestContext.Current.CancellationToken) : connection.BeginTransaction();
         Assert.NotNull(connection.Transaction);
 
         if (async)
@@ -215,7 +215,7 @@ public class SqliteTransactionTest
             Stopwatch stopwatch = Stopwatch.StartNew();
             Task secondWrite = Task.Run(() => writer2.ExecuteNonQuery("INSERT INTO t(value) VALUES ('second');"));
 
-            await Task.Delay(200);
+            await Task.Delay(200, TestContext.Current.CancellationToken);
             tx.Commit();
 
             await secondWrite;

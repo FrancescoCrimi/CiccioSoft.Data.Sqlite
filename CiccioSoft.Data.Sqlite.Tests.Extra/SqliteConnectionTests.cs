@@ -57,7 +57,7 @@ public class SqliteConnectionTests
         connection.Open();
         connection.ExecuteNonQuery("CREATE TABLE Data(Value INTEGER);");
 
-        connection.Optimize();
+        connection.Optimize(TestContext.Current.CancellationToken);
     }
 
     [Fact]
