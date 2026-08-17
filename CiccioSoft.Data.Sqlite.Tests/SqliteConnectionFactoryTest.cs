@@ -123,7 +123,7 @@ public class SqliteConnectionFactoryTest : IDisposable
             }
 
 #pragma warning disable xUnit1031
-            Task.WaitAll(runningTasks);
+            Task.WaitAll(runningTasks, TestContext.Current.CancellationToken);
 #pragma warning restore xUnit1031
         }
     }
