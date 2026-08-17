@@ -22,6 +22,8 @@ namespace CiccioSoft.Sqlite;
 public sealed unsafe class Connection : IDisposable
 {
     private readonly PhysicalConnection _physicalConnection;
+    private readonly object _transactionSyncRoot = new();
+    private Transaction? _rootTransaction;
 
     private Connection(PhysicalConnection physicalConnection)
     {
@@ -86,6 +88,46 @@ public sealed unsafe class Connection : IDisposable
 
         using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
         Execute(utf8Buffer.AsSpan());
+    }
+
+    /// <summary>
+    /// Begins a new root transaction on this logical connection.
+    /// </summary>
+    /// <param name="mode">The SQLite transaction mode to request.</param>
+    /// <returns>The active root transaction.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when a root transaction is already active.</exception>
+    public Transaction BeginTransaction(TransactionMode mode = TransactionMode.Deferred)
+    {
+        ThrowIfInvalid();
+
+        if (!Enum.IsDefined(mode))
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, "The transaction mode is not supported.");
+
+        Transaction transaction;
+
+        lock (_transactionSyncRoot)
+        {
+            if (_rootTransaction?.IsRegisteredActive == true)
+            {
+                throw new InvalidOperationException("A root transaction is already active for this connection.");
+            }
+
+            transaction = new Transaction(this, _physicalConnection, mode);
+            _rootTransaction = transaction;
+        }
+
+        try
+        {
+            _physicalConnection.Execute(GetBeginSql(mode), nameof(BeginTransaction));
+            transaction.Activate();
+            return transaction;
+        }
+        catch
+        {
+            transaction.MarkFailed();
+            ClearRootTransaction(transaction);
+            throw;
+        }
     }
 
     /// <summary>
@@ -511,6 +553,31 @@ public sealed unsafe class Connection : IDisposable
 
     #region Private Methods
 
+
+    internal void ClearRootTransaction(Transaction transaction)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+
+        lock (_transactionSyncRoot)
+        {
+            if (ReferenceEquals(_rootTransaction, transaction))
+            {
+                _rootTransaction = null;
+            }
+        }
+    }
+
+    private static string GetBeginSql(TransactionMode mode)
+    {
+        return mode switch
+        {
+            TransactionMode.Deferred => "BEGIN DEFERRED;",
+            TransactionMode.Immediate => "BEGIN IMMEDIATE;",
+            TransactionMode.Exclusive => "BEGIN EXCLUSIVE;",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "The transaction mode is not supported.")
+        };
+    }
+
     private void ThrowIfInvalid()
     {
         if (!_physicalConnection.IsValid)
@@ -531,5 +598,17 @@ public sealed unsafe class Connection : IDisposable
 
     #endregion
 
-    public void Dispose() => _physicalConnection.Dispose();
+    public void Dispose()
+    {
+        lock (_transactionSyncRoot)
+        {
+            if (_rootTransaction?.IsRegisteredActive == true)
+            {
+                _rootTransaction.MarkFailed();
+                _rootTransaction = null;
+            }
+        }
+
+        _physicalConnection.Dispose();
+    }
 }
