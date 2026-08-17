@@ -97,16 +97,16 @@ public class SqliteConnectionPoolTest
 
         // Give the background task a real chance to reach Semaphore.Wait()
         // and actually block, instead of racing it.
-        await Task.Delay(200);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
         Assert.False(waitingRent.IsCompleted); // sanity check: it really is blocked on the full pool
 
         SqliteConnectionPool.Return(key, occupied);
 
-        var completed = await Task.WhenAny(waitingRent, Task.Delay(UnblockTimeout));
+        var completed = await Task.WhenAny(waitingRent, Task.Delay(UnblockTimeout, TestContext.Current.CancellationToken));
 
         Assert.Same(waitingRent, completed);
-        Assert.True(waitingRent.Result.IsValid());
-        Assert.Same(occupied, waitingRent.Result); // it must have reused the returned session, not created a new one
+        Assert.True((await waitingRent).IsValid());
+        Assert.Same(occupied, (await waitingRent)); // it must have reused the returned session, not created a new one
     }
 
     [Fact]
@@ -115,16 +115,16 @@ public class SqliteConnectionPoolTest
         var key = NewKey();
         const int maxPoolSize = 1;
 
-        var occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags);
+        var occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken);
 
-        var waitingRent = SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags);
+        var waitingRent = SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken);
 
-        await Task.Delay(200);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
         Assert.False(waitingRent.IsCompleted);
 
         SqliteConnectionPool.Return(key, occupied);
 
-        var completed = await Task.WhenAny(waitingRent, Task.Delay(UnblockTimeout));
+        var completed = await Task.WhenAny(waitingRent, Task.Delay(UnblockTimeout, TestContext.Current.CancellationToken));
 
         Assert.Same(waitingRent, completed);
         Assert.Same(occupied, (await waitingRent));
@@ -136,7 +136,7 @@ public class SqliteConnectionPoolTest
         var key = NewKey();
         const int maxPoolSize = 1;
 
-        _ = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags); // never returned: keeps the pool full
+        _ = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken); // never returned: keeps the pool full
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
 
@@ -184,11 +184,11 @@ public class SqliteConnectionPoolTest
                     Interlocked.Decrement(ref inUse);
                     SqliteConnectionPool.Return(key, session);
                 }
-            });
+            }, TestContext.Current.CancellationToken);
         }
 
         var allDone = Task.WhenAll(workers);
-        var completed = await Task.WhenAny(allDone, violation.Task, Task.Delay(TimeSpan.FromSeconds(30)));
+        var completed = await Task.WhenAny(allDone, violation.Task, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
 
         if (completed == violation.Task)
         {
@@ -285,17 +285,17 @@ public class SqliteConnectionPoolTest
 
         var waitingRent = Task.Run(() => SqliteConnectionPool.Rent(key, ":memory:", maxPoolSize, DefaultFlags));
 
-        await Task.Delay(200);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
         Assert.False(waitingRent.IsCompleted); // sanity check: it really is blocked
 
         // Retire the pool without ever returning `occupied`.
         SqliteConnectionPool.Clear(key);
 
-        var completed = await Task.WhenAny(waitingRent, Task.Delay(UnblockTimeout));
+        var completed = await Task.WhenAny(waitingRent, Task.Delay(UnblockTimeout, TestContext.Current.CancellationToken));
 
         Assert.Same(waitingRent, completed); // must not hang forever waiting on a retired PoolState
-        Assert.True(waitingRent.Result.IsValid());
-        Assert.NotSame(occupied, waitingRent.Result); // it restarted against a brand-new pool, not the retired one
+        Assert.True((await waitingRent).IsValid());
+        Assert.NotSame(occupied, (await waitingRent)); // it restarted against a brand-new pool, not the retired one
     }
 
     [Fact]
@@ -304,16 +304,16 @@ public class SqliteConnectionPoolTest
         var key = NewKey();
         const int maxPoolSize = 1;
 
-        var occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags);
+        var occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken);
 
-        var waitingRent = SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags);
+        var waitingRent = SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken);
 
-        await Task.Delay(200);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
         Assert.False(waitingRent.IsCompleted);
 
         SqliteConnectionPool.Clear(key);
 
-        var completed = await Task.WhenAny(waitingRent, Task.Delay(UnblockTimeout));
+        var completed = await Task.WhenAny(waitingRent, Task.Delay(UnblockTimeout, TestContext.Current.CancellationToken));
 
         Assert.Same(waitingRent, completed);
         Assert.NotSame(occupied, await waitingRent);
@@ -333,10 +333,10 @@ public class SqliteConnectionPoolTest
 
         var rentOnB = Task.Run(() => SqliteConnectionPool.Rent(keyB, ":memory:", maxPoolSize: 1, DefaultFlags));
 
-        var completed = await Task.WhenAny(rentOnB, Task.Delay(UnblockTimeout));
+        var completed = await Task.WhenAny(rentOnB, Task.Delay(UnblockTimeout, TestContext.Current.CancellationToken));
 
         Assert.Same(rentOnB, completed);
-        Assert.True(rentOnB.Result.IsValid());
+        Assert.True((await rentOnB).IsValid());
     }
 
     // ------------------------------------------------------------------
