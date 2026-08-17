@@ -6,6 +6,7 @@
 
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace CiccioSoft.Sqlite;
 
@@ -111,6 +112,34 @@ internal sealed unsafe class PhysicalConnection : IDisposable
         if (!IsValid)
         {
             throw new ObjectDisposedException(nameof(PhysicalConnection));
+        }
+    }
+
+
+    /// <summary>
+    /// Executes SQL text directly against the owned native connection.
+    /// </summary>
+    internal void Execute(string sql, [CallerMemberName] string caller = "")
+    {
+        ThrowIfInvalid();
+        ArgumentNullException.ThrowIfNull(sql);
+
+        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[256]);
+
+        fixed (byte* pSql = utf8Buffer)
+        {
+            var result = (ResultCodes)NativeMethods.sqlite3_exec(
+                AsStructPointer(),
+                pSql,
+                null,
+                null,
+                null);
+            GC.KeepAlive(this);
+
+            if (result != ResultCodes.OK)
+            {
+                throw EngineException.CreateException(_handle, result, caller);
+            }
         }
     }
 
