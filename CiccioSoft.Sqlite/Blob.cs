@@ -19,12 +19,14 @@ namespace CiccioSoft.Sqlite;
 public sealed unsafe class Blob : IDisposable
 {
     private readonly BlobSafeHandle _handle;
-    private readonly ConnectionSafeHandle _connectionSafeHandle;
+    private readonly PhysicalConnection _physicalConnection;
 
-    private Blob(BlobSafeHandle handle, ConnectionSafeHandle connectionSafeHandle)
+    private Blob(BlobSafeHandle handle, PhysicalConnection physicalConnection)
     {
+        ArgumentNullException.ThrowIfNull(handle);
+        ArgumentNullException.ThrowIfNull(physicalConnection);
         _handle = handle;
-        _connectionSafeHandle = connectionSafeHandle;
+        _physicalConnection = physicalConnection;
     }
 
     /// <summary>
@@ -47,8 +49,7 @@ public sealed unsafe class Blob : IDisposable
                             string databaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(connection);
-        if (connection.Handle.IsClosed || connection.Handle.IsInvalid)
-            throw new ObjectDisposedException(nameof(Connection));
+        connection.PhysicalConnection.ThrowIfInvalid();
         ArgumentException.ThrowIfNullOrWhiteSpace(tableName);
         ArgumentException.ThrowIfNullOrWhiteSpace(columnName);
         ArgumentException.ThrowIfNullOrWhiteSpace(databaseName);
@@ -62,23 +63,23 @@ public sealed unsafe class Blob : IDisposable
             sqlite3_blob* pBlob = default;
 
             var result = (ResultCodes)NativeMethods.sqlite3_blob_open(
-                connection.Handle.AsStructPointer(),
+                connection.PhysicalConnection.AsStructPointer(),
                 pDb,
                 pTable,
                 pColumn,
                 rowId,
                 readWrite ? 1 : 0,
                 &pBlob);
-            GC.KeepAlive(connection.Handle);
+            GC.KeepAlive(connection.PhysicalConnection);
             var blobSafeHandle = new BlobSafeHandle(pBlob);
 
             if (result != ResultCodes.OK)
             {
                 blobSafeHandle.Dispose();
-                throw EngineException.CreateException(connection.Handle, result, $"{nameof(Blob)}.Open on {tableName}.{columnName} (rowid {rowId})");
+                throw EngineException.CreateException(connection.PhysicalConnection.Handle, result, $"{nameof(Blob)}.Open on {tableName}.{columnName} (rowid {rowId})");
             }
 
-            return new Blob(blobSafeHandle, connection.Handle);
+            return new Blob(blobSafeHandle, connection.PhysicalConnection);
         }
     }
 
@@ -163,7 +164,7 @@ public sealed unsafe class Blob : IDisposable
     {
         if (res == ResultCodes.OK)
             return;
-        throw EngineException.CreateException(_connectionSafeHandle, res, $"{nameof(Blob)}.{caller}");
+        throw EngineException.CreateException(_physicalConnection.Handle, res, $"{nameof(Blob)}.{caller}");
     }
 
     #endregion

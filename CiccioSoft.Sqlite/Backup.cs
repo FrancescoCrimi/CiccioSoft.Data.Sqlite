@@ -23,12 +23,10 @@ public sealed unsafe class Backup : IDisposable
                                     string sourceDatabaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(destination);
-        if (destination.Handle.IsClosed || destination.Handle.IsInvalid)
-            throw new ObjectDisposedException(nameof(Connection));
+        destination.PhysicalConnection.ThrowIfInvalid();
 
         ArgumentNullException.ThrowIfNull(source);
-        if (source.Handle.IsClosed || source.Handle.IsInvalid)
-            throw new ObjectDisposedException(nameof(Connection));
+        source.PhysicalConnection.ThrowIfInvalid();
 
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationDatabaseName);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceDatabaseName);
@@ -38,19 +36,19 @@ public sealed unsafe class Backup : IDisposable
 
         fixed (byte* pDest = destinationNameBuffer, pSource = sourceNameBuffer)
         {
-            sqlite3_backup* backupHandle = NativeMethods.sqlite3_backup_init(destination.Handle.AsStructPointer(),
+            sqlite3_backup* backupHandle = NativeMethods.sqlite3_backup_init(destination.PhysicalConnection.AsStructPointer(),
                                                                              pDest,
-                                                                             source.Handle.AsStructPointer(),
+                                                                             source.PhysicalConnection.AsStructPointer(),
                                                                              pSource);
-            GC.KeepAlive(destination.Handle);
-            GC.KeepAlive(source.Handle);
+            GC.KeepAlive(destination.PhysicalConnection);
+            GC.KeepAlive(source.PhysicalConnection);
 
             if ((nint)backupHandle == nint.Zero)
             {
-                var result = (ResultCodes)NativeMethods.sqlite3_errcode(destination.Handle.AsStructPointer());
-                GC.KeepAlive(destination.Handle);   // ridondante qui (destination.Handle è riusato subito sotto),
+                var result = (ResultCodes)NativeMethods.sqlite3_errcode(destination.PhysicalConnection.AsStructPointer());
+                GC.KeepAlive(destination.PhysicalConnection);   // ridondante qui (destination.PhysicalConnection è riusata subito sotto),
                                                     // presente per uniformità con l'invariante del progetto
-                throw EngineException.CreateException(destination.Handle, result, $"{nameof(Backup)}.Init");
+                throw EngineException.CreateException(destination.PhysicalConnection.Handle, result, $"{nameof(Backup)}.Init");
             }
 
             return new Backup(new BackupSafeHandle(backupHandle));

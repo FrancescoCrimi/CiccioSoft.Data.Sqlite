@@ -14,12 +14,14 @@ namespace CiccioSoft.Sqlite;
 public sealed unsafe class Statement : IDisposable
 {
     private readonly StatementSafeHandle _handle;
-    private readonly ConnectionSafeHandle _connectionSafeHandle;
+    private readonly PhysicalConnection _physicalConnection;
 
-    internal Statement(StatementSafeHandle handle, ConnectionSafeHandle connectionSafeHandle)
+    internal Statement(StatementSafeHandle handle, PhysicalConnection physicalConnection)
     {
+        ArgumentNullException.ThrowIfNull(handle);
+        ArgumentNullException.ThrowIfNull(physicalConnection);
         _handle = handle;
-        _connectionSafeHandle = connectionSafeHandle;
+        _physicalConnection = physicalConnection;
     }
 
 
@@ -42,7 +44,7 @@ public sealed unsafe class Statement : IDisposable
         GC.KeepAlive(_handle);
         if (res == ResultCodes.Row) return true;
         if (res == ResultCodes.Done) return false;
-        // throw new EngineException(res, _connectionSafeHandle, $"SQLite {GetType().Name}.Step");
+        // throw new EngineException(res, _physicalConnection.Handle, $"SQLite {GetType().Name}.Step");
         throw ThrowException(res);
     }
 
@@ -696,12 +698,12 @@ public sealed unsafe class Statement : IDisposable
     {
         if (res == ResultCodes.OK)
             return;
-        throw EngineException.CreateException(_connectionSafeHandle, res, $"{nameof(Statement)}.{caller} to parameter index {index}");
+        throw EngineException.CreateException(_physicalConnection.Handle, res, $"{nameof(Statement)}.{caller} to parameter index {index}");
     }
 
     private EngineException ThrowException(ResultCodes result, [CallerMemberName] string caller = "")
     {
-        return EngineException.CreateException(_connectionSafeHandle, result, $"{nameof(Statement)}.{caller}");
+        return EngineException.CreateException(_physicalConnection.Handle, result, $"{nameof(Statement)}.{caller}");
     }
 
     #endregion
