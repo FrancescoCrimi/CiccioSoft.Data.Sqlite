@@ -115,6 +115,7 @@ sqlite3_backup_step=internal
 sqlite3_backup_finish=internal
 sqlite3_backup_remaining=internal
 sqlite3_backup_pagecount=internal
+sqlite3_wal_checkpoint_v2=internal
 
 
 # Esclude specifiche funzioni, struct o macro dalla generazione (Sintassi: nome)
@@ -346,7 +347,6 @@ sqlite3_log
 sqlite3_wal_hook
 sqlite3_wal_autocheckpoint
 sqlite3_wal_checkpoint
-sqlite3_wal_checkpoint_v2
 sqlite3_vtab_config
 sqlite3_vtab_on_conflict
 sqlite3_vtab_nochange
@@ -667,10 +667,6 @@ SQLITE_STMTSTATUS_RUN
 SQLITE_STMTSTATUS_FILTER_MISS
 SQLITE_STMTSTATUS_FILTER_HIT
 SQLITE_STMTSTATUS_MEMUSED
-SQLITE_CHECKPOINT_PASSIVE
-SQLITE_CHECKPOINT_FULL
-SQLITE_CHECKPOINT_RESTART
-SQLITE_CHECKPOINT_TRUNCATE
 SQLITE_VTAB_CONSTRAINT_SUPPORT
 SQLITE_VTAB_INNOCUOUS
 SQLITE_VTAB_DIRECTONLY

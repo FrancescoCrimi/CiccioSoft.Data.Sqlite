@@ -68,3 +68,4 @@ sqlite3_backup_step									// 9559
 sqlite3_backup_finish								// 9560
 sqlite3_backup_remaining							// 9561
 sqlite3_backup_pagecount							// 9562
+sqlite3_wal_checkpoint_v2							// 9946

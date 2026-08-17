@@ -499,6 +499,42 @@ public sealed unsafe class Connection : IDisposable
     }
 
     /// <summary>
+    /// Avvolge <c>sqlite3_wal_checkpoint_v2</c> su tutti i database allegati (<c>zDb = NULL</c>).
+    /// Tier 0 §21, Invariante I16.
+    /// </summary>
+    /// <remarks>
+    /// Visibilità <c>internal</c> per costruzione, non per svista: in modalità Native il
+    /// consumatore esegue <c>PRAGMA wal_checkpoint(...)</c> direttamente tramite
+    /// <see cref="Execute(string)"/>/<see cref="Prepare"/> (Tier 0 §21) — questo metodo
+    /// esiste solo per <c>SqliteConnection</c> in modalità Coordinated (Livello 3), mai
+    /// per uso diretto su <see cref="Connection"/>. Qualunque esito diverso da
+    /// <see cref="ResultCode.OK"/> (inclusi <see cref="ResultCode.Busy"/> e simili)
+    /// solleva <see cref="EngineException"/> — nessuna gestione silenziosa del "non
+    /// completato": la decisione se e come ritentare spetta al chiamante.
+    /// </remarks>
+    internal SqliteCheckpointResult WalCheckpointCore(SqliteCheckpointMode mode)
+    {
+        ThrowIfInvalid();
+
+        int eMode = mode switch
+        {
+            SqliteCheckpointMode.Passive => NativeMethods.SQLITE_CHECKPOINT_PASSIVE,
+            SqliteCheckpointMode.Full => NativeMethods.SQLITE_CHECKPOINT_FULL,
+            SqliteCheckpointMode.Restart => NativeMethods.SQLITE_CHECKPOINT_RESTART,
+            SqliteCheckpointMode.Truncate => NativeMethods.SQLITE_CHECKPOINT_TRUNCATE,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Valore di SqliteCheckpointMode non riconosciuto."),
+        };
+
+        int logFrames, checkpointedFrames;
+        var result = (ResultCode)NativeMethods.sqlite3_wal_checkpoint_v2(
+            _handle.AsStructPointer(), null, eMode, &logFrames, &checkpointedFrames);
+        GC.KeepAlive(_handle);
+        CheckResult(result);
+
+        return new SqliteCheckpointResult(mode, logFrames, checkpointedFrames);
+    }
+
+    /// <summary>
     /// Returns the SQLite library version string used by the native runtime.
     /// </summary>
     /// <returns>

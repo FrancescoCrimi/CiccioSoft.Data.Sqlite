@@ -242,6 +242,9 @@ namespace CiccioSoft.Sqlite
         [DllImport("CiccioSoftSqliteLibraryPlaceholder", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
         internal static extern int sqlite3_backup_pagecount(sqlite3_backup* p);
 
+        [DllImport("CiccioSoftSqliteLibraryPlaceholder", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+        internal static extern int sqlite3_wal_checkpoint_v2(sqlite3* db, [NativeTypeName("const char *")] byte* zDb, int eMode, int* pnLog, int* pnCkpt);
+
         [NativeTypeName("#define SQLITE_VERSION \"3.50.4\"")]
         public static ReadOnlySpan<byte> SQLITE_VERSION => "3.50.4"u8;
 
@@ -715,5 +718,17 @@ namespace CiccioSoft.Sqlite
 
         [NativeTypeName("#define SQLITE_TXN_WRITE 2")]
         public const int SQLITE_TXN_WRITE = 2;
+
+        [NativeTypeName("#define SQLITE_CHECKPOINT_PASSIVE 0")]
+        public const int SQLITE_CHECKPOINT_PASSIVE = 0;
+
+        [NativeTypeName("#define SQLITE_CHECKPOINT_FULL 1")]
+        public const int SQLITE_CHECKPOINT_FULL = 1;
+
+        [NativeTypeName("#define SQLITE_CHECKPOINT_RESTART 2")]
+        public const int SQLITE_CHECKPOINT_RESTART = 2;
+
+        [NativeTypeName("#define SQLITE_CHECKPOINT_TRUNCATE 3")]
+        public const int SQLITE_CHECKPOINT_TRUNCATE = 3;
     }
 }

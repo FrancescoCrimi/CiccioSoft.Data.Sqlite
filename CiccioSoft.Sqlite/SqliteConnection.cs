@@ -259,6 +259,61 @@ public sealed class SqliteConnection : IDisposable
     }
 
     // ------------------------------------------------------------------
+    // Checkpoint WAL (Tier 0 §21, Invariante I16)
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Esegue un checkpoint WAL — solo in modalità Coordinated (Tier 0 §21).
+    /// </summary>
+    /// <param name="mode">
+    /// Nessun default: I16 distingue esplicitamente <see cref="SqliteCheckpointMode.Passive"/>
+    /// (mai bloccante, mai instradato) da <see cref="SqliteCheckpointMode.Full"/>/
+    /// <see cref="SqliteCheckpointMode.Restart"/>/<see cref="SqliteCheckpointMode.Truncate"/>
+    /// (bloccanti, instradati come turno one-shot nel canale del coordinatore) — un valore
+    /// implicito nasconderebbe proprio la distinzione che questa API esiste per rendere
+    /// esplicita (niente magia).
+    /// </param>
+    /// <exception cref="SqliteConfigurationException">
+    /// Sollevata immediatamente se <see cref="ConcurrencyMode"/> non è
+    /// <see cref="SqliteConcurrencyMode.Coordinated"/>: in Native non esiste una primitiva
+    /// dedicata (il consumatore esegue <c>PRAGMA wal_checkpoint(...)</c> direttamente); in
+    /// ReadOnly il checkpoint non si applica, poiché nessuna scrittura è mai possibile.
+    /// </exception>
+    public SqliteCheckpointResult Checkpoint(SqliteCheckpointMode mode) =>
+        CheckpointAsync(mode, CancellationToken.None).GetAwaiter().GetResult();
+
+    /// <summary>Variante asincrona di <see cref="Checkpoint"/>. Vedi lì per la semantica completa.</summary>
+    public Task<SqliteCheckpointResult> CheckpointAsync(SqliteCheckpointMode mode, CancellationToken ct = default)
+    {
+        if (ConcurrencyMode != SqliteConcurrencyMode.Coordinated)
+        {
+            throw new SqliteConfigurationException(
+                ConcurrencyMode == SqliteConcurrencyMode.ReadOnly
+                    ? "Checkpoint non è ammesso su una SqliteConnection in modalità ReadOnly: " +
+                      "nessuna scrittura è mai possibile, quindi non esiste un WAL da " +
+                      "trasferire nel database principale (Tier 0 §21)."
+                    : "Checkpoint non è una primitiva di SqliteConnection in modalità Native: " +
+                      "eseguire 'PRAGMA wal_checkpoint(...)' direttamente tramite Execute/Prepare, " +
+                      "senza garanzia di ordinamento con altre scritture (Tier 0 §21, Invariante I16).");
+        }
+
+        if (mode == SqliteCheckpointMode.Passive)
+        {
+            // I16: PASSIVE non blocca mai per definizione — nessuna serializzazione con gli
+            // scrittori è necessaria, quindi non attraversa il canale del coordinatore.
+            // Chiamata sincrona sotto un Task già completato (non un'attesa cooperativa reale,
+            // coerente con §22: qui non esiste un Execution Engine da proiettare).
+            return Task.FromResult(ActiveConnection.WalCheckpointCore(mode));
+        }
+
+        // FULL/RESTART/TRUNCATE: turno one-shot nello stesso canale FIFO dei writer lease (I16)
+        // — nessuna scrittura coordinata può interleave con un checkpoint bloccante.
+        var coordinator = _coordinator ?? throw new InvalidOperationException(
+            "Stato interno inconsistente: SqliteConcurrencyMode.Coordinated senza un coordinatore associato.");
+        return coordinator.EnqueueAsync(() => Task.FromResult(ActiveConnection.WalCheckpointCore(mode)), ct);
+    }
+
+    // ------------------------------------------------------------------
     // Chiusura
     // ------------------------------------------------------------------
 

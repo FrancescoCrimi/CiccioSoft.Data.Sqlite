@@ -196,7 +196,6 @@ sqlite3_log
 sqlite3_wal_hook
 sqlite3_wal_autocheckpoint
 sqlite3_wal_checkpoint
-sqlite3_wal_checkpoint_v2
 sqlite3_vtab_config
 sqlite3_vtab_on_conflict
 sqlite3_vtab_nochange
