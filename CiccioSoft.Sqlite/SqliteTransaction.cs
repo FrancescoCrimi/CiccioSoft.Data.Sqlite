@@ -84,10 +84,16 @@ public sealed class SqliteTransaction : IAsyncDisposable, IDisposable
 
     public Statement Prepare(string sql) => PrepareAsync(sql, CancellationToken.None).GetAwaiter().GetResult();
 
-    public async Task<Statement> PrepareAsync(string sql, CancellationToken ct = default)
+    public Statement Prepare(string sql, PrepareFlags prepareFlags) =>
+        PrepareAsync(sql, prepareFlags, CancellationToken.None).GetAwaiter().GetResult();
+
+    public Task<Statement> PrepareAsync(string sql, CancellationToken ct = default) =>
+        PrepareAsync(sql, PrepareFlags.None, ct);
+
+    public async Task<Statement> PrepareAsync(string sql, PrepareFlags prepareFlags, CancellationToken ct = default)
     {
         ThrowIfCompleted();
-        var statement = _connection.Prepare(sql);   // già cache-aware, Dispose() sempre sicuro (I26)
+        var statement = _connection.Prepare(sql, prepareFlags);   // già cache-aware, Dispose() sempre sicuro (I26)
         await EnsureWriterLeaseIfNeededAsync(statement, ct).ConfigureAwait(false);
         return statement;
     }

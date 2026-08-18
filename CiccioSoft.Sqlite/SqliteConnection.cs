@@ -197,6 +197,11 @@ public sealed class SqliteConnection : IDisposable
     public Statement Prepare(string sql) =>
         _pooled is not null ? _pooled.Cache.GetOrPrepare(sql) : ActiveConnection.Prepare(sql);
 
+    public Statement Prepare(string sql, PrepareFlags prepareFlags = PrepareFlags.None) =>
+        _pooled is not null
+            ? _pooled.Cache.GetOrPrepare(sql, prepareFlags)
+            : ActiveConnection.Prepare(sql, prepareFlags);
+
     public void Execute(string sql) => ActiveConnection.Execute(sql);
 
     /// <summary>
