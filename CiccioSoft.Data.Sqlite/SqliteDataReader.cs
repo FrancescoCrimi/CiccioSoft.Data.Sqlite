@@ -1014,6 +1014,7 @@ public sealed class SqliteDataReader : DbDataReader
         return DateTime.SpecifyKind(utc, DateTimeKind.Unspecified);
     }
 
+    [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicProperties)]
     private Type InferFieldType(int ordinal)
         => Stmt.GetColumnType(ordinal) switch
         {

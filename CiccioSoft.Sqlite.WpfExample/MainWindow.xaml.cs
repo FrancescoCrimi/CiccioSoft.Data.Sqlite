@@ -17,7 +17,7 @@ public partial class MainWindow : Window
 {
     private int _indiceCorrente = 0;
     private int _countImages;
-    private readonly Connection? _connection;
+    private readonly CiccioSoft.Sqlite.SqliteConnection? _connection;
 
     public MainWindow()
     {
@@ -25,8 +25,16 @@ public partial class MainWindow : Window
 
         try
         {
-            NativeLibrary.Configure(NativeSource.SourceGear);
-            _connection = Connection.Open("test.db", OpenFlagsDefaults.Coordinated);
+            SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+            var option = new SqliteConnectionOptions
+            {
+                DataSource = "test.db",
+                AdditionalFlags = OpenFlagsDefaults.Coordinated,
+                ConcurrencyMode = SqliteConcurrencyMode.Native
+            };
+            var connection = new CiccioSoft.Sqlite.SqliteConnection(option);
+            connection.Open();
+            _connection = connection;
         }
         catch
         {

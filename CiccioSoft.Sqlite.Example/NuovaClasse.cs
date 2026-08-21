@@ -8,7 +8,14 @@ public class NuovaClasse
 {
     public NuovaClasse()
     {
-        using var conn = Connection.Open("app.db", OpenFlagsDefaults.Coordinated);
+        var option = new SqliteConnectionOptions
+        {
+            DataSource = "app.db",
+            AdditionalFlags = OpenFlagsDefaults.Coordinated,
+            ConcurrencyMode = SqliteConcurrencyMode.Native
+        };
+        using var conn = new CiccioSoft.Sqlite.SqliteConnection(option);
+        conn.Open();
         conn.Execute("DROP TABLE IF EXISTS files");
         conn.Execute("""
     CREATE TABLE IF NOT EXISTS files (
@@ -25,6 +32,7 @@ public class NuovaClasse
         // const string sourcePath = @"C:\data\backup-2026-07-22.zip";
         const string sourcePath = "backup.zip";
         const int ChunkSize = 64 * 1024; // 64 KB: bilancia n. di syscall vs. footprint di memoria
+        Span<byte> buffer = stackalloc byte[ChunkSize];
 
         long fileLength = new FileInfo(sourcePath).Length;
 
@@ -43,10 +51,9 @@ public class NuovaClasse
         }
 
         using (var source = File.OpenRead(sourcePath))
-        using (var blob = Blob.Open(conn, "files", "payload", rowId, readWrite: true))
+        using (var blob = conn.OpenBlob("files", "payload", rowId, readWrite: true))
         using (var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
         {
-            Span<byte> buffer = stackalloc byte[ChunkSize];
             long offset = 0;
             int bytesRead;
 
@@ -84,11 +91,10 @@ public class NuovaClasse
                 throw new InvalidOperationException($"Riga {rowId} non trovata");
         }
 
-        using (var blob = Blob.Open(conn, "files", "payload", rowId, readWrite: false))
+        using (var blob = conn.OpenBlob("files", "payload", rowId, readWrite: false))
         using (var dest = File.Create(destPath))
         {
             int totalSize = blob.Bytes();
-            Span<byte> buffer = stackalloc byte[ChunkSize];
             int offset = 0;
 
             while (offset < totalSize)
@@ -109,7 +115,7 @@ public class NuovaClasse
         //      già presenti, riutilizzando lo stesso handle blob senza riaprirlo ----
 
         using (var idsStmt = conn.Prepare("SELECT id FROM files"))
-        using (var blob = Blob.Open(conn, "files", "payload", rowId: 1, readWrite: false))
+        using (var blob = conn.OpenBlob("files", "payload", rowId: 1, readWrite: false))
         {
             bool first = true;
             while (idsStmt.Step())
@@ -120,7 +126,6 @@ public class NuovaClasse
                 else blob.Reopen(currentId);  // costo trascurabile: nessuna nuova sqlite3_blob_open
 
                 using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-                Span<byte> buffer = stackalloc byte[ChunkSize];
                 int totalSize = blob.Bytes();
                 int offset = 0;
 

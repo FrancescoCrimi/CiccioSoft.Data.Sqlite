@@ -40,7 +40,7 @@
             "program": "${folder}/CiccioSoft.Sqlite.Tests/bin/Debug/net10.0/CiccioSoft.Sqlite.Tests.exe",
             "args": [
                 "-filter", 
-                "//CiccioSoft.Sqlite.Tests/EngineExceptionTests/ConstraintFailure_ExposesBaseAndExtendedCodes",
+                "//CiccioSoft.Sqlite.Tests/DisposalLifecycleTests/Backup_InitBackup_OnDisposedConnections_ThrowsObjectDisposedException",
                 "-parallel",
                 "none"
             ],

@@ -37,7 +37,7 @@ public class SqliteConnectionFactoryTest : IDisposable
     [Fact(Skip = "wip")]
     public void Internal_connections_are_reused_across_connections()
     {
-        Connection db;
+        CiccioSoft.Sqlite.SqliteConnection db;
         using (var connection1 = new SqliteConnection(ConnectionString))
         {
             connection1.Open();
@@ -156,7 +156,7 @@ public class SqliteConnectionFactoryTest : IDisposable
     [Fact(Skip = "wip")]
     public void ReadUncommitted_doesnt_bleed_across_connections()
     {
-        Connection db;
+        CiccioSoft.Sqlite.SqliteConnection db;
         using (var connection1 = new SqliteConnection(ConnectionString))
         {
             connection1.Open();
@@ -178,7 +178,7 @@ public class SqliteConnectionFactoryTest : IDisposable
     [Fact(Skip = "wip")]
     public void Functions_dont_bleed_across_connections()
     {
-        Connection db;
+        CiccioSoft.Sqlite.SqliteConnection db;
         using (var connection1 = new SqliteConnection(ConnectionString))
         {
             if (new Version(connection1.ServerVersion) < new Version(3, 31, 0))
@@ -206,7 +206,7 @@ public class SqliteConnectionFactoryTest : IDisposable
     [Fact(Skip = "ericsink/SQLitePCL.raw#421")]
     public void Collations_dont_bleed_across_connections()
     {
-        Connection db;
+        CiccioSoft.Sqlite.SqliteConnection db;
         using (var connection1 = new SqliteConnection(ConnectionString))
         {
             // connection1.CreateCollation("COLLATION1", string.CompareOrdinal);
@@ -226,7 +226,7 @@ public class SqliteConnectionFactoryTest : IDisposable
     [Fact(Skip = "wip")]
     public void EnableExtensions_doesnt_bleed_across_connections()
     {
-        Connection db;
+        CiccioSoft.Sqlite.SqliteConnection db;
         SqliteException ex;
         string disabledMessage;
         using (var connection1 = new SqliteConnection(ConnectionString))

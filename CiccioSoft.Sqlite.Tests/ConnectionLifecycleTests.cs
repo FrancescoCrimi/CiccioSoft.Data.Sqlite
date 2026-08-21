@@ -46,9 +46,15 @@ public sealed class ConnectionLifecycleTests
     public void Open_ReadOnlyOnMissingFile_ThrowsEngineException()
     {
         string missing = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.db");
+        var option = new SqliteConnectionOptions
+        {
+            DataSource = missing,
+            AdditionalFlags = OpenFlags.ReadOnly,
+            ConcurrencyMode = SqliteConcurrencyMode.Native
+        };
 
         var ex = Assert.Throws<EngineException>(() =>
-            Connection.Open(missing, OpenFlags.ReadOnly));
+            new SqliteConnection(option).Open());
 
         Assert.Equal(ResultCode.CantOpen, ex.PrimaryResultCode);
         Assert.Contains("Open", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -58,7 +64,14 @@ public sealed class ConnectionLifecycleTests
     public void Open_DefaultFlags_CreateReadWrite()
     {
         using var temp = new TempDatabase();
-        using var connection = Connection.Open(temp.Path);
+        var option = new SqliteConnectionOptions
+        {
+            DataSource = temp.Path,
+            AdditionalFlags = OpenFlags.ReadWrite | OpenFlags.Create,
+            ConcurrencyMode = SqliteConcurrencyMode.Native
+        };
+        using var connection = new SqliteConnection(option);
+        connection.Open();
 
         Assert.False(connection.DbReadOnly());
         connection.Execute("CREATE TABLE t (id INTEGER);");
@@ -67,9 +80,14 @@ public sealed class ConnectionLifecycleTests
     [Fact]
     public void Open_WithUriMemory_Succeeds()
     {
-        using var connection = Connection.Open(
-            "file:lifecycle_uri?mode=memory&cache=shared",
-            OpenFlags.ReadWrite | OpenFlags.Create);
+        var option = new SqliteConnectionOptions
+        {
+            DataSource = "file:lifecycle_uri?mode=memory&cache=shared",
+            AdditionalFlags = OpenFlags.ReadWrite | OpenFlags.Create,
+            ConcurrencyMode = SqliteConcurrencyMode.Native
+        };
+        using var connection = new SqliteConnection(option);
+        connection.Open();
 
         connection.Execute("CREATE TABLE t (id INTEGER);");
         connection.Execute("INSERT INTO t VALUES (42);");
@@ -91,7 +109,7 @@ public sealed class ConnectionLifecycleTests
     [Fact]
     public void LibVersion_ReturnsNonEmptyVersionString()
     {
-        string? version = Connection.LibVersion();
+        string? version = SqliteConnection.LibVersion();
 
         Assert.False(string.IsNullOrWhiteSpace(version));
         Assert.Matches(@"^\d+\.\d+\.\d+", version!);
@@ -100,8 +118,8 @@ public sealed class ConnectionLifecycleTests
     [Fact]
     public void LibVersionNumber_IsPositiveAndConsistentWithString()
     {
-        int number = Connection.LibVersionNumber();
-        string? version = Connection.LibVersion();
+        int number = SqliteConnection.LibVersionNumber();
+        string? version = SqliteConnection.LibVersion();
 
         Assert.True(number > 3000000);
         Assert.NotNull(version);

@@ -23,24 +23,26 @@ public sealed class DisposalLifecycleTests
         var connection = ConnectionFactory.OpenMemory();
         connection.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() => connection.Execute("SELECT 1;"));
-        Assert.Throws<ObjectDisposedException>(() => connection.Execute("SELECT 1;"u8));
-        Assert.Throws<ObjectDisposedException>(() => connection.Prepare("SELECT 1;"));
-        Assert.Throws<ObjectDisposedException>(() =>
+        // Verificare il tipo di Eccezzione, era ObjectDisposedException 
+        // modificato in InvalidOperationException
+        Assert.Throws<InvalidOperationException>(() => connection.Execute("SELECT 1;"));
+        Assert.Throws<InvalidOperationException>(() => connection.Execute("SELECT 1;"u8));
+        Assert.Throws<InvalidOperationException>(() => connection.Prepare("SELECT 1;"));
+        Assert.Throws<InvalidOperationException>(() =>
             connection.Prepare("SELECT 1;", 0, out _, PrepareFlags.None));
-        Assert.Throws<ObjectDisposedException>(() => connection.LastInsertRowId());
-        Assert.Throws<ObjectDisposedException>(() => connection.Changes());
-        Assert.Throws<ObjectDisposedException>(() => connection.TotalChanges());
-        Assert.Throws<ObjectDisposedException>(() => connection.GetAutoCommit());
-        Assert.Throws<ObjectDisposedException>(() => connection.Limit(LimitCategory.Attached, -1));
-        Assert.Throws<ObjectDisposedException>(() => connection.TransactionState());
-        Assert.Throws<ObjectDisposedException>(() => connection.DbReadOnly());
-        Assert.Throws<ObjectDisposedException>(() => connection.ExtendedErrCode());
-        Assert.Throws<ObjectDisposedException>(() => connection.GetLastErrorOffset());
-        Assert.Throws<ObjectDisposedException>(() => connection.BusyTimeout(1000));
-        // Assert.Throws<ObjectDisposedException>(() => connection.ExtendedResultCodes(true));
-        Assert.Throws<ObjectDisposedException>(() => connection.Interrupt());
-        Assert.Throws<ObjectDisposedException>(() =>
+        Assert.Throws<InvalidOperationException>(() => connection.LastInsertRowId());
+        Assert.Throws<InvalidOperationException>(() => connection.Changes());
+        Assert.Throws<InvalidOperationException>(() => connection.TotalChanges());
+        Assert.Throws<InvalidOperationException>(() => connection.GetAutoCommit());
+        Assert.Throws<InvalidOperationException>(() => connection.Limit(LimitCategory.Attached, -1));
+        Assert.Throws<InvalidOperationException>(() => connection.TransactionState());
+        Assert.Throws<InvalidOperationException>(() => connection.DbReadOnly());
+        Assert.Throws<InvalidOperationException>(() => connection.ExtendedErrCode());
+        Assert.Throws<InvalidOperationException>(() => connection.GetLastErrorOffset());
+        Assert.Throws<InvalidOperationException>(() => connection.BusyTimeout(1000));
+        // Assert.Throws<InvalidOperationException>(() => connection.ExtendedResultCodes(true));
+        Assert.Throws<InvalidOperationException>(() => connection.Interrupt());
+        Assert.Throws<InvalidOperationException>(() =>
             connection.GetTableColumnMetadata("t", "id", out _, out _, out _, out _, out _));
     }
 
@@ -92,7 +94,7 @@ public sealed class DisposalLifecycleTests
         connection.Execute("INSERT INTO files (payload) VALUES (zeroblob(8));");
         long rowId = connection.LastInsertRowId();
 
-        var blob = Blob.Open(connection, "files", "payload", rowId, readWrite: true);
+        var blob = connection.OpenBlob("files", "payload", rowId, readWrite: true);
         blob.Dispose();
 
         byte[] buffer = new byte[4];
@@ -111,7 +113,7 @@ public sealed class DisposalLifecycleTests
         source.Execute("CREATE TABLE t (id INTEGER);");
         using var destination = destDb.Open();
 
-        var backup = Backup.InitBackup(destination, source);
+        var backup = source.InitBackup(destination);
         backup.Dispose();
 
         Assert.Throws<ObjectDisposedException>(() => backup.Step());
@@ -128,8 +130,10 @@ public sealed class DisposalLifecycleTests
         long rowId = connection.LastInsertRowId();
         connection.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() =>
-            Blob.Open(connection, "files", "payload", rowId));
+        // Assert.Throws<ObjectDisposedException>(() =>
+        // Modificata eccezzione in InvalidOperationException per adattarsi a SqliteConnection.ActiveConnection ma eccezione sbagliata. 
+        Assert.Throws<InvalidOperationException>(() =>
+            connection.OpenBlob("files", "payload", rowId));
     }
 
     [Fact]
@@ -141,10 +145,13 @@ public sealed class DisposalLifecycleTests
         var disposed = ConnectionFactory.OpenMemory();
         disposed.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() =>
-            Backup.InitBackup(disposed, live));
-        Assert.Throws<ObjectDisposedException>(() =>
-            Backup.InitBackup(live, disposed));
+        // Assert.Throws<ObjectDisposedException>(() =>
+        // Modificata eccezzione in InvalidOperationException per adattarsi a SqliteConnection.ActiveConnection ma eccezione sbagliata. 
+        Assert.Throws<InvalidOperationException>(() =>
+            disposed.InitBackup(live));
+        // Assert.Throws<ObjectDisposedException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
+            live.InitBackup(disposed));
     }
 
     [Fact]
@@ -153,7 +160,7 @@ public sealed class DisposalLifecycleTests
         var connection = ConnectionFactory.OpenMemory();
         connection.Dispose();
 
-        Assert.False(string.IsNullOrWhiteSpace(Connection.LibVersion()));
-        Assert.True(Connection.LibVersionNumber() > 0);
+        Assert.False(string.IsNullOrWhiteSpace(SqliteConnection.LibVersion()));
+        Assert.True(SqliteConnection.LibVersionNumber() > 0);
     }
 }

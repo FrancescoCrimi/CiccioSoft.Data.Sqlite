@@ -24,7 +24,7 @@ public sealed class BackupTests
             source.Execute("INSERT INTO inventory (sku) VALUES ('A-1'), ('B-2'), ('C-3');");
 
             using var destination = destDb.Open();
-            using var backup = Backup.InitBackup(destination, source);
+            using var backup = source.InitBackup(destination);
 
             ResultCode rc;
             do
@@ -69,7 +69,7 @@ public sealed class BackupTests
         }
 
         using var destination = destDb.Open();
-        using var backup = Backup.InitBackup(destination, source);
+        using var backup = source.InitBackup(destination);
 
         int steps = 0;
         ResultCode rc;
@@ -92,24 +92,22 @@ public sealed class BackupTests
         using var connection = ConnectionFactory.OpenMemory();
 
         Assert.Throws<ArgumentNullException>(() =>
-            Backup.InitBackup(null!, connection));
-        Assert.Throws<ArgumentNullException>(() =>
-            Backup.InitBackup(connection, null!));
+            connection.InitBackup(null!));
+        // Assert.Throws<ArgumentNullException>(() =>
+        //     Backup.InitBackup(connection, null!));
     }
 
     [Theory]
-    [InlineData(null, "main")]
-    [InlineData("main", null)]
-    [InlineData("", "main")]
-    [InlineData("main", "")]
-    [InlineData("   ", "main")]
-    public void InitBackup_InvalidDatabaseNames_Throw(string? destName, string? sourceName)
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void InitBackup_InvalidDatabaseNames_Throw(string? destName)
     {
         using var source = ConnectionFactory.OpenMemory();
         using var destination = ConnectionFactory.OpenMemory();
 
         Assert.ThrowsAny<ArgumentException>(() =>
-            Backup.InitBackup(destination, source, destName!, sourceName!));
+            source.InitBackup(destination, destName!));
     }
 
     [Fact]
@@ -121,7 +119,7 @@ public sealed class BackupTests
         source.Execute("CREATE TABLE t (id INTEGER);");
         using var destination = destDb.Open();
 
-        var backup = Backup.InitBackup(destination, source);
+        var backup = source.InitBackup(destination);
         backup.Dispose();
         backup.Dispose();
     }

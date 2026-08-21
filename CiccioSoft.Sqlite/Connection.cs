@@ -13,8 +13,6 @@ using System.Text;
 
 namespace CiccioSoft.Sqlite;
 
-public enum ConnectionPhysicalState { Created, Configuring, Idle, Leased, Active, Poisoned, Closed }
-
 /// <summary>
 /// Provides a high-performance, low-allocation wrapper for a SQLite database connection.
 /// </summary>
@@ -22,7 +20,7 @@ public enum ConnectionPhysicalState { Created, Configuring, Idle, Leased, Active
 /// This class is not inherently thread-safe. Concurrent access to a single SQLite connection 
 /// should be synchronized or managed according to SQLite's threading modes.
 /// </threadsafety>
-public sealed unsafe class Connection : IDisposable
+internal sealed unsafe class Connection : IDisposable
 {
     private readonly ConnectionSafeHandle _handle;
     public ConnectionPhysicalState State { get; internal set; } = ConnectionPhysicalState.Created;

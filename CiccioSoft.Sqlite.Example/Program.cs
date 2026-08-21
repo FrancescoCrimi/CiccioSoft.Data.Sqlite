@@ -12,7 +12,7 @@ class Program
     {
         Console.WriteLine("Hello, World!");
 
-        NativeLibrary.Configure(NativeSource.SourceGear);
+        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
 
         // var utf8Buffer = Utils.GenUtf8LoremIpsum(1048576);          // Gen Utf8
         // Console.OutputEncoding = Encoding.UTF8;                  // Forza la console in UTF-8
@@ -28,7 +28,14 @@ class Program
 
     static void blabla()
     {
-        using var conn = Connection.Open("app.db", OpenFlagsDefaults.Coordinated);
+        var option = new SqliteConnectionOptions
+        {
+            DataSource = "app.db",
+            AdditionalFlags = OpenFlagsDefaults.Coordinated,
+            ConcurrencyMode = SqliteConcurrencyMode.Native
+        };
+        using var conn = new CiccioSoft.Sqlite.SqliteConnection(option);
+        conn.Open();
 
         conn.Execute("CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY, payload BLOB)");
 
@@ -43,7 +50,7 @@ class Program
         long rowId = conn.LastInsertRowId();
 
         // Apertura in read/write sulla riga appena inserita
-        using var blob = Blob.Open(conn, "files", "payload", rowId, readWrite: true);
+        using var blob = conn.OpenBlob("files", "payload", rowId, readWrite: true);
 
         Span<byte> chunk = stackalloc byte[4096];
         new Random().NextBytes(chunk);

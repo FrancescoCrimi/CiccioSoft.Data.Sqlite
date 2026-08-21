@@ -126,7 +126,15 @@ internal static class SqliteConnectionPool
             {
                 try
                 {
-                    return new SqliteSession(Connection.Open(dataSource, openFlags));
+                    var option = new SqliteConnectionOptions
+                    {
+                        DataSource =dataSource,
+                        AdditionalFlags = openFlags,
+                        ConcurrencyMode = SqliteConcurrencyMode.Native
+                    };
+                    var connection = new CiccioSoft.Sqlite.SqliteConnection(option);
+                    connection.Open();
+                    return new SqliteSession(connection);
                 }
                 catch
                 {
@@ -226,7 +234,15 @@ internal static class SqliteConnectionPool
             {
                 try
                 {
-                    return new SqliteSession(Connection.Open(dataSource, openFlags));
+                    var option = new SqliteConnectionOptions
+                    {
+                        DataSource = dataSource,
+                        AdditionalFlags = openFlags,
+                        ConcurrencyMode = SqliteConcurrencyMode.Native
+                    };
+                    var connection = new CiccioSoft.Sqlite.SqliteConnection(option);
+                    connection.Open();
+                    return new SqliteSession(connection);
                 }
                 catch
                 {

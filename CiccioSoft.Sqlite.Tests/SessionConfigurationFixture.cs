@@ -33,7 +33,7 @@ public class MyTestConfigFixture : IDisposable
     public MyTestConfigFixture()
     {
         // Chiamata al tuo metodo statico di configurazione
-        NativeLibrary.Configure(NativeSource.SourceGear);
+        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
     }
 
     public void Dispose()
@@ -68,7 +68,7 @@ public class SessionConfigurationFixture : IAsyncLifetime
     public ValueTask InitializeAsync()
     {
         // Viene eseguito una sola volta all'avvio della sessione per questo assembly
-        NativeLibrary.Configure(NativeSource.SourceGear);
+        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
 
         // Se viene generata eccezzione interrompi la sessione di Test
         // try

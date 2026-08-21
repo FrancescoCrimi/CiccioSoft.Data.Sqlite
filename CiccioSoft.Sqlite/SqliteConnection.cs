@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT.
 
 using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -83,7 +84,9 @@ public sealed class SqliteConnection : IDisposable
         // Modalità Native (Tier 0 §11): solo Baseline + ReadWrite|Create, mai un profilo
         // denominato (I25) — AdditionalFlags è qui la superficie primaria di configurazione,
         // non un'aggiunta sopra un profilo già deciso.
-        var flags = OpenFlagsDefaults.Baseline | OpenFlags.ReadWrite | OpenFlags.Create;
+        var flags = OpenFlagsDefaults.Baseline;
+        // modificato funzionamento tolti OpenFlags.ReadWrite | OpenFlags.Create
+        // var flags = OpenFlagsDefaults.Baseline | OpenFlags.ReadWrite | OpenFlags.Create;
         if (_options.AdditionalFlags is { } extra)
             flags |= extra;
 
@@ -195,12 +198,34 @@ public sealed class SqliteConnection : IDisposable
     /// proprietà della cache — altrimenti lo finalizza.
     /// </summary>
     public Statement Prepare(string sql) =>
-        _pooled is not null ? _pooled.Cache.GetOrPrepare(sql) : ActiveConnection.Prepare(sql);
+        _pooled is not null
+            ? _pooled.Cache.GetOrPrepare(sql)
+            : ActiveConnection.Prepare(sql);
 
     public Statement Prepare(string sql, PrepareFlags prepareFlags = PrepareFlags.None) =>
         _pooled is not null
             ? _pooled.Cache.GetOrPrepare(sql, prepareFlags)
             : ActiveConnection.Prepare(sql, prepareFlags);
+
+    /// <summary>
+    /// Compiles the next SQL statement starting from a byte offset within a batch SQL text.
+    /// </summary>
+    /// <param name="sql">The full SQL batch text.</param>
+    /// <param name="sqlByteOffset">The UTF-8 byte offset where statement preparation should start.</param>
+    /// <param name="nextSqlByteOffset">The UTF-8 byte offset immediately after the prepared statement.</param>
+    /// <param name="prepareFlags">Flags such as <see cref="PrepareFlags.Persistent"/> or <see cref="PrepareFlags.NoVtab"/>.</param>
+    /// <returns>
+    /// A prepared statement if one is found at the given offset; otherwise <c>null</c> when only whitespace/comments remain.
+    /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sqlByteOffset"/> is outside the SQL byte buffer range.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
+    /// <exception cref="EngineException">Thrown if the statement cannot be prepared.</exception>
+    public Statement? Prepare(string sql, int sqlByteOffset, out int nextSqlByteOffset, PrepareFlags prepareFlags = PrepareFlags.None)
+    {
+        return ActiveConnection.Prepare(sql, sqlByteOffset, out nextSqlByteOffset, prepareFlags);
+    }
+
+    public void Execute(ReadOnlySpan<byte> sql) => ActiveConnection.Execute(sql);
 
     public void Execute(string sql) => ActiveConnection.Execute(sql);
 
@@ -211,6 +236,166 @@ public sealed class SqliteConnection : IDisposable
     /// Disponibile in ogni modalità operativa, senza alcun <see cref="CancellationToken"/>.
     /// </summary>
     public void Interrupt() => ActiveConnection.Interrupt();
+
+
+    /// <summary>
+    /// Returns the row ID of the last successful INSERT into the database from this connection.
+    /// </summary>
+    /// <returns>The 64-bit row identifier of the last inserted row.</returns>
+    public long LastInsertRowId()
+    {
+        return ActiveConnection.LastInsertRowId();
+    }
+
+    /// <summary>
+    /// Returns the number of rows modified, inserted, or deleted by the last finished SQL statement.
+    /// </summary>
+    /// <returns>The number of affected rows.</returns>
+    //TODO: check int/long return
+    public int Changes()
+    {
+        return ActiveConnection.Changes();
+    }
+
+    /// <summary>
+    /// Returns the total number of rows modified, inserted, or deleted since this connection was opened.
+    /// </summary>
+    public long TotalChanges()
+    {
+        return ActiveConnection.TotalChanges();
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> if the connection is currently in auto-commit mode.
+    /// </summary>
+    public bool GetAutoCommit()
+    {
+        return ActiveConnection.GetAutoCommit();
+    }
+
+    /// <summary>
+    /// Queries or changes a runtime limit for the connection. 
+    /// Pass -1 to read the current limit, or a positive value to lower it.
+    /// </summary>
+    /// <param name="id">The category of the limit to check or modify.</param>
+    /// <param name="newVal">The new limit value, or -1 to only query the current limit.</param>
+    /// <returns>The limit value that was in effect before this call.</returns>
+    public int Limit(LimitCategory id, int newVal)
+    {
+        return ActiveConnection.Limit(id, newVal);
+    }
+
+    /// <summary>
+    /// Gets the current transaction state for a specific schema, or the highest state across all schemas if null.
+    /// </summary>
+    /// <param name="schemaName">The name of the schema (e.g., "main"). Pass null for the global connection state.</param>
+    /// <returns>The specific transaction state.</returns>
+    /// <exception cref="EngineException">Thrown if the schema name is invalid.</exception>
+    public TransactionState TransactionState(string? schemaName = null)
+    {
+        return ActiveConnection.TransactionState(schemaName);
+    }
+
+    /// <summary>
+    /// Determines whether a attached database is read-only.
+    /// </summary>
+    /// <param name="databaseName">The name of the database (e.g., "main", "temp").</param>
+    /// <returns>True if the database is read-only; false if it is read/write.</returns>
+    /// <exception cref="EngineException">Thrown if the database name is not found on this connection.</exception>
+    public bool DbReadOnly(string databaseName = "main")
+    {
+        return ActiveConnection.DbReadOnly(databaseName);
+    }
+
+    /// <summary>
+    /// Returns the latest extended SQLite error code for this connection.
+    /// </summary>
+    public ResultCode ExtendedErrCode()
+    {
+        return ActiveConnection.ExtendedErrCode();
+    }
+
+    /// <summary>
+    /// Returns the byte offset in SQL text where the latest parse error was detected.
+    /// </summary>
+    /// <returns>The zero-based offset, or -1 if unavailable.</returns>
+    public int GetLastErrorOffset()
+    {
+        return ActiveConnection.GetLastErrorOffset();
+    }
+
+    /// <summary>
+    /// Sets a busy timeout on this connection.
+    /// </summary>
+    /// <param name="milliseconds">The timeout in milliseconds.</param>
+    public void BusyTimeout(int milliseconds)
+    {
+        ActiveConnection.BusyTimeout(milliseconds);
+    }
+
+    /// <summary>
+    /// Returns the SQLite library version string used by the native runtime.
+    /// </summary>
+    /// <returns>
+    /// A version string in the form <c>major.minor.patch</c> (for example, <c>3.46.0</c>).
+    /// </returns>
+    public static string? LibVersion()
+    {
+        unsafe
+        {
+            byte* pLibVersion = NativeMethods.sqlite3_libversion();
+            return Marshal.PtrToStringUTF8((nint)pLibVersion);
+        }
+    }
+
+    /// <summary>
+    /// Returns the SQLite library version number used by the native runtime.
+    /// </summary>
+    /// <returns>
+    /// An integer representation of the version in the format <c>MMmmpp</c> (major, minor, patch).
+    /// </returns>
+    public static int LibVersionNumber()
+    {
+        return NativeMethods.sqlite3_libversion_number();
+    }
+
+    /// <summary>
+    /// Retrieves metadata information about a specific column in a table.
+    /// </summary>
+    /// <param name="tableName">The name of the table.</param>
+    /// <param name="columnName">The name of the column.</param>
+    /// <param name="dataType">Output: The declared data type of the column (e.g., "TEXT", "INTEGER", "REAL", "BLOB").</param>
+    /// <param name="collSeq">Output: The collating sequence (e.g., "BINARY", "NOCASE", "RTRIM").</param>
+    /// <param name="isNotNull">Output: Whether the column has a NOT NULL constraint.</param>
+    /// <param name="isPrimaryKey">Output: Whether the column is part of the primary key.</param>
+    /// <param name="isAutoIncrement">Output: Whether the column has the AUTOINCREMENT keyword.</param>
+    /// <remarks>
+    /// <para>
+    /// This method provides type-safe access to SQLite's table_column_metadata function.
+    /// It leverages zero-allocation marshalling techniques to minimize heap pressure.
+    /// </para>
+    /// <para>
+    /// The metadata is retrieved from the "main" database attachment by default.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown if tableName or columnName is null.</exception>
+    /// <exception cref="EngineException">Thrown if the metadata cannot be retrieved.</exception>
+    public void GetTableColumnMetadata(string tableName,
+                                       string columnName,
+                                       out string? dataType,
+                                       out string? collSeq,
+                                       out bool isNotNull,
+                                       out bool isPrimaryKey,
+                                       out bool isAutoIncrement)
+    {
+        ActiveConnection.GetTableColumnMetadata(tableName,
+                                                columnName,
+                                                out dataType,
+                                                out collSeq,
+                                                out isNotNull,
+                                                out isPrimaryKey,
+                                                out isAutoIncrement);
+    }
 
     // ------------------------------------------------------------------
     // Livello 3 — primitiva di scrittura coordinata (Tier 0 §12, §17)
@@ -339,5 +524,21 @@ public sealed class SqliteConnection : IDisposable
             _native?.Dispose();
             _native = null;
         }
+    }
+
+    public Backup InitBackup(SqliteConnection destination,
+                             string destinationDatabaseName = "main")
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        return Backup.InitBackup(destination.ActiveConnection, ActiveConnection, destinationDatabaseName, "main");
+    }
+
+    public Blob OpenBlob(string tableName,
+                         string columnName,
+                         long rowId,
+                         bool readWrite = false,
+                         string databaseName = "main")
+    {
+        return Blob.Open(ActiveConnection, tableName, columnName, rowId, readWrite, databaseName);
     }
 }

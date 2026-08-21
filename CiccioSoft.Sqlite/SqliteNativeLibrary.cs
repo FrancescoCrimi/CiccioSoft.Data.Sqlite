@@ -10,22 +10,14 @@ using System.Runtime.InteropServices;
 
 namespace CiccioSoft.Sqlite;
 
-public enum NativeSource
-{
-    Bundled,        // libreria nativa inclusa nel pacchetto NuGet
-    SourceGear,     // bundled provenienza SourceGear.sqlite3
-    System,         // libreria di sistema già presente (es. libsqlite3.so.0 su Linux, winsqlite3.dll fornita dall'host su Windows)
-    Custom          // path esplicito qualsiasi, per casi non previsti
-}
-
-public static class NativeLibrary
+public static class SqliteNativeLibrary
 {
     private static nint _cachedHandle;
-    private static NativeSource? _configured;
+    private static SqliteNativeSource? _configured;
     private static string? _customPath;
     private static readonly System.Threading.Lock _gate = new();
 
-    public static void Configure(NativeSource source, string? customPath = null)
+    public static void Configure(SqliteNativeSource source, string? customPath = null)
     {
         lock (_gate)
         {
@@ -42,25 +34,25 @@ public static class NativeLibrary
 
             string target = source switch
             {
-                NativeSource.Bundled =>
+                SqliteNativeSource.Bundled =>
                     OperatingSystem.IsWindows() ? "sqlite3" : "libsqlite3",
-                NativeSource.SourceGear =>
+                SqliteNativeSource.SourceGear =>
                     OperatingSystem.IsWindows() ? "e_sqlite3" : "libe_sqlite3",
-                NativeSource.System =>
+                SqliteNativeSource.System =>
                     OperatingSystem.IsWindows() ? "winsqlite3" : "libsqlite3",
-                NativeSource.Custom =>
+                SqliteNativeSource.Custom =>
                     customPath ?? throw new ArgumentException(
                         $"{source} richiede customPath valorizzato.", nameof(customPath)),
                 _ => throw new ArgumentOutOfRangeException(nameof(source))
             };
 
-            if (System.Runtime.InteropServices.NativeLibrary.TryLoad(target, typeof(NativeLibrary).Assembly, null, out nint handle))
+            if (System.Runtime.InteropServices.NativeLibrary.TryLoad(target, typeof(SqliteNativeLibrary).Assembly, null, out nint handle))
                 _cachedHandle = handle;
             else
                 throw new DllNotFoundException(
                     $"Impossibile caricare '{target}' per la sorgente {source}.");
 
-            System.Runtime.InteropServices.NativeLibrary.SetDllImportResolver(typeof(NativeLibrary).Assembly, Resolver);
+            System.Runtime.InteropServices.NativeLibrary.SetDllImportResolver(typeof(SqliteNativeLibrary).Assembly, Resolver);
             _configured = source;
             _customPath = customPath;
         }

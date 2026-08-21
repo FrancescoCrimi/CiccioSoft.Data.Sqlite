@@ -17,10 +17,10 @@ public sealed unsafe class Backup : IDisposable
         _handle = handle;
     }
 
-    public static Backup InitBackup(Connection destination,
-                                    Connection source,
-                                    string destinationDatabaseName = "main",
-                                    string sourceDatabaseName = "main")
+    internal static Backup InitBackup(Connection destination,
+                                      Connection source,
+                                      string destinationDatabaseName = "main",
+                                      string sourceDatabaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(destination);
         if (destination.Handle.IsClosed || destination.Handle.IsInvalid)

@@ -23,8 +23,18 @@ internal sealed class TempDatabase : IDisposable
             $"{prefix ?? "interop"}-{Guid.NewGuid():N}.db");
     }
 
-    public Connection Open(OpenFlags flags = OpenFlags.ReadWrite | OpenFlags.Create)
-        => Connection.Open(Path, flags);
+    public SqliteConnection Open(OpenFlags flags = OpenFlags.ReadWrite | OpenFlags.Create)
+    {
+        var option = new SqliteConnectionOptions
+        {
+            DataSource = Path,
+            AdditionalFlags = flags,
+            ConcurrencyMode = SqliteConcurrencyMode.Native
+        };
+        var connection = new SqliteConnection(option);
+        connection.Open();
+        return connection;
+    }
 
     public void Dispose()
     {

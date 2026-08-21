@@ -17,7 +17,7 @@ public class WriteSpan
     private static ReadOnlySpan<byte> TestString => "User_Performance_Test_String_12345"u8;
 
     private sqlite3 _db1;
-    private Connection _db2;
+    private CiccioSoft.Sqlite.SqliteConnection _db2;
 
     [GlobalSetup(Target = nameof(WriteSpan_SQLitePCL))]
     public void GlobalSetup_SQLitePCL()
@@ -62,8 +62,15 @@ public class WriteSpan
     [GlobalSetup(Target = nameof(WriteSpan_Interop))]
     public void GlobalSetup_Interop()
     {
-        NativeLibrary.Configure(NativeSource.SourceGear);
-        _db2 = Connection.Open(DbFile, OpenFlagsDefaults.Coordinated);
+        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        var option = new SqliteConnectionOptions
+        {
+            DataSource = DbFile,
+            AdditionalFlags = OpenFlagsDefaults.Coordinated,
+            ConcurrencyMode = SqliteConcurrencyMode.Native
+        };
+        _db2 = new CiccioSoft.Sqlite.SqliteConnection(option);
+        _db2.Open();
         _db2.Execute("PRAGMA journal_mode = WAL;");
         _db2.Execute("PRAGMA synchronous = OFF;");
     }
