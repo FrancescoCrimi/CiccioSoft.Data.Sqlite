@@ -340,13 +340,7 @@ public sealed class SqliteConnection : IDisposable
     /// A version string in the form <c>major.minor.patch</c> (for example, <c>3.46.0</c>).
     /// </returns>
     public static string? LibVersion()
-    {
-        unsafe
-        {
-            byte* pLibVersion = NativeMethods.sqlite3_libversion();
-            return Marshal.PtrToStringUTF8((nint)pLibVersion);
-        }
-    }
+        => Connection.LibVersion();
 
     /// <summary>
     /// Returns the SQLite library version number used by the native runtime.
@@ -355,9 +349,7 @@ public sealed class SqliteConnection : IDisposable
     /// An integer representation of the version in the format <c>MMmmpp</c> (major, minor, patch).
     /// </returns>
     public static int LibVersionNumber()
-    {
-        return NativeMethods.sqlite3_libversion_number();
-    }
+        => Connection.LibVersionNumber();
 
     /// <summary>
     /// Retrieves metadata information about a specific column in a table.
