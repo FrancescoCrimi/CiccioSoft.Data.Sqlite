@@ -527,10 +527,11 @@ public sealed class SqliteConnection : IDisposable
     }
 
     public Backup InitBackup(SqliteConnection destination,
-                             string destinationDatabaseName = "main")
+                             string destinationDatabaseName = "main",
+                             string sourceDatabaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(destination);
-        return Backup.InitBackup(destination.ActiveConnection, ActiveConnection, destinationDatabaseName, "main");
+        return Backup.InitBackup(destination.ActiveConnection, ActiveConnection, destinationDatabaseName, sourceDatabaseName);
     }
 
     public Blob OpenBlob(string tableName,
