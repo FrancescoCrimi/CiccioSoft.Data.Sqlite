@@ -381,6 +381,18 @@ L'identità e la modalità determinano insieme il profilo, mai il contrario (Tie
 
 Invariata dalla v4.0.0: costruttore che riceve un puntatore già ottenuto, mai un parametro `out`/`ref` marshalled automaticamente; `ReleaseHandle()` confronta l'`int` grezzo di `sqlite3_close_v2` con `NativeMethods.SQLITE_OK`, senza passare per `ResultCode`.
 
+### 8.1.1 `Utf8CStringBuffer`
+
+**Nuovo in questa versione — formalizza un dettaglio di marshalling di Livello 1 lasciato implicito fino a v4.0.0.** `ref struct` interno (mai parte della superficie pubblica): converte una `string` .NET in UTF-8 null-terminated per il confine P/Invoke, con storage primario su `stackalloc` fornito dal chiamante e fallback su `ArrayPool<byte>.Shared` solo se il testo eccede lo spazio disponibile — nessun rischio di `StackOverflowException` per input di dimensione non prevedibile a priori (query, percorsi file, parametri di bind).
+
+Contratto:
+
+- Il testo non può essere `null`: la distinzione fra SQL NULL e stringa vuota è responsabilità del chiamante (es. bind di parametri), che deve instradare i valori `null` verso un binding NULL nativo *prima* di raggiungere questo tipo. Per parametri opzionali legittimamente `null` sul lato del chiamante (es. il nome di una VFS), la normalizzazione (`vfs ?? string.Empty`) è a carico del chiamante, non del buffer.
+- Vita strettamente scope-bound al pattern `using var ... ; fixed (...) { ... }`: nessuna guardia contro l'uso dopo `Dispose()` (nessun campo `_disposed`) — il costo di una guardia non è giustificato dato l'ambito `internal` e la vita brevissima dell'istanza.
+- `Dispose()` restituisce all'`ArrayPool` il buffer eventualmente affittato **sempre** con azzeramento incondizionato (`clearArray: true`), anche quando il contenuto non è di per sé sensibile — perché una stringa di connessione con credenziali embedded può transitare da qui, e un buffer non ripulito resterebbe leggibile da un rent successivo altrove nel processo.
+
+Usato oggi da `Connection` (percorso file e nome VFS in `Open`, testo SQL in `Prepare`/`Execute`, nomi di schema/database), `Statement` (nomi di parametro nel bind, testo in `BindText`), `Backup` (nomi dei due database coinvolti) e `Blob` (nomi di database/tabella/colonna) — ogni marshalling di stringa verso l'ABI C passa da qui, mai un `Marshal.StringToHGlobalAnsi` o equivalente. La dimensione del buffer su stack è scelta dal chiamante caso per caso (256 byte per identificatori corti, 512–1024 per SQL/percorsi) — non è parte del contratto del tipo.
+
 ### 8.2 `Connection`: nessuna `StatementCache` propria
 
 **Cambiamento principale di questa versione**: `Connection` (Livello 2) non possiede più una `StatementCache`. Il campo è rimosso; la cache, quando esiste, appartiene a `PooledConnection` (§9.2), non a `Connection`:
@@ -663,6 +675,8 @@ var watchdog = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(_ => connection.
 statement.Step();   // termina con ResultCode.Interrupt se il watchdog scatta prima del Done
 ```
 
+**Nota — `Dispose` non è un secondo meccanismo di cancellazione (nuovo in questa versione).** `Connection.Interrupt()`, sopra, è l'*unica* operazione di questa derivazione pensata per essere invocata da un thread diverso da quello che sta eseguendo la chiamata bloccante. `Dispose()`/`DisposeAsync()` non godono della stessa garanzia: le firme P/Invoke di questa derivazione passano il puntatore nativo grezzo, non il `SafeHandle` tipizzato (§20), quindi nessun refcounting automatico del marshaller protegge la chiusura nativa da una chiamata bloccante ancora in volo su un altro thread. Contratto per il chiamante: **una `Connection`/`SqliteConnection` non va mai disposta mentre un'operazione bloccante è in corso su un altro thread — comportamento non definito se violato.** Per terminare un'operazione bloccante da un altro thread lo strumento corretto è sempre e solo `Interrupt()`, mai `Dispose()`.
+
 ### 16.5 Invarianti di questa sezione
 
 Vedi Invarianti I18 (§19) e I21 (§16.4); I19 non è più applicabile — rimosso da Tier 0 v6.0.0 (§20 di questo documento).
@@ -826,6 +840,7 @@ Invarianti attivi: I1–I18, I20, I21, I23–I26. I19 e I22 sono rimossi da Tier
 | Un consumatore in modalità Native si aspetta lo stesso automatismo di reset di `read_uncommitted` disponibile in Coordinated/ReadOnly (§12.4), causando stato di sessione residuo fra usi successivi della stessa connessione. | Rischio tracciato (nuovo) | Documentazione esplicita in XML doc-comment su `SqliteConnection` in modalità Native; nessuna mitigazione automatica, per design (§8.2). |
 | Interazione `SharedCache`↔`SingleWriterCoordinator` non validata in modalità Coordinated. | Tracciato, invariato da Tier 0 §27 | Validazione tecnica dedicata richiesta prima di dichiarare supportata la combinazione. |
 | Un nuovo tipo pubblico aggiunto senza il corrispondente attributo di thread-affinity (§17.1). | Rischio di processo | Test di conformità I20 tramite scansione per riflessione in CI. |
+| Le firme P/Invoke di questa derivazione passano il puntatore nativo grezzo (`AsStructPointer()`, §8.1) invece del `SafeHandle` tipizzato, per evitare l'overhead di marshalling automatico — scelta deliberata, motivata da benchmark interni dell'autore (0,54×–0,82× il tempo di riferimento di SQLitePCLRaw=1,0× su 100.000 operazioni ripetute). Conseguenza: nessun refcounting automatico del marshaller protegge una chiamata nativa bloccante in volo da un `Dispose()` concorrente su un altro thread — a differenza di quanto offrirebbe passare `SafeHandle` per valore a ogni firma P/Invoke. | Deviazione deliberata (nuovo) | Contratto esplicito per il chiamante (§16.4): mai disporre mentre un'operazione bloccante è in corso su un altro thread — comportamento non definito se violato. L'unico strumento sanzionato per l'interruzione cross-thread resta `Interrupt()` (I21), mai `Dispose()`. Unificazione di `Connection` e `ConnectionSafeHandle` in una sola classe valutata e rimandata (non richiede modifica a questa voce). |
 
 ---
 
