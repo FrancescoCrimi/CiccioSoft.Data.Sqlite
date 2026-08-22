@@ -29,9 +29,16 @@ internal static class DatabaseIdentity
         string fullPath = Path.GetFullPath(connectionStringPath);
 
         // Risoluzione symlink dove supportata (FileSystemInfo.ResolveLinkTarget, .NET 6+).
+        // Solo se il file esiste già: ResolveLinkTarget lancia FileNotFoundException su un
+        // percorso assente, ma un database che deve ancora essere creato (il caso normale
+        // in Coordinated/ReadOnly con OpenFlags.Create, Tier 0 §20) non può per definizione
+        // essere un symlink — niente da risolvere, fullPath resta quello canonicalizzato sopra.
         var info = new FileInfo(fullPath);
-        var resolved = info.ResolveLinkTarget(returnFinalTarget: true);
-        if (resolved is not null) fullPath = resolved.FullName;
+        if (info.Exists)
+        {
+            var resolved = info.ResolveLinkTarget(returnFinalTarget: true);
+            if (resolved is not null) fullPath = resolved.FullName;
+        }
 
         // Normalizzazione del case: euristica basata sul sistema operativo (Tier 0 §9, nota
         // sulla canonicalizzazione) — non infallibile su filesystem con case-sensitivity

@@ -36,6 +36,26 @@ internal sealed class TempDatabase : IDisposable
         return connection;
     }
 
+    /// <summary>
+    /// Apre questo stesso file in <see cref="SqliteConcurrencyMode.Coordinated"/> o
+    /// <see cref="SqliteConcurrencyMode.ReadOnly"/>: nessun <c>AdditionalFlags</c> da passare,
+    /// il profilo denominato (ReadWrite|Create o ReadOnly) è già incluso di suo (Tier 0 §20).
+    /// Due connessioni aperte su questo stesso <see cref="Path"/> con lo stesso <paramref name="mode"/>
+    /// condividono lo stesso <c>SqliteConnectionPool</c>/<c>SingleWriterCoordinator</c> via
+    /// <c>CoordinatorRegistry</c> (Tier 0 §11): utile per i test di serializzazione cross-connessione.
+    /// </summary>
+    public SqliteConnection OpenMode(SqliteConcurrencyMode mode)
+    {
+        var option = new SqliteConnectionOptions
+        {
+            DataSource = Path,
+            ConcurrencyMode = mode
+        };
+        var connection = new SqliteConnection(option);
+        connection.Open();
+        return connection;
+    }
+
     public void Dispose()
     {
         try

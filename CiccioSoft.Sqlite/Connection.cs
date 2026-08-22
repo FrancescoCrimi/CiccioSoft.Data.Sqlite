@@ -497,7 +497,7 @@ internal sealed unsafe class Connection : IDisposable
     }
 
     /// <summary>
-    /// Avvolge <c>sqlite3_wal_checkpoint_v2</c> su tutti i database allegati (<c>zDb = NULL</c>).
+    /// Avvolge <c>sqlite3_wal_checkpoint_v2</c> sul database principale (<c>zDb = "main"</c>).
     /// Tier 0 §21, Invariante I16.
     /// </summary>
     /// <remarks>
@@ -523,9 +523,21 @@ internal sealed unsafe class Connection : IDisposable
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Valore di SqliteCheckpointMode non riconosciuto."),
         };
 
+        // zDb=NULL istruirebbe SQLite a operare su TUTTI i database WAL collegati, ma in tal
+        // caso la documentazione nativa dichiara esplicitamente *pnLog/*pnCkpt "undefined" —
+        // non -1 per convenzione, proprio indefiniti. Passare "main" esplicitamente (nessun
+        // parametro databaseName è ancora esposto qui: comportamento corretto solo per il
+        // database principale, non per eventuali ATTACH) rende i due contatori dell'esito
+        // significativi, come promesso da SqliteCheckpointResult.
+        using var dbNameBuffer = new Utf8CStringBuffer("main", stackalloc byte[16]);
+
         int logFrames, checkpointedFrames;
-        var result = (ResultCode)NativeMethods.sqlite3_wal_checkpoint_v2(
-            _handle.AsStructPointer(), null, eMode, &logFrames, &checkpointedFrames);
+        ResultCode result;
+        fixed (byte* pDbName = dbNameBuffer)
+        {
+            result = (ResultCode)NativeMethods.sqlite3_wal_checkpoint_v2(
+                _handle.AsStructPointer(), pDbName, eMode, &logFrames, &checkpointedFrames);
+        }
         GC.KeepAlive(_handle);
         CheckResult(result);
 
