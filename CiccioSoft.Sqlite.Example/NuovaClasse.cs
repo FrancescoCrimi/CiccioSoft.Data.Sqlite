@@ -44,7 +44,7 @@ public class NuovaClasse
         }
 
         using (var source = File.OpenRead(sourcePath))
-        using (var blob = Blob.Open(conn, "files", "payload", rowId, readWrite: true))
+        using (var blob = conn.OpenBlob("files", "payload", rowId, readWrite: true))
         using (var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
         {
             long offset = 0;
@@ -84,7 +84,7 @@ public class NuovaClasse
                 throw new InvalidOperationException($"Riga {rowId} non trovata");
         }
 
-        using (var blob = Blob.Open(conn, "files", "payload", rowId, readWrite: false))
+        using (var blob = conn.OpenBlob("files", "payload", rowId, readWrite: false))
         using (var dest = File.Create(destPath))
         {
             int totalSize = blob.Bytes();
@@ -108,7 +108,7 @@ public class NuovaClasse
         //      già presenti, riutilizzando lo stesso handle blob senza riaprirlo ----
 
         using (var idsStmt = conn.Prepare("SELECT id FROM files"))
-        using (var blob = Blob.Open(conn, "files", "payload", rowId: 1, readWrite: false))
+        using (var blob = conn.OpenBlob("files", "payload", rowId: 1, readWrite: false))
         {
             bool first = true;
             while (idsStmt.Step())

@@ -92,7 +92,7 @@ public sealed class DisposalLifecycleTests
         connection.Execute("INSERT INTO files (payload) VALUES (zeroblob(8));");
         long rowId = connection.LastInsertRowId();
 
-        var blob = Blob.Open(connection, "files", "payload", rowId, readWrite: true);
+        var blob = connection.OpenBlob("files", "payload", rowId, readWrite: true);
         blob.Dispose();
 
         byte[] buffer = new byte[4];
@@ -129,7 +129,7 @@ public sealed class DisposalLifecycleTests
         connection.Dispose();
 
         Assert.Throws<ObjectDisposedException>(() =>
-            Blob.Open(connection, "files", "payload", rowId));
+            connection.OpenBlob("files", "payload", rowId));
     }
 
     [Fact]

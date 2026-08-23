@@ -43,7 +43,7 @@ class Program
         long rowId = conn.LastInsertRowId();
 
         // Apertura in read/write sulla riga appena inserita
-        using var blob = Blob.Open(conn, "files", "payload", rowId, readWrite: true);
+        using var blob = conn.OpenBlob("files", "payload", rowId, readWrite: true);
 
         Span<byte> chunk = stackalloc byte[4096];
         new Random().NextBytes(chunk);
