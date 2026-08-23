@@ -598,16 +598,11 @@ public sealed unsafe class Connection : IDisposable
 
 
 
-
-
-
-
-
-
     public Backup InitBackup(Connection destination,
                              string destinationDatabaseName = "main",
                              string sourceDatabaseName = "main")
     {
+        ThrowIfInvalid();
         ArgumentNullException.ThrowIfNull(destination);
         return Backup.InitBackup(destination, this, destinationDatabaseName, sourceDatabaseName);
     }
@@ -618,11 +613,9 @@ public sealed unsafe class Connection : IDisposable
                          bool readWrite = false,
                          string databaseName = "main")
     {
+        ThrowIfInvalid();
         return Blob.Open(this, tableName, columnName, rowId, readWrite, databaseName);
     }
-
-
-
 
 
 
