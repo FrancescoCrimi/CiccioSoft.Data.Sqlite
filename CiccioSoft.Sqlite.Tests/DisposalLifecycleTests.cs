@@ -111,7 +111,7 @@ public sealed class DisposalLifecycleTests
         source.Execute("CREATE TABLE t (id INTEGER);");
         using var destination = destDb.Open();
 
-        var backup = Backup.InitBackup(destination, source);
+        var backup = source.InitBackup(destination);
         backup.Dispose();
 
         Assert.Throws<ObjectDisposedException>(() => backup.Step());
@@ -142,9 +142,9 @@ public sealed class DisposalLifecycleTests
         disposed.Dispose();
 
         Assert.Throws<ObjectDisposedException>(() =>
-            Backup.InitBackup(disposed, live));
+            live.InitBackup(disposed));
         Assert.Throws<ObjectDisposedException>(() =>
-            Backup.InitBackup(live, disposed));
+            disposed.InitBackup(live));
     }
 
     [Fact]

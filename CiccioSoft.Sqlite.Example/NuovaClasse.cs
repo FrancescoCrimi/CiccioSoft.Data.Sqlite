@@ -25,6 +25,7 @@ public class NuovaClasse
         // const string sourcePath = @"C:\data\backup-2026-07-22.zip";
         const string sourcePath = "backup.zip";
         const int ChunkSize = 64 * 1024; // 64 KB: bilancia n. di syscall vs. footprint di memoria
+        Span<byte> buffer = stackalloc byte[ChunkSize];
 
         long fileLength = new FileInfo(sourcePath).Length;
 
@@ -46,7 +47,6 @@ public class NuovaClasse
         using (var blob = Blob.Open(conn, "files", "payload", rowId, readWrite: true))
         using (var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
         {
-            Span<byte> buffer = stackalloc byte[ChunkSize];
             long offset = 0;
             int bytesRead;
 
@@ -88,7 +88,6 @@ public class NuovaClasse
         using (var dest = File.Create(destPath))
         {
             int totalSize = blob.Bytes();
-            Span<byte> buffer = stackalloc byte[ChunkSize];
             int offset = 0;
 
             while (offset < totalSize)
@@ -120,7 +119,6 @@ public class NuovaClasse
                 else blob.Reopen(currentId);  // costo trascurabile: nessuna nuova sqlite3_blob_open
 
                 using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-                Span<byte> buffer = stackalloc byte[ChunkSize];
                 int totalSize = blob.Bytes();
                 int offset = 0;
 

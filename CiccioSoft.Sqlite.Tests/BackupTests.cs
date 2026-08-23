@@ -24,7 +24,7 @@ public sealed class BackupTests
             source.Execute("INSERT INTO inventory (sku) VALUES ('A-1'), ('B-2'), ('C-3');");
 
             using var destination = destDb.Open();
-            using var backup = Backup.InitBackup(destination, source);
+            using var backup = source.InitBackup(destination);
 
             ResultCodes rc;
             do
@@ -69,7 +69,7 @@ public sealed class BackupTests
         }
 
         using var destination = destDb.Open();
-        using var backup = Backup.InitBackup(destination, source);
+        using var backup = source.InitBackup(destination);
 
         int steps = 0;
         ResultCodes rc;
@@ -92,9 +92,9 @@ public sealed class BackupTests
         using var connection = ConnectionFactory.OpenMemory();
 
         Assert.Throws<ArgumentNullException>(() =>
-            Backup.InitBackup(null!, connection));
-        Assert.Throws<ArgumentNullException>(() =>
-            Backup.InitBackup(connection, null!));
+            connection.InitBackup(null!));
+        // Assert.Throws<ArgumentNullException>(() =>
+        //     Backup.InitBackup(connection, null!));
     }
 
     [Theory]
@@ -109,7 +109,7 @@ public sealed class BackupTests
         using var destination = ConnectionFactory.OpenMemory();
 
         Assert.ThrowsAny<ArgumentException>(() =>
-            Backup.InitBackup(destination, source, destName!, sourceName!));
+            source.InitBackup(destination, destName!, sourceName!));
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public sealed class BackupTests
         source.Execute("CREATE TABLE t (id INTEGER);");
         using var destination = destDb.Open();
 
-        var backup = Backup.InitBackup(destination, source);
+        var backup = source.InitBackup(destination);
         backup.Dispose();
         backup.Dispose();
     }

@@ -12,12 +12,12 @@ public sealed unsafe class Backup : IDisposable
 {
     private readonly BackupSafeHandle _handle;
 
-    internal Backup(BackupSafeHandle handle)
+    private Backup(BackupSafeHandle handle)
     {
         _handle = handle;
     }
 
-    public static Backup InitBackup(Connection destination,
+    internal static Backup InitBackup(Connection destination,
                                     Connection source,
                                     string destinationDatabaseName = "main",
                                     string sourceDatabaseName = "main")
