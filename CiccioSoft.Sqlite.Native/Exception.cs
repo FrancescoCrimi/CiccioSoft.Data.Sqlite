@@ -12,11 +12,11 @@ namespace CiccioSoft.Sqlite.Native;
 /// <summary>
 /// Represents an error returned by the native SQLite interop layer.
 /// </summary>
-public sealed unsafe class EngineException : System.Exception
+public sealed unsafe class Exception : System.Exception
 {
     string? _operation;
 
-    private EngineException(ResultCodes result, string errorMessage, string operation)
+    private Exception(ResultCodes result, string errorMessage, string operation)
     {
         ResultCode = result;
         BaseResultCode = (ResultCodes)(((int)result) & 0xFF);
@@ -64,7 +64,7 @@ public sealed unsafe class EngineException : System.Exception
     public string? ErrorMessage { get; }
 
 
-    internal static EngineException CreateException(ConnectionSafeHandle connectionSafeHandle, ResultCodes result, string caller)
+    internal static Exception CreateException(ConnectionSafeHandle connectionSafeHandle, ResultCodes result, string caller)
     {
         string errorMessage;
         byte* pErrStr = NativeMethods.sqlite3_errstr((int)result);
@@ -85,6 +85,6 @@ public sealed unsafe class EngineException : System.Exception
             errorMessage = errorString;
         }
 
-        return new CiccioSoft.Sqlite.Native.EngineException(result, errorMessage, caller);
+        return new CiccioSoft.Sqlite.Native.Exception(result, errorMessage, caller);
     }
 }

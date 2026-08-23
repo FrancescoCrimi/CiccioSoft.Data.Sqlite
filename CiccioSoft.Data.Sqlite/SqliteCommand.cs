@@ -426,19 +426,19 @@ public sealed class SqliteCommand : DbCommand
                 operationCancellationToken.ThrowIfCancellationRequested();
                 return operation();
             }
-            catch (CiccioSoft.Sqlite.Native.EngineException ex) when (_timeoutTriggered && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (CiccioSoft.Sqlite.Native.Exception ex) when (_timeoutTriggered && ex.BaseResultCode == ResultCodes.Interrupt)
             {
                 throw new SqliteException(Properties.Resources.CommandTimedOut(_command.CommandTimeout), ex);
             }
-            catch (CiccioSoft.Sqlite.Native.EngineException ex) when ((operationCanceled || operationCancellationToken.IsCancellationRequested) && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (CiccioSoft.Sqlite.Native.Exception ex) when ((operationCanceled || operationCancellationToken.IsCancellationRequested) && ex.BaseResultCode == ResultCodes.Interrupt)
             {
                 throw new OperationCanceledException(operationCancellationToken);
             }
-            catch (CiccioSoft.Sqlite.Native.EngineException ex) when (_externalCancellationToken.IsCancellationRequested && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (CiccioSoft.Sqlite.Native.Exception ex) when (_externalCancellationToken.IsCancellationRequested && ex.BaseResultCode == ResultCodes.Interrupt)
             {
                 throw new OperationCanceledException(_externalCancellationToken);
             }
-            catch (CiccioSoft.Sqlite.Native.EngineException ex)
+            catch (CiccioSoft.Sqlite.Native.Exception ex)
             {
                 // throw new SqliteException(ex.Message, (int)ex.BaseErrorCode, (int)ex.ExtendedErrorCode, ex);
                 throw new SqliteException(Resources.SqliteNativeError((int)ex.BaseResultCode, ex.ErrorMessage), ex);
@@ -466,19 +466,19 @@ public sealed class SqliteCommand : DbCommand
                 operationCancellationToken.ThrowIfCancellationRequested();
                 operation();
             }
-            catch (CiccioSoft.Sqlite.Native.EngineException ex) when (_timeoutTriggered && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (CiccioSoft.Sqlite.Native.Exception ex) when (_timeoutTriggered && ex.BaseResultCode == ResultCodes.Interrupt)
             {
                 throw new SqliteException(Properties.Resources.CommandTimedOut(_command.CommandTimeout), ex);
             }
-            catch (CiccioSoft.Sqlite.Native.EngineException ex) when ((operationCanceled || operationCancellationToken.IsCancellationRequested) && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (CiccioSoft.Sqlite.Native.Exception ex) when ((operationCanceled || operationCancellationToken.IsCancellationRequested) && ex.BaseResultCode == ResultCodes.Interrupt)
             {
                 throw new OperationCanceledException(operationCancellationToken);
             }
-            catch (CiccioSoft.Sqlite.Native.EngineException ex) when (_externalCancellationToken.IsCancellationRequested && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (CiccioSoft.Sqlite.Native.Exception ex) when (_externalCancellationToken.IsCancellationRequested && ex.BaseResultCode == ResultCodes.Interrupt)
             {
                 throw new OperationCanceledException(_externalCancellationToken);
             }
-            catch (CiccioSoft.Sqlite.Native.EngineException ex)
+            catch (CiccioSoft.Sqlite.Native.Exception ex)
             {
                 // throw new SqliteException(ex.Message, (int)ex.BaseErrorCode, (int)ex.ExtendedErrorCode, ex);
                 throw new SqliteException(Resources.SqliteNativeError((int)ex.BaseResultCode, ex.ErrorMessage), ex);

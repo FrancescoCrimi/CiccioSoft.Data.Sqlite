@@ -59,7 +59,7 @@ public sealed class SharedCacheAndConcurrencyTests
         a.Execute("CREATE TABLE t (id INTEGER);");
         a.Execute("INSERT INTO t VALUES (1);");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             b.Execute("SELECT * FROM t;"));
 
         Assert.Equal(ResultCodes.Error, ex.BaseResultCode);

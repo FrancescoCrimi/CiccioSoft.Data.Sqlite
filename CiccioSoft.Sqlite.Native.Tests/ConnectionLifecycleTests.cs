@@ -47,7 +47,7 @@ public sealed class ConnectionLifecycleTests
     {
         string missing = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.db");
 
-        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
+        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
             Connection.Open(missing, OpenFlags.ReadOnly));
 
         Assert.Equal(ResultCodes.CantOpen, ex.BaseResultCode);

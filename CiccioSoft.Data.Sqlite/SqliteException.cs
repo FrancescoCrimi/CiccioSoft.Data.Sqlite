@@ -39,7 +39,7 @@ public class SqliteException : DbException
         SqliteExtendedErrorCode = extendedErrorCode;
     }
 
-    public SqliteException(string message, CiccioSoft.Sqlite.Native.EngineException? innerException = null)
+    public SqliteException(string message, CiccioSoft.Sqlite.Native.Exception? innerException = null)
         : base(message, innerException)
     {
         if (innerException != null)

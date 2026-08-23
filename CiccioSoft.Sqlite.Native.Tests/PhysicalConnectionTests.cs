@@ -58,7 +58,7 @@ public sealed class PhysicalConnectionTests
     {
         string path = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.db");
 
-        var exception = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
+        var exception = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
             Connection.Open(path, OpenFlags.ReadOnly));
 
         Assert.Equal(ResultCodes.CantOpen, exception.BaseResultCode);

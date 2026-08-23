@@ -1083,7 +1083,7 @@ public sealed class SqliteDataReader : DbDataReader
                 out isAutoIncrement);
             return true;
         }
-        catch (CiccioSoft.Sqlite.Native.EngineException)
+        catch (CiccioSoft.Sqlite.Native.Exception)
         {
             isNotNull = false;
             isPrimaryKey = false;
