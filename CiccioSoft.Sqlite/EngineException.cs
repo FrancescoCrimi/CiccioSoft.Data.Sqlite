@@ -66,7 +66,7 @@ public sealed unsafe class EngineException : Exception
         {
             // sqlite3_errmsg returns the most recent error message for this specific connection,
             // providing contextual details (e.g. which column or constraint failed).
-            byte* pErr = NativeMethods.sqlite3_errmsg(connectionSafeHandle.AsStructPointer());
+            byte* pErr = NativeMethods.sqlite3_errmsg((sqlite3*)connectionSafeHandle.DangerousGetHandle());
             GC.KeepAlive(connectionSafeHandle);
             errorMessage = Marshal.PtrToStringUTF8((nint)pErr) ?? "Unreadable SQLite error";
         }

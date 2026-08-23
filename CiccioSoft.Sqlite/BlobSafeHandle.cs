@@ -17,8 +17,6 @@ public sealed unsafe class BlobSafeHandle : SafeHandle
 
     public override bool IsInvalid => handle == nint.Zero;
 
-    internal sqlite3_blob* AsStructPointer() => (sqlite3_blob*)handle;
-
     protected override bool ReleaseHandle()
     {
         return NativeMethods.sqlite3_blob_close((sqlite3_blob*)handle) == NativeMethods.SQLITE_OK;

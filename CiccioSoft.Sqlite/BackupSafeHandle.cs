@@ -17,8 +17,6 @@ public sealed unsafe class BackupSafeHandle : SafeHandle
 
     public override bool IsInvalid => handle == nint.Zero;
 
-    internal sqlite3_backup* AsStructPointer() => (sqlite3_backup*)handle;
-
     protected override bool ReleaseHandle()
     {
         return NativeMethods.sqlite3_backup_finish((sqlite3_backup*)handle) == NativeMethods.SQLITE_OK;

@@ -17,8 +17,6 @@ public sealed unsafe class StatementSafeHandle : SafeHandle
 
     public override bool IsInvalid => handle == nint.Zero;
 
-    internal sqlite3_stmt* AsStructPointer() => (sqlite3_stmt*)handle;
-
     protected override bool ReleaseHandle()
     {
         return NativeMethods.sqlite3_finalize((sqlite3_stmt*)handle) == NativeMethods.SQLITE_OK;
