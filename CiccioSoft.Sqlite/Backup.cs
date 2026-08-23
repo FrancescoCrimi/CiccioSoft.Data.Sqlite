@@ -36,16 +36,16 @@ public sealed unsafe class Backup : IDisposable
 
         fixed (byte* pDest = destinationNameBuffer, pSource = sourceNameBuffer)
         {
-            sqlite3_backup* backupHandle = NativeMethods.sqlite3_backup_init(destination.Handle.AsStructPointer(),
+            sqlite3_backup* backupHandle = NativeMethods.sqlite3_backup_init((sqlite3*)destination.Handle.DangerousGetHandle(),
                                                                              pDest,
-                                                                             source.Handle.AsStructPointer(),
+                                                                             (sqlite3*)source.Handle.DangerousGetHandle(),
                                                                              pSource);
             GC.KeepAlive(destination.Handle);
             GC.KeepAlive(source.Handle);
 
             if ((nint)backupHandle == nint.Zero)
             {
-                var result = (ResultCodes)NativeMethods.sqlite3_errcode(destination.Handle.AsStructPointer());
+                var result = (ResultCodes)NativeMethods.sqlite3_errcode((sqlite3*)destination.Handle.DangerousGetHandle());
                 GC.KeepAlive(destination.Handle);   // ridondante qui (destination.Handle è riusata subito sotto),
                                                     // presente per uniformità con l'invariante del progetto
                 throw EngineException.CreateException(destination.Handle, result, $"{nameof(Backup)}.Init");
@@ -58,7 +58,7 @@ public sealed unsafe class Backup : IDisposable
     public ResultCodes Step(int pages = -1)
     {
         ThrowIfInvalid();
-        var rtn = (ResultCodes)NativeMethods.sqlite3_backup_step(_handle.AsStructPointer(), pages);
+        var rtn = (ResultCodes)NativeMethods.sqlite3_backup_step((sqlite3_backup*)_handle.DangerousGetHandle(), pages);
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -66,7 +66,7 @@ public sealed unsafe class Backup : IDisposable
     public int Remaining()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_backup_remaining(_handle.AsStructPointer());
+        var rtn = NativeMethods.sqlite3_backup_remaining((sqlite3_backup*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -74,7 +74,7 @@ public sealed unsafe class Backup : IDisposable
     public int PageCount()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_backup_pagecount(_handle.AsStructPointer());
+        var rtn = NativeMethods.sqlite3_backup_pagecount((sqlite3_backup*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         return rtn;
     }

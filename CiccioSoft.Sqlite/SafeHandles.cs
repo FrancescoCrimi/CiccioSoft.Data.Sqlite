@@ -17,8 +17,7 @@ public sealed unsafe class ConnectionSafeHandle : SafeHandle
 
     public override bool IsInvalid => handle == nint.Zero;
 
-    internal sqlite3* AsStructPointer() => (sqlite3*)handle;
-
+    // Verificare Se oltre a chiamare sqlite3_close_v2 è necesasario anche "handle = nint.Zero"
     protected override bool ReleaseHandle()
     {
         return NativeMethods.sqlite3_close_v2((sqlite3*)handle) == NativeMethods.SQLITE_OK;
@@ -34,8 +33,7 @@ public sealed unsafe class StatementSafeHandle : SafeHandle
 
     public override bool IsInvalid => handle == nint.Zero;
 
-    internal sqlite3_stmt* AsStructPointer() => (sqlite3_stmt*)handle;
-
+    // Verificare Se oltre a chiamare sqlite3_close_v2 è necesasario anche "handle = nint.Zero"
     protected override bool ReleaseHandle()
     {
         return NativeMethods.sqlite3_finalize((sqlite3_stmt*)handle) == NativeMethods.SQLITE_OK;
@@ -52,8 +50,7 @@ public sealed unsafe class BackupSafeHandle : SafeHandle
 
     public override bool IsInvalid => handle == nint.Zero;
 
-    internal sqlite3_backup* AsStructPointer() => (sqlite3_backup*)handle;
-
+    // Verificare Se oltre a chiamare sqlite3_close_v2 è necesasario anche "handle = nint.Zero"
     protected override bool ReleaseHandle()
     {
         return NativeMethods.sqlite3_backup_finish((sqlite3_backup*)handle) == NativeMethods.SQLITE_OK;
@@ -69,8 +66,7 @@ public sealed unsafe class BlobSafeHandle : SafeHandle
 
     public override bool IsInvalid => handle == nint.Zero;
 
-    internal sqlite3_blob* AsStructPointer() => (sqlite3_blob*)handle;
-
+    // Verificare Se oltre a chiamare sqlite3_close_v2 è necesasario anche "handle = nint.Zero"
     protected override bool ReleaseHandle()
     {
         return NativeMethods.sqlite3_blob_close((sqlite3_blob*)handle) == NativeMethods.SQLITE_OK;

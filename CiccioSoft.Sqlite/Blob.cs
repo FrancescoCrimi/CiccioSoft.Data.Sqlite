@@ -13,7 +13,7 @@ namespace CiccioSoft.Sqlite;
 /// Provides low-allocation, incremental read/write access to a single BLOB value
 /// stored in a table row, via the <c>sqlite3_blob_*</c> incremental I/O API.
 /// </summary>
-/// <threadsafety>
+/// <threadsafety>sqlite3_backupsqlite3_backup
 /// This class is not inherently thread-safe, consistent with the rest of the library.
 /// </threadsafety>
 public sealed unsafe class Blob : IDisposable
@@ -63,7 +63,7 @@ public sealed unsafe class Blob : IDisposable
             sqlite3_blob* pBlob = default;
 
             var result = (ResultCodes)NativeMethods.sqlite3_blob_open(
-                connection.Handle.AsStructPointer(),
+                (sqlite3*)connection.Handle.DangerousGetHandle(),
                 pDb,
                 pTable,
                 pColumn,
@@ -89,7 +89,7 @@ public sealed unsafe class Blob : IDisposable
     public int Bytes()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_blob_bytes(_handle.AsStructPointer());
+        var rtn = NativeMethods.sqlite3_blob_bytes((sqlite3_blob*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -109,7 +109,7 @@ public sealed unsafe class Blob : IDisposable
         fixed (byte* pDest = destination)
         {
             var result = (ResultCodes)NativeMethods.sqlite3_blob_read(
-                _handle.AsStructPointer(), pDest, destination.Length, blobOffset);
+                (sqlite3_blob*)_handle.DangerousGetHandle(), pDest, destination.Length, blobOffset);
             GC.KeepAlive(_handle);
             CheckResult(result);
         }
@@ -132,7 +132,7 @@ public sealed unsafe class Blob : IDisposable
         fixed (byte* pSrc = source)
         {
             var result = (ResultCodes)NativeMethods.sqlite3_blob_write(
-                _handle.AsStructPointer(), pSrc, source.Length, blobOffset);
+                (sqlite3_blob*)_handle.DangerousGetHandle(), pSrc, source.Length, blobOffset);
             GC.KeepAlive(_handle);
             CheckResult(result);
         }
@@ -147,7 +147,7 @@ public sealed unsafe class Blob : IDisposable
     public void Reopen(long rowId)
     {
         ThrowIfInvalid();
-        var result = (ResultCodes)NativeMethods.sqlite3_blob_reopen(_handle.AsStructPointer(), rowId);
+        var result = (ResultCodes)NativeMethods.sqlite3_blob_reopen((sqlite3_blob*)_handle.DangerousGetHandle(), rowId);
         GC.KeepAlive(_handle);
         CheckResult(result);
     }
