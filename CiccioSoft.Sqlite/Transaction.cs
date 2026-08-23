@@ -14,16 +14,13 @@ namespace CiccioSoft.Sqlite;
 public sealed class Transaction : IDisposable
 {
     private readonly Connection _connection;
-    private readonly PhysicalConnection _physicalConnection;
     private readonly object _syncRoot = new();
     private LogicalTransactionState _state;
 
-    internal Transaction(Connection connection, PhysicalConnection physicalConnection, TransactionMode mode)
+    internal Transaction(Connection connection, TransactionMode mode)
     {
         ArgumentNullException.ThrowIfNull(connection);
-        ArgumentNullException.ThrowIfNull(physicalConnection);
         _connection = connection;
-        _physicalConnection = physicalConnection;
         Mode = mode;
         _state = LogicalTransactionState.Initial;
     }
@@ -142,6 +139,7 @@ public sealed class Transaction : IDisposable
 
     private void Execute(string sql, string operation)
     {
-        _physicalConnection.Execute(sql, $"Transaction.{operation}");
+        // _connection.Execute(sql, $"Transaction.{operation}");
+        _connection.Execute(sql);
     }
 }

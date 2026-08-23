@@ -90,7 +90,7 @@ public sealed class TransactionRuntimeV2Tests
     public void Commit_BeforeBegin_IsRejectedByStateMachine()
     {
         using var connection = ConnectionFactory.OpenMemory();
-        var transaction = new Transaction(connection, connection.PhysicalConnection, TransactionMode.Deferred);
+        var transaction = new Transaction(connection, TransactionMode.Deferred);
 
         Assert.Throws<InvalidOperationException>(() => transaction.Commit());
         Assert.Equal(LogicalTransactionState.Initial, transaction.State);

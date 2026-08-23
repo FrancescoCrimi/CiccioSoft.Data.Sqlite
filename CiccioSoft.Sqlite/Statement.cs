@@ -14,9 +14,9 @@ namespace CiccioSoft.Sqlite;
 public sealed unsafe class Statement : IDisposable
 {
     private readonly StatementSafeHandle _handle;
-    private readonly PhysicalConnection _physicalConnection;
+    private readonly Connection _physicalConnection;
 
-    internal Statement(StatementSafeHandle handle, PhysicalConnection physicalConnection)
+    internal Statement(StatementSafeHandle handle, Connection physicalConnection)
     {
         ArgumentNullException.ThrowIfNull(handle);
         ArgumentNullException.ThrowIfNull(physicalConnection);

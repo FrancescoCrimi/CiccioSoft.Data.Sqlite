@@ -34,13 +34,13 @@
             "stopAtEntry": false
         },
         {
-            "name": "MsSqlite",
+            "name": "Test3",
             "type": "netcoredbg",
             "request": "launch",
-            "program": "${folder}/Microsoft.Data.Sqlite.Tests/bin/Debug/net10.0/Microsoft.Data.Sqlite.Tests.exe",
+            "program": "${folder}/CiccioSoft.Sqlite.Tests/bin/Debug/net10.0/CiccioSoft.Sqlite.Tests.exe",
             "args": [
                 "-filter", 
-                "//Microsoft.Data.Sqlite/SqliteTransactionTest/ReadUncommitted_allows_dirty_reads",
+                "//CiccioSoft.Sqlite.Tests/DisposalLifecycleTests/Connection_UseAfterDispose_ThrowsObjectDisposedException",
                 "-parallel",
                 "none"
             ],
