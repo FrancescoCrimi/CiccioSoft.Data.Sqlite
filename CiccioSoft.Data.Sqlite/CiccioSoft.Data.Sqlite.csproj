@@ -24,7 +24,7 @@ CiccioSoft.Data.Sqlite.SqliteTransaction
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../CiccioSoft.Sqlite/CiccioSoft.Sqlite.csproj" />
+    <ProjectReference Include="../CiccioSoft.Sqlite.Native/CiccioSoft.Sqlite.Native.csproj" />
     <!-- <Compile Remove="MySqlConnectionStringBuilder.cs" /> -->
     <!-- <None Include="MySqlConnectionStringBuilder.cs" /> -->
   </ItemGroup>

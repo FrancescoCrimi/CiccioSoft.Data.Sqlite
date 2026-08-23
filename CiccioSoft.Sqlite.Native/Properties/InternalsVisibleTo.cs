@@ -6,4 +6,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("CiccioSoft.Sqlite.Tests")]
+[assembly: InternalsVisibleTo("CiccioSoft.Sqlite.Native.Tests")]
