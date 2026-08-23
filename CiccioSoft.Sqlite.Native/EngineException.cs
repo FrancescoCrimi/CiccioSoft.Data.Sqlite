@@ -7,12 +7,12 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace CiccioSoft.Sqlite;
+namespace CiccioSoft.Sqlite.Native;
 
 /// <summary>
 /// Represents an error returned by the native SQLite interop layer.
 /// </summary>
-public sealed unsafe class EngineException : Exception
+public sealed unsafe class EngineException : System.Exception
 {
     string? _operation;
 
@@ -85,6 +85,6 @@ public sealed unsafe class EngineException : Exception
             errorMessage = errorString;
         }
 
-        return new EngineException(result, errorMessage, caller);
+        return new CiccioSoft.Sqlite.Native.EngineException(result, errorMessage, caller);
     }
 }

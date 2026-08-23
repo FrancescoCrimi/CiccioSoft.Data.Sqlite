@@ -7,10 +7,10 @@
 using System;
 using System.IO;
 using System.Text;
-using CiccioSoft.Sqlite.Tests.Infrastructure;
+using CiccioSoft.Sqlite.Native.Tests.Infrastructure;
 using Xunit;
 
-namespace CiccioSoft.Sqlite.Tests;
+namespace CiccioSoft.Sqlite.Native.Tests;
 
 public sealed class ConnectionLifecycleTests
 {
@@ -47,7 +47,7 @@ public sealed class ConnectionLifecycleTests
     {
         string missing = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.db");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             Connection.Open(missing, OpenFlags.ReadOnly));
 
         Assert.Equal(ResultCodes.CantOpen, ex.BaseResultCode);

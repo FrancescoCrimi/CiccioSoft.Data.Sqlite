@@ -6,10 +6,10 @@
 
 using System;
 using System.Text;
-using CiccioSoft.Sqlite.Tests.Infrastructure;
+using CiccioSoft.Sqlite.Native.Tests.Infrastructure;
 using Xunit;
 
-namespace CiccioSoft.Sqlite.Tests;
+namespace CiccioSoft.Sqlite.Native.Tests;
 
 public sealed class ConnectionExecuteAndQueryTests
 {
@@ -45,7 +45,7 @@ public sealed class ConnectionExecuteAndQueryTests
     {
         using var connection = ConnectionFactory.OpenMemory();
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             connection.Execute("CREATE TABL broken (id INTEGER);"));
 
         Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
@@ -182,7 +182,7 @@ public sealed class ConnectionExecuteAndQueryTests
         connection.Execute("CREATE TABLE t (id INTEGER PRIMARY KEY);");
         connection.Execute("INSERT INTO t VALUES (1);");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             connection.Execute("INSERT INTO t VALUES (1);"));
 
         Assert.Equal(ResultCodes.Constraint, ex.BaseResultCode);
@@ -194,7 +194,7 @@ public sealed class ConnectionExecuteAndQueryTests
     {
         using var connection = ConnectionFactory.OpenMemory();
 
-        Assert.Throws<EngineException>(() =>
+        Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             connection.Execute("SELECT FROM;"));
 
         int offset = connection.GetLastErrorOffset();

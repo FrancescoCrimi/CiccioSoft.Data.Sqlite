@@ -8,7 +8,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace CiccioSoft.Sqlite;
+namespace CiccioSoft.Sqlite.Native;
 
 
 public sealed unsafe class Statement : IDisposable

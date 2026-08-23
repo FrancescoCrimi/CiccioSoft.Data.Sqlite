@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace CiccioSoft.Sqlite;
+namespace CiccioSoft.Sqlite.Native;
 
 /// <summary>
 /// Provides a high-performance, low-allocation wrapper for a SQLite database connection.

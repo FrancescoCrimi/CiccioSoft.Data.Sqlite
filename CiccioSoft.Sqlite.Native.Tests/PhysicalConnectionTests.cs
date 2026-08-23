@@ -8,7 +8,7 @@ using System;
 using System.IO;
 using Xunit;
 
-namespace CiccioSoft.Sqlite.Tests;
+namespace CiccioSoft.Sqlite.Native.Tests;
 
 public sealed class PhysicalConnectionTests
 {
@@ -58,7 +58,7 @@ public sealed class PhysicalConnectionTests
     {
         string path = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.db");
 
-        var exception = Assert.Throws<EngineException>(() =>
+        var exception = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             Connection.Open(path, OpenFlags.ReadOnly));
 
         Assert.Equal(ResultCodes.CantOpen, exception.BaseResultCode);

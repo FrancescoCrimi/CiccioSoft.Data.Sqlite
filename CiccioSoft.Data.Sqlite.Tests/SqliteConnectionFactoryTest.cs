@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using CiccioSoft.Sqlite;
+using CiccioSoft.Sqlite.Native;
 using Xunit;
 
 namespace CiccioSoft.Data.Sqlite;

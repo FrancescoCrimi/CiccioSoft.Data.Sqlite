@@ -6,7 +6,7 @@
 
 using System;
 
-namespace CiccioSoft.Sqlite;
+namespace CiccioSoft.Sqlite.Native;
 
 public sealed unsafe class Backup : IDisposable
 {
@@ -18,9 +18,9 @@ public sealed unsafe class Backup : IDisposable
     }
 
     internal static Backup InitBackup(Connection destination,
-                                    Connection source,
-                                    string destinationDatabaseName = "main",
-                                    string sourceDatabaseName = "main")
+                                      Connection source,
+                                      string destinationDatabaseName = "main",
+                                      string sourceDatabaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(destination);
         destination.ThrowIfInvalid();

@@ -10,7 +10,7 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Loggers;
 using BenchmarkDotNet.Running;
 
-namespace CiccioSoft.Sqlite.Benchmark;
+namespace CiccioSoft.Sqlite.Native.Benchmark;
 
 class Program
 {

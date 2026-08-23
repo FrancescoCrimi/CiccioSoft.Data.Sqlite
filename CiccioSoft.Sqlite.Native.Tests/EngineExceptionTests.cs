@@ -5,10 +5,10 @@
 // https://opensource.org/licenses/MIT.
 
 using System;
-using CiccioSoft.Sqlite.Tests.Infrastructure;
+using CiccioSoft.Sqlite.Native.Tests.Infrastructure;
 using Xunit;
 
-namespace CiccioSoft.Sqlite.Tests;
+namespace CiccioSoft.Sqlite.Native.Tests;
 
 public sealed class EngineExceptionTests
 {
@@ -19,7 +19,7 @@ public sealed class EngineExceptionTests
         connection.Execute("CREATE TABLE t (id INTEGER PRIMARY KEY, email TEXT UNIQUE);");
         connection.Execute("INSERT INTO t VALUES (1, 'a@x.com');");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             connection.Execute("INSERT INTO t VALUES (2, 'a@x.com');"));
 
         Assert.Equal(ResultCodes.Constraint, ex.BaseResultCode);
@@ -39,7 +39,7 @@ public sealed class EngineExceptionTests
     {
         using var connection = ConnectionFactory.OpenMemory();
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             connection.Prepare("NOT VALID SQL !!!"));
 
         Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
@@ -55,7 +55,7 @@ public sealed class EngineExceptionTests
             $"no-such-dir-{Guid.NewGuid():N}",
             "db.sqlite");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             Connection.Open(path, OpenFlags.ReadWrite));
 
         Assert.Equal(ResultCodes.CantOpen, ex.BaseResultCode);
@@ -70,7 +70,7 @@ public sealed class EngineExceptionTests
         connection.Execute("CREATE TABLE t (id INTEGER PRIMARY KEY);");
         connection.Execute("INSERT INTO t VALUES (1);");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<CiccioSoft.Sqlite.Native.EngineException>(() =>
             connection.Execute("INSERT INTO t VALUES (1);"));
 
         Assert.Equal((ResultCodes)((int)ex.ResultCode & 0xFF), ex.BaseResultCode);

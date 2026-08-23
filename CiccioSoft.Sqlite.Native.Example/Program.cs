@@ -2,13 +2,12 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-// using CiccioSoft.Interop.Sqlite;
 
-namespace CiccioSoft.Sqlite.Example;
+namespace CiccioSoft.Sqlite.Native.Example;
 
 class Program
 {
-    static unsafe void Main(string[] args)
+    static void Main(string[] args)
     {
         Console.WriteLine("Hello, World!");
 

@@ -8,7 +8,7 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace CiccioSoft.Sqlite.Tests;
+namespace CiccioSoft.Sqlite.Native.Tests;
 
 // =================================================================================
 // 1) COME UTILIZZARE QUESTA FIXTURE SU UNA O PIÙ CLASSI DI TEST:

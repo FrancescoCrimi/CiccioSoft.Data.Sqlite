@@ -146,7 +146,7 @@ public class SqliteTransaction : DbTransaction
         {
             session.Native.Execute(sql);
         }
-        catch (EngineException ex)
+        catch (CiccioSoft.Sqlite.Native.EngineException ex)
         {
             throw new SqliteException(ex.Message, ex);
         }

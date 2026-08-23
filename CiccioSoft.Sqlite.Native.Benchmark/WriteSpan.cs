@@ -8,7 +8,7 @@ using System;
 using BenchmarkDotNet.Attributes;
 using SQLitePCL;
 
-namespace CiccioSoft.Sqlite.Benchmark;
+namespace CiccioSoft.Sqlite.Native.Benchmark;
 
 public class WriteSpan
 {

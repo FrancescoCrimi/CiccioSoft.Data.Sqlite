@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Xunit;
 
-namespace CiccioSoft.Sqlite.Tests;
+namespace CiccioSoft.Sqlite.Native.Tests;
 
 /// <summary>
 /// Contract tests for the hybrid stack/ArrayPool UTF-8 marshalling helper used on every

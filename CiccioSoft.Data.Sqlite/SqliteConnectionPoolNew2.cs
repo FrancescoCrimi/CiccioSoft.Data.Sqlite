@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using CiccioSoft.Sqlite;
+using CiccioSoft.Sqlite.Native;
 
 namespace CiccioSoft.Data.Sqlite;
 

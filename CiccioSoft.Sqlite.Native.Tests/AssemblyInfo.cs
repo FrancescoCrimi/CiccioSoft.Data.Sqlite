@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT.
 
 using Xunit;
-using CiccioSoft.Sqlite.Tests;
+using CiccioSoft.Sqlite.Native.Tests;
 
 // Tutti i test di questo assembly gireranno in sequenza (uno dopo l'altro)
 [assembly: CollectionBehavior(DisableTestParallelization = true)]

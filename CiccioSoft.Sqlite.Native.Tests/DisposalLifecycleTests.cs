@@ -5,10 +5,10 @@
 // https://opensource.org/licenses/MIT.
 
 using System;
-using CiccioSoft.Sqlite.Tests.Infrastructure;
+using CiccioSoft.Sqlite.Native.Tests.Infrastructure;
 using Xunit;
 
-namespace CiccioSoft.Sqlite.Tests;
+namespace CiccioSoft.Sqlite.Native.Tests;
 
 /// <summary>
 /// Guards the enterprise disposal contract: after Dispose, every public instance API

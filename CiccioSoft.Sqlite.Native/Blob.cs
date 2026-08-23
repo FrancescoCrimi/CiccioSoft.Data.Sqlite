@@ -7,7 +7,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace CiccioSoft.Sqlite;
+namespace CiccioSoft.Sqlite.Native;
 
 /// <summary>
 /// Provides low-allocation, incremental read/write access to a single BLOB value
@@ -42,11 +42,11 @@ public sealed unsafe class Blob : IDisposable
     /// <exception cref="ObjectDisposedException">Thrown if the connection is no longer valid.</exception>
     /// <exception cref="EngineException">Thrown if the BLOB cannot be opened (e.g. row/column not found).</exception>
     internal static Blob Open(Connection connection,
-                            string tableName,
-                            string columnName,
-                            long rowId,
-                            bool readWrite = false,
-                            string databaseName = "main")
+                              string tableName,
+                              string columnName,
+                              long rowId,
+                              bool readWrite = false,
+                              string databaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(connection);
         connection.ThrowIfInvalid();

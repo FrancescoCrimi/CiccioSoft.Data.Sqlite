@@ -2,7 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 
-namespace CiccioSoft.Sqlite.Example;
+namespace CiccioSoft.Sqlite.Native.Example;
 
 public class NuovaClasse
 {

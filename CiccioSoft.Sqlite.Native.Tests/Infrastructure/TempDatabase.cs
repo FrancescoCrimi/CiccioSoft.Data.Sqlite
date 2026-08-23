@@ -7,7 +7,7 @@
 using System;
 using System.IO;
 
-namespace CiccioSoft.Sqlite.Tests.Infrastructure;
+namespace CiccioSoft.Sqlite.Native.Tests.Infrastructure;
 
 /// <summary>
 /// Owns a unique temporary SQLite database file and deletes it on dispose.

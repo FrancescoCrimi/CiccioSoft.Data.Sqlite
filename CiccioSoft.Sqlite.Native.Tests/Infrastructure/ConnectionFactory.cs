@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-namespace CiccioSoft.Sqlite.Tests.Infrastructure;
+namespace CiccioSoft.Sqlite.Native.Tests.Infrastructure;
 
 /// <summary>
 /// Factory helpers for enterprise-grade, isolated in-memory connections.

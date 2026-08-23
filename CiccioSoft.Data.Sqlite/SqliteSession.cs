@@ -6,7 +6,7 @@
 
 using System;
 using System.Threading;
-using CiccioSoft.Sqlite;
+using CiccioSoft.Sqlite.Native;
 
 namespace CiccioSoft.Data.Sqlite;
 

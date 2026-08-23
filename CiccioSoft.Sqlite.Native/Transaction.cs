@@ -6,7 +6,7 @@
 
 using System;
 
-namespace CiccioSoft.Sqlite;
+namespace CiccioSoft.Sqlite.Native;
 
 /// <summary>
 /// Represents a logical SQLite root transaction owned by a <see cref="Connection"/>.

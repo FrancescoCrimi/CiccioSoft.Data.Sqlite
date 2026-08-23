@@ -2,7 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace CiccioSoft.Sqlite.Example;
+namespace CiccioSoft.Sqlite.Native.Example;
 
 internal static class Utils
 {
