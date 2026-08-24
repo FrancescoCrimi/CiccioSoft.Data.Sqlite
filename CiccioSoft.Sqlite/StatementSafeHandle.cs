@@ -19,6 +19,7 @@ public sealed unsafe class StatementSafeHandle : SafeHandle
 
     protected override bool ReleaseHandle()
     {
-        return NativeMethods.sqlite3_finalize((sqlite3_stmt*)handle) == NativeMethods.SQLITE_OK;
+        _ = NativeMethods.sqlite3_finalize((sqlite3_stmt*)handle);
+        return true;
     }
 }

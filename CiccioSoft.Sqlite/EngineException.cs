@@ -62,7 +62,7 @@ public sealed unsafe class EngineException : Exception
         string errorString = Marshal.PtrToStringUTF8((nint)pErrStr) ?? "Unknown error code";
 
         string errorMessage;
-        if (connectionSafeHandle != null && !connectionSafeHandle.IsInvalid)
+        if (connectionSafeHandle is { IsClosed: false, IsInvalid: false })
         {
             // sqlite3_errmsg returns the most recent error message for this specific connection,
             // providing contextual details (e.g. which column or constraint failed).

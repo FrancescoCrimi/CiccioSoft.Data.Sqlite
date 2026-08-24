@@ -19,6 +19,7 @@ public sealed unsafe class BlobSafeHandle : SafeHandle
 
     protected override bool ReleaseHandle()
     {
-        return NativeMethods.sqlite3_blob_close((sqlite3_blob*)handle) == NativeMethods.SQLITE_OK;
+        _ = NativeMethods.sqlite3_blob_close((sqlite3_blob*)handle);
+        return true;
     }
 }

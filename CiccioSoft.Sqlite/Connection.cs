@@ -64,9 +64,12 @@ internal sealed unsafe class Connection : IDisposable
     {
         // Controllo immediato sul null
         ArgumentNullException.ThrowIfNull(filename);
+
         // Controllo multipiattaforma sui caratteri non validi (Es. | < > * in Windows)
         if (filename.IndexOfAny(Path.GetInvalidPathChars()) != -1)
-            throw new ArgumentException("Il percorso contiene caratteri non validi per il sistema operativo corrente.", nameof(filename));
+            throw new ArgumentException(
+                "Il percorso contiene caratteri non validi per il sistema operativo corrente.",
+                nameof(filename));
 
         string vfsSafe = vfs ?? string.Empty;
 
@@ -675,7 +678,8 @@ internal sealed unsafe class Connection : IDisposable
 
     private void ThrowIfInvalid()
     {
-        if (_handle.IsClosed || _handle.IsInvalid)
+        // if (_handle.IsClosed || _handle.IsInvalid)
+        if (_handle is not { IsClosed: false, IsInvalid: false })
             throw new ObjectDisposedException(nameof(Connection));
     }
 

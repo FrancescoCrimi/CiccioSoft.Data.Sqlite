@@ -19,6 +19,7 @@ public sealed unsafe class ConnectionSafeHandle : SafeHandle
 
     protected override bool ReleaseHandle()
     {
-        return NativeMethods.sqlite3_close_v2((sqlite3*)handle) == NativeMethods.SQLITE_OK;
+        _ = NativeMethods.sqlite3_close_v2((sqlite3*)handle);
+        return true;
     }
 }

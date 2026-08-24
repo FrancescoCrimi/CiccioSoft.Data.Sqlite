@@ -687,7 +687,8 @@ public sealed unsafe class Statement : IDisposable
 
     private void ThrowIfInvalid()
     {
-        if (_handle.IsClosed || _handle.IsInvalid)
+        // if (_handle.IsClosed || _handle.IsInvalid)
+        if (_handle is not { IsClosed: false, IsInvalid: false })
             throw new ObjectDisposedException(nameof(Statement));
     }
 
@@ -730,7 +731,12 @@ public sealed unsafe class Statement : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (IsOwnedByCache) return;
+        if (IsOwnedByCache)
+        {
+            Reset();           // rilascia l'eventuale transazione di lettura implicita
+            ClearBindings();   // non lasciare valori bindati per il prossimo, ignaro, prenditore
+            return;
+        }
         DisposeCore();
     }
 
