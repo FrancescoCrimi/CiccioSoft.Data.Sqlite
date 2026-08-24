@@ -82,14 +82,14 @@ public sealed unsafe class Connection : IDisposable
             byte* pVfs = vfsName.Length == 0 ? null : pVfsBuffer;
 
             sqlite3* pDb = null;
-            ResultCodes result = (ResultCodes)NativeMethods.sqlite3_open_v2(
+            ResultCode result = (ResultCode)NativeMethods.sqlite3_open_v2(
                 pFilename,
                 &pDb,
                 (int)flags,
                 pVfs);
             var handle = new ConnectionSafeHandle(pDb);
 
-            if (result != ResultCodes.OK)
+            if (result != ResultCode.OK)
             {
                 Exception exception = Exception.CreateException(
                     handle,
@@ -110,7 +110,7 @@ public sealed unsafe class Connection : IDisposable
 
         fixed (byte* pBuf = sql)
         {
-            var result = (ResultCodes)NativeMethods.sqlite3_exec(
+            var result = (ResultCode)NativeMethods.sqlite3_exec(
                 (sqlite3*)_handle.DangerousGetHandle(),
                 pBuf,
                 null,
@@ -205,7 +205,7 @@ public sealed unsafe class Connection : IDisposable
         {
             // Chiamata nativa
             sqlite3_stmt* pStmt = default;
-            var result = (ResultCodes)NativeMethods.sqlite3_prepare_v3(
+            var result = (ResultCode)NativeMethods.sqlite3_prepare_v3(
                 (sqlite3*)_handle.DangerousGetHandle(),
                 pBuf,
                 utf8Buffer.Length, // Lunghezza esatta dei dati
@@ -215,7 +215,7 @@ public sealed unsafe class Connection : IDisposable
             GC.KeepAlive(_handle);
             var stmtSafeHandle = new StatementSafeHandle(pStmt);
 
-            if (result != ResultCodes.OK)
+            if (result != ResultCode.OK)
             {
                 stmtSafeHandle.Dispose();
                 ThrowException(result);
@@ -255,7 +255,7 @@ public sealed unsafe class Connection : IDisposable
 
             sqlite3_stmt* pStmt = default;
             byte* pTail = null;
-            var result = (ResultCodes)NativeMethods.sqlite3_prepare_v3(
+            var result = (ResultCode)NativeMethods.sqlite3_prepare_v3(
                 (sqlite3*)_handle.DangerousGetHandle(),
                 pStart,
                 remainingLength,
@@ -265,7 +265,7 @@ public sealed unsafe class Connection : IDisposable
             GC.KeepAlive(_handle);
             var stmtSafeHandle = new StatementSafeHandle(pStmt);
 
-            if (result != ResultCodes.OK)
+            if (result != ResultCode.OK)
             {
                 stmtSafeHandle.Dispose();
                 ThrowException(result);
@@ -413,10 +413,10 @@ public sealed unsafe class Connection : IDisposable
     /// <summary>
     /// Returns the latest extended SQLite error code for this connection.
     /// </summary>
-    public ResultCodes ExtendedErrCode()
+    public ResultCode ExtendedErrCode()
     {
         ThrowIfInvalid();
-        var rtn = (ResultCodes)NativeMethods.sqlite3_extended_errcode((sqlite3*)_handle.DangerousGetHandle());
+        var rtn = (ResultCode)NativeMethods.sqlite3_extended_errcode((sqlite3*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -440,9 +440,9 @@ public sealed unsafe class Connection : IDisposable
     public void BusyTimeout(int milliseconds)
     {
         ThrowIfInvalid();
-        var result = (ResultCodes)NativeMethods.sqlite3_busy_timeout((sqlite3*)_handle.DangerousGetHandle(), milliseconds);
+        var result = (ResultCode)NativeMethods.sqlite3_busy_timeout((sqlite3*)_handle.DangerousGetHandle(), milliseconds);
         GC.KeepAlive(_handle);
-        if (result == ResultCodes.OK)
+        if (result == ResultCode.OK)
             return;
         CheckResult(result);
     }
@@ -454,9 +454,9 @@ public sealed unsafe class Connection : IDisposable
     public void ExtendedResultCodes(bool enabled)
     {
         ThrowIfInvalid();
-        var result = (ResultCodes)NativeMethods.sqlite3_extended_result_codes((sqlite3*)_handle.DangerousGetHandle(), enabled ? 1 : 0);
+        var result = (ResultCode)NativeMethods.sqlite3_extended_result_codes((sqlite3*)_handle.DangerousGetHandle(), enabled ? 1 : 0);
         GC.KeepAlive(_handle);
-        if (result == ResultCodes.OK)
+        if (result == ResultCode.OK)
             return;
         CheckResult(result);
     }
@@ -562,7 +562,7 @@ public sealed unsafe class Connection : IDisposable
             fixed (byte* pTableName = tableNameBuffer)
             fixed (byte* pColumnName = columnNameBuffer)
             {
-                var rc = (ResultCodes)NativeMethods.sqlite3_table_column_metadata(
+                var rc = (ResultCode)NativeMethods.sqlite3_table_column_metadata(
                     (sqlite3*)_handle.DangerousGetHandle(),
                     null,
                     pTableName,
@@ -574,7 +574,7 @@ public sealed unsafe class Connection : IDisposable
                     &autoInc);
                 GC.KeepAlive(_handle);
 
-                if (rc != ResultCodes.OK)
+                if (rc != ResultCode.OK)
                 {
                     string operation = $"Connection.GetTableColumnMetadata metadata lookup for column '{columnName}' in table '{tableName}'";
                     // throw new EngineException(rc, _handle, operation);
@@ -648,18 +648,18 @@ public sealed unsafe class Connection : IDisposable
 
     internal void ThrowIfInvalid()
     {
-        if (_handle.IsInvalid || _handle.IsClosed)
+        if (_handle is not { IsClosed: false, IsInvalid: false })
             throw new ObjectDisposedException(nameof(Connection));
     }
 
-    private void CheckResult(ResultCodes result, [CallerMemberName] string caller = "")
+    private void CheckResult(ResultCode result, [CallerMemberName] string caller = "")
     {
-        if (result == ResultCodes.OK)
+        if (result == ResultCode.OK)
             return;
         throw Exception.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
     }
 
-    private void ThrowException(ResultCodes result, [CallerMemberName] string caller = "")
+    private void ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
         throw Exception.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
     }

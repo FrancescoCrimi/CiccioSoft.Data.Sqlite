@@ -40,10 +40,10 @@ public sealed unsafe class Statement : IDisposable
     public bool Step()
     {
         ThrowIfInvalid();
-        var res = (ResultCodes)NativeMethods.sqlite3_step((sqlite3_stmt*)_handle.DangerousGetHandle());
+        var res = (ResultCode)NativeMethods.sqlite3_step((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
-        if (res == ResultCodes.Row) return true;
-        if (res == ResultCodes.Done) return false;
+        if (res == ResultCode.Row) return true;
+        if (res == ResultCode.Done) return false;
         // throw new EngineException(res, _physicalConnection.Handle, $"SQLite {GetType().Name}.Step");
         throw ThrowException(res);
     }
@@ -60,7 +60,7 @@ public sealed unsafe class Statement : IDisposable
     public void Reset()
     {
         ThrowIfInvalid();
-        var res = (ResultCodes)NativeMethods.sqlite3_reset((sqlite3_stmt*)_handle.DangerousGetHandle());
+        var res = (ResultCode)NativeMethods.sqlite3_reset((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         CheckResult(res);
     }
@@ -77,7 +77,7 @@ public sealed unsafe class Statement : IDisposable
     public void ClearBindings()
     {
         ThrowIfInvalid();
-        var res = (ResultCodes)NativeMethods.sqlite3_clear_bindings((sqlite3_stmt*)_handle.DangerousGetHandle());
+        var res = (ResultCode)NativeMethods.sqlite3_clear_bindings((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         CheckResult(res);
     }
@@ -468,7 +468,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var result = (ResultCodes)NativeMethods.sqlite3_bind_null((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
+        var result = (ResultCode)NativeMethods.sqlite3_bind_null((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         CheckBindResult(result, index);
     }
@@ -485,7 +485,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var result = (ResultCodes)NativeMethods.sqlite3_bind_int((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
+        var result = (ResultCode)NativeMethods.sqlite3_bind_int((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
         GC.KeepAlive(_handle);
         CheckBindResult(result, index);
     }
@@ -501,7 +501,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var result = (ResultCodes)NativeMethods.sqlite3_bind_int64((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
+        var result = (ResultCode)NativeMethods.sqlite3_bind_int64((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
         GC.KeepAlive(_handle);
         CheckBindResult(result, index);
     }
@@ -517,7 +517,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var result = (ResultCodes)NativeMethods.sqlite3_bind_double((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
+        var result = (ResultCode)NativeMethods.sqlite3_bind_double((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
         GC.KeepAlive(_handle);
         CheckBindResult(result, index);
     }
@@ -536,7 +536,7 @@ public sealed unsafe class Statement : IDisposable
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
         // span reale, anche se Length == 0 -> bind normale con lunghezza 0.
-        var res = (ResultCodes)BindTextCore(index, text);
+        var res = (ResultCode)BindTextCore(index, text);
         CheckBindResult(res, index);
     }
 
@@ -554,13 +554,13 @@ public sealed unsafe class Statement : IDisposable
     /// il parametro lunghezza viene ignorato). Per lo span vuoto usiamo quindi un buffer sentinella
     /// statico, mai scritto e mai dereferenziato (n == 0), solo per garantire un puntatore non-null.
     /// </remarks>
-    private ResultCodes BindTextCore(int index, ReadOnlySpan<byte> text)
+    private ResultCode BindTextCore(int index, ReadOnlySpan<byte> text)
     {
         if (text.Length == 0)
         {
             fixed (byte* pBuf = s_emptySentinel)
             {
-                var res = (ResultCodes)NativeMethods.sqlite3_bind_text(
+                var res = (ResultCode)NativeMethods.sqlite3_bind_text(
                     (sqlite3_stmt*)_handle.DangerousGetHandle(), index, pBuf, 0, NativeMethods.SQLITE_TRANSIENT);
 				GC.KeepAlive(_handle);
 				return res;
@@ -571,7 +571,7 @@ public sealed unsafe class Statement : IDisposable
         {
             // Usiamo SQLITE_TRANSIENT (IntPtr(-1)) perché il buffer stackalloc/pool
             // verrà distrutto al termine di questo metodo, quindi SQLite deve copiarlo.
-            var res = (ResultCodes)NativeMethods.sqlite3_bind_text(
+            var res = (ResultCode)NativeMethods.sqlite3_bind_text(
                 (sqlite3_stmt*)_handle.DangerousGetHandle(),
                 index,
                 pBuf,
@@ -641,7 +641,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var res = (ResultCodes)BindBlobCore(index, data);
+        var res = (ResultCode)BindBlobCore(index, data);
         CheckBindResult(res, index);
     }
 
@@ -649,13 +649,13 @@ public sealed unsafe class Statement : IDisposable
     /// Esegue il pinning di <paramref name="data"/> e invoca <c>sqlite3_bind_blob</c>.
     /// Vedi il commento su <see cref="BindTextCore"/> per il razionale del caso Length == 0.
     /// </summary>
-    private ResultCodes BindBlobCore(int index, ReadOnlySpan<byte> data)
+    private ResultCode BindBlobCore(int index, ReadOnlySpan<byte> data)
     {
         if (data.Length == 0)
         {
             fixed (byte* pData = s_emptySentinel)
             {
-                var res = (ResultCodes)NativeMethods.sqlite3_bind_blob(
+                var res = (ResultCode)NativeMethods.sqlite3_bind_blob(
                     (sqlite3_stmt*)_handle.DangerousGetHandle(), index, pData, 0, NativeMethods.SQLITE_TRANSIENT);
                 GC.KeepAlive(_handle);
 				return res;
@@ -664,7 +664,7 @@ public sealed unsafe class Statement : IDisposable
 
         fixed (byte* pData = data)
         {
-            var res = (ResultCodes)NativeMethods.sqlite3_bind_blob(
+            var res = (ResultCode)NativeMethods.sqlite3_bind_blob(
                 (sqlite3_stmt*)_handle.DangerousGetHandle(),
                 index,
                 pData,
@@ -682,26 +682,26 @@ public sealed unsafe class Statement : IDisposable
 
     private void ThrowIfInvalid()
     {
-        if (_handle.IsClosed || _handle.IsInvalid)
+        if (_handle is not { IsClosed: false, IsInvalid: false })
             throw new ObjectDisposedException(nameof(Statement));
     }
 
-    private void CheckResult(ResultCodes res, [CallerMemberName] string caller = "")
+    private void CheckResult(ResultCode res, [CallerMemberName] string caller = "")
     {
-        if (res == ResultCodes.OK)
+        if (res == ResultCode.OK)
             return;
         throw ThrowException(res, $"{nameof(Statement)}.{caller}");
     }
 
     // Piccolo helper per centralizzare il controllo degli errori
-    private void CheckBindResult(ResultCodes res, int index, [CallerMemberName] string caller = "")
+    private void CheckBindResult(ResultCode res, int index, [CallerMemberName] string caller = "")
     {
-        if (res == ResultCodes.OK)
+        if (res == ResultCode.OK)
             return;
         throw Exception.CreateException(_physicalConnection.Handle, res, $"{nameof(Statement)}.{caller} to parameter index {index}");
     }
 
-    private Exception ThrowException(ResultCodes result, [CallerMemberName] string caller = "")
+    private Exception ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
         return Exception.CreateException(_physicalConnection.Handle, result, $"{nameof(Statement)}.{caller}");
     }

@@ -61,6 +61,6 @@ public sealed class PhysicalConnectionTests
         var exception = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
             Connection.Open(path, OpenFlags.ReadOnly));
 
-        Assert.Equal(ResultCodes.CantOpen, exception.BaseResultCode);
+        Assert.Equal(ResultCode.CantOpen, exception.BaseResultCode);
     }
 }

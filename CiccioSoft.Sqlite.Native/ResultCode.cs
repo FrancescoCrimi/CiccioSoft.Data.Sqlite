@@ -9,7 +9,7 @@ namespace CiccioSoft.Sqlite;
 /// <summary>
 /// Represents SQLite Extended Result Codes.
 /// </summary>
-public enum ResultCodes
+public enum ResultCode
 {
     OK                      = NativeMethods.SQLITE_OK,
     Error                   = NativeMethods.SQLITE_ERROR,
@@ -132,4 +132,11 @@ public enum ResultCodes
 
     OkLoadPermanently       = NativeMethods.SQLITE_OK_LOAD_PERMANENTLY,
     OkSymlink               = NativeMethods.SQLITE_OK_SYMLINK
+}
+
+
+public static class ResultCodeExtensions
+{
+    public static ResultCode ToPrimary(this ResultCode code) =>
+        (ResultCode)((int)code & 0xFF);
 }

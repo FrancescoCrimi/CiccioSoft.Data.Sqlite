@@ -50,7 +50,7 @@ public sealed class ConnectionLifecycleTests
         var ex = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
             Connection.Open(missing, OpenFlags.ReadOnly));
 
-        Assert.Equal(ResultCodes.CantOpen, ex.BaseResultCode);
+        Assert.Equal(ResultCode.CantOpen, ex.BaseResultCode);
         Assert.Contains("Open", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -119,7 +119,7 @@ public sealed class BlobTests
             var ex = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
                 blob.Write(new byte[] { 1, 2, 3, 4 }, 0));
 
-            Assert.Equal(ResultCodes.ReadOnly, ex.BaseResultCode);
+            Assert.Equal(ResultCode.ReadOnly, ex.BaseResultCode);
         }
     }
 
@@ -132,7 +132,7 @@ public sealed class BlobTests
         {
             byte[] buffer = new byte[8];
             var ex = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() => blob.Read(buffer, 0));
-            Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+            Assert.Equal(ResultCode.Error, ex.BaseResultCode);
         }
     }
 
@@ -145,7 +145,7 @@ public sealed class BlobTests
         var ex = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
             connection.OpenBlob("files", "payload", rowId: 999));
 
-        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Error, ex.BaseResultCode);
         Assert.Contains("Blob.Open", ex.Message, StringComparison.Ordinal);
     }
 

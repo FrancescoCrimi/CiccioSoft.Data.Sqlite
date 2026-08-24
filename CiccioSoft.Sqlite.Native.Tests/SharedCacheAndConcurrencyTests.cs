@@ -62,6 +62,6 @@ public sealed class SharedCacheAndConcurrencyTests
         var ex = Assert.Throws<Exception>(() =>
             b.Execute("SELECT * FROM t;"));
 
-        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Error, ex.BaseResultCode);
     }
 }

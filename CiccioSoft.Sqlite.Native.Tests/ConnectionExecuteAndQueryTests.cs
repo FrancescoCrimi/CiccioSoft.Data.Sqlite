@@ -48,7 +48,7 @@ public sealed class ConnectionExecuteAndQueryTests
         var ex = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
             connection.Execute("CREATE TABL broken (id INTEGER);"));
 
-        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Error, ex.BaseResultCode);
         Assert.False(string.IsNullOrWhiteSpace(ex.ErrorMessage));
         Assert.False(string.IsNullOrWhiteSpace(ex.ErrorString));
         Assert.Contains("Execute", ex.Message, StringComparison.Ordinal);
@@ -185,8 +185,8 @@ public sealed class ConnectionExecuteAndQueryTests
         var ex = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
             connection.Execute("INSERT INTO t VALUES (1);"));
 
-        Assert.Equal(ResultCodes.Constraint, ex.BaseResultCode);
-        Assert.Equal(ResultCodes.Constraint, (ResultCodes)((int)connection.ExtendedErrCode() & 0xFF));
+        Assert.Equal(ResultCode.Constraint, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Constraint, (ResultCode)((int)connection.ExtendedErrCode() & 0xFF));
     }
 
     [Fact]

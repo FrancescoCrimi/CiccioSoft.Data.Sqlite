@@ -33,7 +33,7 @@ public sealed class ConnectionPrepareTests
         var ex = Assert.Throws<CiccioSoft.Sqlite.Native.Exception>(() =>
             connection.Prepare("SELEC * FROM nowhere;"));
 
-        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Error, ex.BaseResultCode);
         Assert.Contains("Prepare", ex.Message, StringComparison.Ordinal);
     }
 
@@ -167,7 +167,7 @@ public sealed class ConnectionPrepareTests
                 out _,
                 out _));
 
-        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Error, ex.BaseResultCode);
     }
 
     [Theory]

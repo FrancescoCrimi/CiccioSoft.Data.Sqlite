@@ -62,7 +62,7 @@ public sealed unsafe class Blob : IDisposable
         {
             sqlite3_blob* pBlob = default;
 
-            var result = (ResultCodes)NativeMethods.sqlite3_blob_open(
+            var result = (ResultCode)NativeMethods.sqlite3_blob_open(
                 (sqlite3*)connection.Handle.DangerousGetHandle(),
                 pDb,
                 pTable,
@@ -73,7 +73,7 @@ public sealed unsafe class Blob : IDisposable
             GC.KeepAlive(connection.Handle);
             var blobSafeHandle = new BlobSafeHandle(pBlob);
 
-            if (result != ResultCodes.OK)
+            if (result != ResultCode.OK)
             {
                 blobSafeHandle.Dispose();
                 throw Exception.CreateException(connection.Handle, result, $"{nameof(Blob)}.Open on {tableName}.{columnName} (rowid {rowId})");
@@ -108,7 +108,7 @@ public sealed unsafe class Blob : IDisposable
 
         fixed (byte* pDest = destination)
         {
-            var result = (ResultCodes)NativeMethods.sqlite3_blob_read(
+            var result = (ResultCode)NativeMethods.sqlite3_blob_read(
                 (sqlite3_blob*)_handle.DangerousGetHandle(), pDest, destination.Length, blobOffset);
             GC.KeepAlive(_handle);
             CheckResult(result);
@@ -131,7 +131,7 @@ public sealed unsafe class Blob : IDisposable
 
         fixed (byte* pSrc = source)
         {
-            var result = (ResultCodes)NativeMethods.sqlite3_blob_write(
+            var result = (ResultCode)NativeMethods.sqlite3_blob_write(
                 (sqlite3_blob*)_handle.DangerousGetHandle(), pSrc, source.Length, blobOffset);
             GC.KeepAlive(_handle);
             CheckResult(result);
@@ -147,7 +147,7 @@ public sealed unsafe class Blob : IDisposable
     public void Reopen(long rowId)
     {
         ThrowIfInvalid();
-        var result = (ResultCodes)NativeMethods.sqlite3_blob_reopen((sqlite3_blob*)_handle.DangerousGetHandle(), rowId);
+        var result = (ResultCode)NativeMethods.sqlite3_blob_reopen((sqlite3_blob*)_handle.DangerousGetHandle(), rowId);
         GC.KeepAlive(_handle);
         CheckResult(result);
     }
@@ -156,13 +156,13 @@ public sealed unsafe class Blob : IDisposable
 
     private void ThrowIfInvalid()
     {
-        if (_handle.IsClosed || _handle.IsInvalid)
+        if (_handle is not { IsClosed: false, IsInvalid: false })
             throw new ObjectDisposedException(nameof(Blob));
     }
 
-    private void CheckResult(ResultCodes res, [CallerMemberName] string caller = "")
+    private void CheckResult(ResultCode res, [CallerMemberName] string caller = "")
     {
-        if (res == ResultCodes.OK)
+        if (res == ResultCode.OK)
             return;
         throw Exception.CreateException(_connection.Handle, res, $"{nameof(Blob)}.{caller}");
     }
