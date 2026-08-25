@@ -56,6 +56,7 @@ public sealed class Statement : IDisposable
             EnsureOperationWriterOwnership(cancellationToken);
         }
 
+        _session.Gate.Wait(cancellationToken);
         try
         {
             return _native.Step();
@@ -66,18 +67,23 @@ public sealed class Statement : IDisposable
                 ReleaseOperationWriterLease();
             throw;
         }
+        finally
+        {
+            _session.Gate.Release();
+        }
     }
 
     public void Reset()
     {
         EnsureNotDisposed();
-
+        _session.Gate.Wait();
         try
         {
             _native.Reset();
         }
         finally
         {
+            _session.Gate.Release();
             if (_transaction is null)
                 ReleaseOperationWriterLease();
         }
@@ -86,30 +92,30 @@ public sealed class Statement : IDisposable
     public void ClearBindings()
     {
         EnsureNotDisposed();
-        _native.ClearBindings();
+        _session.Gate.Wait();
+        try { _native.ClearBindings(); }
+        finally { _session.Gate.Release(); }
     }
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
         try
         {
-            ReleaseOperationWriterLease();
-            _native.Dispose();
+            _session.Gate.Wait();
+            try { _native.Dispose(); }
+            finally { _session.Gate.Release(); }
         }
         finally
         {
-            _session.Gate.Release();
+            ReleaseOperationWriterLease();
         }
     }
 
     private void EnsureOperationWriterOwnership(CancellationToken cancellationToken)
     {
-        if (IsReadOnly || _writerLease is not null)
-            return;
-
+        if (IsReadOnly || _writerLease is not null) return;
         _writerLease = _connection.AcquireWriteLease(cancellationToken);
     }
 
