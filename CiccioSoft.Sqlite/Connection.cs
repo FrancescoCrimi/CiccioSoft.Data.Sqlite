@@ -23,6 +23,7 @@ public sealed class Connection : IDisposable
     private readonly string _poolKey;
     private readonly bool _pooled;
     private SqliteSession? _session;
+    private Transaction? _transaction;
     private int _disposed;
 
     private Connection(string poolKey, SqliteSession session, bool pooled)
@@ -89,12 +90,11 @@ public sealed class Connection : IDisposable
         try
         {
             Native.Statement nativeStatement = session.Native.Prepare(sql, prepareFlags);
-            return new Statement(this, session, nativeStatement);
+            return new Statement(this, session, nativeStatement, _transaction);
         }
-        catch
+        finally
         {
             session.Gate.Release();
-            throw;
         }
     }
 
@@ -105,6 +105,49 @@ public sealed class Connection : IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(Prepare(sql, prepareFlags));
+    }
+
+    public Transaction BeginTransaction()
+    {
+        EnsureNotDisposed();
+
+        if (_transaction is not null)
+            throw new InvalidOperationException("A transaction is already active on this connection.");
+
+        Transaction transaction = new(this, _session!);
+        try
+        {
+            transaction.Begin();
+            _transaction = transaction;
+            return transaction;
+        }
+        catch
+        {
+            transaction.Dispose();
+            throw;
+        }
+    }
+
+    public async Task<Transaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureNotDisposed();
+
+        if (_transaction is not null)
+            throw new InvalidOperationException("A transaction is already active on this connection.");
+
+        Transaction transaction = new(this, _session!);
+        try
+        {
+            await transaction.BeginAsync(cancellationToken).ConfigureAwait(false);
+            _transaction = transaction;
+            return transaction;
+        }
+        catch
+        {
+            transaction.Dispose();
+            throw;
+        }
     }
 
     internal IDisposable AcquireWriteLease(CancellationToken cancellationToken = default)
@@ -119,10 +162,19 @@ public sealed class Connection : IDisposable
         return SingleWriterCoordinator.AcquireAsync(_poolKey, cancellationToken);
     }
 
+    internal void EndTransaction(Transaction transaction)
+    {
+        if (ReferenceEquals(_transaction, transaction))
+            _transaction = null;
+    }
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
+
+        _transaction?.Dispose();
+        _transaction = null;
 
         SqliteSession? session = Interlocked.Exchange(ref _session, null);
         if (session is null)
@@ -156,6 +208,8 @@ public sealed class Connection : IDisposable
         EnsureNotDisposed();
         return _session!;
     }
+
+    internal Transaction? CurrentTransaction => _transaction;
 
     private void EnsureNotDisposed()
     {
