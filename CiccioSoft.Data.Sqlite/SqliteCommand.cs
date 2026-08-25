@@ -425,15 +425,15 @@ public sealed class SqliteCommand : DbCommand
                 operationCancellationToken.ThrowIfCancellationRequested();
                 return operation();
             }
-            catch (EngineException ex) when (_timeoutTriggered && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (EngineException ex) when (_timeoutTriggered && ex.BaseResultCode == ResultCode.Interrupt)
             {
                 throw new SqliteException(Properties.Resources.CommandTimedOut(_command.CommandTimeout), ex);
             }
-            catch (EngineException ex) when ((operationCanceled || operationCancellationToken.IsCancellationRequested) && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (EngineException ex) when ((operationCanceled || operationCancellationToken.IsCancellationRequested) && ex.BaseResultCode == ResultCode.Interrupt)
             {
                 throw new OperationCanceledException(operationCancellationToken);
             }
-            catch (EngineException ex) when (_externalCancellationToken.IsCancellationRequested && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (EngineException ex) when (_externalCancellationToken.IsCancellationRequested && ex.BaseResultCode == ResultCode.Interrupt)
             {
                 throw new OperationCanceledException(_externalCancellationToken);
             }
@@ -465,15 +465,15 @@ public sealed class SqliteCommand : DbCommand
                 operationCancellationToken.ThrowIfCancellationRequested();
                 operation();
             }
-            catch (EngineException ex) when (_timeoutTriggered && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (EngineException ex) when (_timeoutTriggered && ex.BaseResultCode == ResultCode.Interrupt)
             {
                 throw new SqliteException(Properties.Resources.CommandTimedOut(_command.CommandTimeout), ex);
             }
-            catch (EngineException ex) when ((operationCanceled || operationCancellationToken.IsCancellationRequested) && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (EngineException ex) when ((operationCanceled || operationCancellationToken.IsCancellationRequested) && ex.BaseResultCode == ResultCode.Interrupt)
             {
                 throw new OperationCanceledException(operationCancellationToken);
             }
-            catch (EngineException ex) when (_externalCancellationToken.IsCancellationRequested && ex.BaseResultCode == ResultCodes.Interrupt)
+            catch (EngineException ex) when (_externalCancellationToken.IsCancellationRequested && ex.BaseResultCode == ResultCode.Interrupt)
             {
                 throw new OperationCanceledException(_externalCancellationToken);
             }

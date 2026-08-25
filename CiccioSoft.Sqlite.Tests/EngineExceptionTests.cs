@@ -22,16 +22,16 @@ public sealed class EngineExceptionTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Execute("INSERT INTO t VALUES (2, 'a@x.com');"));
 
-        Assert.Equal(ResultCodes.Constraint, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Constraint, ex.BaseResultCode);
         Assert.True(
-            ex.ResultCode == ResultCodes.Constraint
-            || ex.ResultCode == ResultCodes.ConstraintUnique
-            || ((int)ex.ResultCode & 0xFF) == (int)ResultCodes.Constraint);
+            ex.ResultCode == ResultCode.Constraint
+            || ex.ResultCode == ResultCode.ConstraintUnique
+            || ((int)ex.ResultCode & 0xFF) == (int)ResultCode.Constraint);
 
         Assert.False(string.IsNullOrWhiteSpace(ex.ErrorString));
         Assert.False(string.IsNullOrWhiteSpace(ex.ErrorMessage));
         Assert.Contains("failed", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(((int)ex.ResultCode).ToString(), ex.Message, StringComparison.Ordinal);
+        Assert.Contains(ex.ResultCode.ToString(), ex.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class EngineExceptionTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Prepare("NOT VALID SQL !!!"));
 
-        Assert.Equal(ResultCodes.Error, ex.BaseResultCode);
+        Assert.Equal(ResultCode.Error, ex.BaseResultCode);
         Assert.Contains("Prepare", ex.Message, StringComparison.Ordinal);
         Assert.Contains(ex.ErrorString!, ex.Message, StringComparison.Ordinal);
     }
@@ -58,7 +58,7 @@ public sealed class EngineExceptionTests
         var ex = Assert.Throws<EngineException>(() =>
             Connection.Open(path, OpenFlags.ReadWrite));
 
-        Assert.Equal(ResultCodes.CantOpen, ex.BaseResultCode);
+        Assert.Equal(ResultCode.CantOpen, ex.BaseResultCode);
         Assert.Contains("Open", ex.Message, StringComparison.Ordinal);
         Assert.NotNull(ex.ErrorString);
     }
@@ -73,6 +73,6 @@ public sealed class EngineExceptionTests
         var ex = Assert.Throws<EngineException>(() =>
             connection.Execute("INSERT INTO t VALUES (1);"));
 
-        Assert.Equal((ResultCodes)((int)ex.ResultCode & 0xFF), ex.BaseResultCode);
+        Assert.Equal((ResultCode)((int)ex.ResultCode & 0xFF), ex.BaseResultCode);
     }
 }

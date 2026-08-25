@@ -14,36 +14,24 @@ namespace CiccioSoft.Sqlite;
 /// </summary>
 public sealed unsafe class EngineException : Exception
 {
-    string? _operation;
-
-    private EngineException(ResultCodes result, string errorMessage, string operation)
+    private EngineException(string message, ResultCode resultCode, string errorString, string errorMessage)
+        : base(message)
     {
-        ResultCode = result;
-        BaseResultCode = (ResultCodes)(((int)result) & 0xFF);
+        ResultCode = resultCode;
+        BaseResultCode = resultCode.ToPrimary();
+        ErrorString = errorString;
         ErrorMessage = errorMessage;
-        _operation = operation;
-
-        // sqlite3_errstr translates a result code into its English-language description.
-        // It does not require a database connection handle.
-        byte* pErrStr = NativeMethods.sqlite3_errstr((int)result);
-        ErrorString = Marshal.PtrToStringUTF8((nint)pErrStr) ?? "Unknown error code";
     }
-
-    public override string Message =>
-        $"{_operation} failed. {ErrorString}. " +
-        $"Base code: {BaseResultCode}, " +
-        $"Extended code: {ResultCode} ({(int)ResultCode}). " +
-        $"Native message: {ErrorMessage}";
-
-    /// <summary>
-    /// Gets the base SQLite error code (lowest 8 bits).
-    /// </summary>
-    public ResultCodes BaseResultCode { get; }
 
     /// <summary>
     /// Gets the extended SQLite error code.
     /// </summary>
-    public ResultCodes ResultCode { get; }
+    public ResultCode ResultCode { get; }
+
+    /// <summary>
+    /// Gets the base SQLite error code (lowest 8 bits).
+    /// </summary>
+    public ResultCode BaseResultCode { get; }
 
     /// <summary>
     /// Gets the generic English-language description of the result code,
@@ -63,18 +51,17 @@ public sealed unsafe class EngineException : Exception
     /// </summary>
     public string? ErrorMessage { get; }
 
-
-    internal static EngineException CreateException(ConnectionSafeHandle connectionSafeHandle, ResultCodes result, string caller)
+    internal static EngineException CreateException(ConnectionSafeHandle connectionSafeHandle, ResultCode resultCode, string caller)
     {
-        string errorMessage;
-        byte* pErrStr = NativeMethods.sqlite3_errstr((int)result);
+        byte* pErrStr = NativeMethods.sqlite3_errstr((int)resultCode);
         string errorString = Marshal.PtrToStringUTF8((nint)pErrStr) ?? "Unknown error code";
 
-        if (connectionSafeHandle != null && !connectionSafeHandle.IsInvalid)
+        string errorMessage;
+        if (connectionSafeHandle is { IsClosed: false, IsInvalid: false })
         {
             // sqlite3_errmsg returns the most recent error message for this specific connection,
             // providing contextual details (e.g. which column or constraint failed).
-            byte* pErr = NativeMethods.sqlite3_errmsg(connectionSafeHandle.AsStructPointer());
+            byte* pErr = NativeMethods.sqlite3_errmsg((sqlite3*)connectionSafeHandle.DangerousGetHandle());
             GC.KeepAlive(connectionSafeHandle);
             errorMessage = Marshal.PtrToStringUTF8((nint)pErr) ?? "Unreadable SQLite error";
         }
@@ -85,6 +72,13 @@ public sealed unsafe class EngineException : Exception
             errorMessage = errorString;
         }
 
-        return new EngineException(result, errorMessage, caller);
+        string message =
+            $"{caller} failed. " +
+            $"Error: {errorString}, " +
+            $"PrimaryResultCode: {resultCode.ToPrimary()}, " +
+            $"ResultCode: {resultCode}, " +
+            $"Message: {errorMessage}";
+
+        return new EngineException(message, resultCode, errorString, errorMessage);
     }
 }

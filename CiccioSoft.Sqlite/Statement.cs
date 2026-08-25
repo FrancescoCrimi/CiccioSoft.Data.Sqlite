@@ -10,6 +10,21 @@ using System.Runtime.InteropServices;
 
 namespace CiccioSoft.Sqlite;
 
+public sealed unsafe class StatementSafeHandle : SafeHandle
+{
+    internal StatementSafeHandle(sqlite3_stmt* pStmt)
+        : base((nint)pStmt, true)
+    {
+    }
+
+    public override bool IsInvalid => handle == nint.Zero;
+
+    protected override bool ReleaseHandle()
+    {
+        _ = NativeMethods.sqlite3_finalize((sqlite3_stmt*)handle);
+        return true;
+    }
+}
 
 public sealed unsafe class Statement : IDisposable
 {
@@ -38,10 +53,10 @@ public sealed unsafe class Statement : IDisposable
     public bool Step()
     {
         ThrowIfInvalid();
-        var res = (ResultCodes)NativeMethods.sqlite3_step(_handle.AsStructPointer());
+        var res = (ResultCode)NativeMethods.sqlite3_step((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
-        if (res == ResultCodes.Row) return true;
-        if (res == ResultCodes.Done) return false;
+        if (res == ResultCode.Row) return true;
+        if (res == ResultCode.Done) return false;
         // throw new EngineException(res, _connectionSafeHandle, $"SQLite {GetType().Name}.Step");
         throw ThrowException(res);
     }
@@ -58,7 +73,7 @@ public sealed unsafe class Statement : IDisposable
     public void Reset()
     {
         ThrowIfInvalid();
-        var res = (ResultCodes)NativeMethods.sqlite3_reset(_handle.AsStructPointer());
+        var res = (ResultCode)NativeMethods.sqlite3_reset((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         CheckResult(res);
     }
@@ -75,7 +90,7 @@ public sealed unsafe class Statement : IDisposable
     public void ClearBindings()
     {
         ThrowIfInvalid();
-        var res = (ResultCodes)NativeMethods.sqlite3_clear_bindings(_handle.AsStructPointer());
+        var res = (ResultCode)NativeMethods.sqlite3_clear_bindings((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         CheckResult(res);
     }
@@ -99,7 +114,7 @@ public sealed unsafe class Statement : IDisposable
     public int ColumnCount()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_column_count(_handle.AsStructPointer());
+        var rtn = NativeMethods.sqlite3_column_count((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -110,7 +125,7 @@ public sealed unsafe class Statement : IDisposable
     public int ParameterCount()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_bind_parameter_count(_handle.AsStructPointer());
+        var rtn = NativeMethods.sqlite3_bind_parameter_count((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -121,7 +136,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite parameter index must be 1 or greater.");
 
-        byte* pName = NativeMethods.sqlite3_bind_parameter_name(_handle.AsStructPointer(), index);
+        byte* pName = NativeMethods.sqlite3_bind_parameter_name((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
 
         if (pName == null)
@@ -144,7 +159,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite parameter index must be 1 or greater.");
 
-        byte* pName = NativeMethods.sqlite3_bind_parameter_name(_handle.AsStructPointer(), index);
+        byte* pName = NativeMethods.sqlite3_bind_parameter_name((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
 
         return pName is null ? null : Marshal.PtrToStringUTF8((nint)pName);
@@ -165,7 +180,7 @@ public sealed unsafe class Statement : IDisposable
 
         fixed (byte* pBuf = utf8Buffer)
         {
-            var rtn = NativeMethods.sqlite3_bind_parameter_index(_handle.AsStructPointer(), pBuf);
+            var rtn = NativeMethods.sqlite3_bind_parameter_index((sqlite3_stmt*)_handle.DangerousGetHandle(), pBuf);
             GC.KeepAlive(_handle);
             return rtn;
         }
@@ -188,7 +203,7 @@ public sealed unsafe class Statement : IDisposable
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
         // sqlite3_column_name restituisce un byte* UTF-8 (null-terminated)
-        byte* pName = NativeMethods.sqlite3_column_name(_handle.AsStructPointer(), index);
+        byte* pName = NativeMethods.sqlite3_column_name((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
 
         // Se l'indice è fuori intervallo o il nome non è disponibile, SQLite restituisce NULL
@@ -207,7 +222,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
-        byte* pText = NativeMethods.sqlite3_column_decltype(_handle.AsStructPointer(), index);
+        byte* pText = NativeMethods.sqlite3_column_decltype((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         return pText is null ? null : Marshal.PtrToStringUTF8((nint)pText);
     }
@@ -221,7 +236,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
-        byte* pText = NativeMethods.sqlite3_column_database_name(_handle.AsStructPointer(), index);
+        byte* pText = NativeMethods.sqlite3_column_database_name((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         return pText is null ? null : Marshal.PtrToStringUTF8((nint)pText);
     }
@@ -235,7 +250,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
-        byte* pText = NativeMethods.sqlite3_column_table_name(_handle.AsStructPointer(), index);
+        byte* pText = NativeMethods.sqlite3_column_table_name((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         return pText is null ? null : Marshal.PtrToStringUTF8((nint)pText);
     }
@@ -249,7 +264,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
-        byte* pText = NativeMethods.sqlite3_column_origin_name(_handle.AsStructPointer(), index);
+        byte* pText = NativeMethods.sqlite3_column_origin_name((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         return pText is null ? null : Marshal.PtrToStringUTF8((nint)pText);
     }
@@ -270,7 +285,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
-        var rtn = NativeMethods.sqlite3_column_int(_handle.AsStructPointer(), index);
+        var rtn = NativeMethods.sqlite3_column_int((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -286,7 +301,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
-        var rtn = NativeMethods.sqlite3_column_int64(_handle.AsStructPointer(), index);
+        var rtn = NativeMethods.sqlite3_column_int64((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -302,7 +317,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
-        var rtn = NativeMethods.sqlite3_column_double(_handle.AsStructPointer(), index);
+        var rtn = NativeMethods.sqlite3_column_double((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -314,12 +329,12 @@ public sealed unsafe class Statement : IDisposable
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
         // Otteniamo il puntatore alla memoria nativa gestita da SQLite
-        byte* pText = NativeMethods.sqlite3_column_text(_handle.AsStructPointer(), index);
+        byte* pText = NativeMethods.sqlite3_column_text((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         if (pText == null) return ReadOnlySpan<byte>.Empty;
 
         // Chiediamo a SQLite la lunghezza esatta in byte
-        int byteCount = NativeMethods.sqlite3_column_bytes(_handle.AsStructPointer(), index);
+        int byteCount = NativeMethods.sqlite3_column_bytes((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         if (byteCount == 0) return ReadOnlySpan<byte>.Empty;
 
@@ -343,7 +358,7 @@ public sealed unsafe class Statement : IDisposable
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
         // Otteniamo il puntatore alla memoria nativa gestita da SQLite
-        byte* pText = NativeMethods.sqlite3_column_text(_handle.AsStructPointer(), index);
+        byte* pText = NativeMethods.sqlite3_column_text((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
 
         // Marshal.PtrToStringUTF8 gestisce internamente il controllo null e la terminazione \0
@@ -363,12 +378,12 @@ public sealed unsafe class Statement : IDisposable
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
         // Otteniamo il puntatore alla memoria del BLOB gestita da SQLite
-        void* pBlob = NativeMethods.sqlite3_column_blob(_handle.AsStructPointer(), index);
+        void* pBlob = NativeMethods.sqlite3_column_blob((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         if (pBlob == null) return ReadOnlySpan<byte>.Empty;
 
         // Otteniamo la dimensione in byte
-        int length = NativeMethods.sqlite3_column_bytes(_handle.AsStructPointer(), index);
+        int length = NativeMethods.sqlite3_column_bytes((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
 
         // Restituiamo uno Span che punta direttamente alla memoria interna di SQLite.
@@ -388,7 +403,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
 
-        int typeCode = NativeMethods.sqlite3_column_type(_handle.AsStructPointer(), index);
+        int typeCode = NativeMethods.sqlite3_column_type((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         return (SqliteType)typeCode;
     }
@@ -399,7 +414,7 @@ public sealed unsafe class Statement : IDisposable
     public bool IsReadOnly()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_stmt_readonly(_handle.AsStructPointer()) != 0;
+        var rtn = NativeMethods.sqlite3_stmt_readonly((sqlite3_stmt*)_handle.DangerousGetHandle()) != 0;
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -410,7 +425,7 @@ public sealed unsafe class Statement : IDisposable
     public bool IsBusy()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_stmt_busy(_handle.AsStructPointer()) != 0;
+        var rtn = NativeMethods.sqlite3_stmt_busy((sqlite3_stmt*)_handle.DangerousGetHandle()) != 0;
         GC.KeepAlive(_handle);
         return rtn;
     }
@@ -423,7 +438,7 @@ public sealed unsafe class Statement : IDisposable
     {
         ThrowIfInvalid();
 
-        byte* pExpanded = NativeMethods.sqlite3_expanded_sql(_handle.AsStructPointer());
+        byte* pExpanded = NativeMethods.sqlite3_expanded_sql((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         if (pExpanded == null)
         {
@@ -446,7 +461,7 @@ public sealed unsafe class Statement : IDisposable
     public string? GetSql()
     {
         ThrowIfInvalid();
-        byte* pSql = NativeMethods.sqlite3_sql(_handle.AsStructPointer());
+        byte* pSql = NativeMethods.sqlite3_sql((sqlite3_stmt*)_handle.DangerousGetHandle());
         GC.KeepAlive(_handle);
         return pSql is null ? null : Marshal.PtrToStringUTF8((nint)pSql);
     }
@@ -466,7 +481,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var result = (ResultCodes)NativeMethods.sqlite3_bind_null(_handle.AsStructPointer(), index);
+        var result = (ResultCode)NativeMethods.sqlite3_bind_null((sqlite3_stmt*)_handle.DangerousGetHandle(), index);
         GC.KeepAlive(_handle);
         CheckBindResult(result, index);
     }
@@ -483,7 +498,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var result = (ResultCodes)NativeMethods.sqlite3_bind_int(_handle.AsStructPointer(), index, value);
+        var result = (ResultCode)NativeMethods.sqlite3_bind_int((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
         GC.KeepAlive(_handle);
         CheckBindResult(result, index);
     }
@@ -499,7 +514,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var result = (ResultCodes)NativeMethods.sqlite3_bind_int64(_handle.AsStructPointer(), index, value);
+        var result = (ResultCode)NativeMethods.sqlite3_bind_int64((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
         GC.KeepAlive(_handle);
         CheckBindResult(result, index);
     }
@@ -515,7 +530,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var result = (ResultCodes)NativeMethods.sqlite3_bind_double(_handle.AsStructPointer(), index, value);
+        var result = (ResultCode)NativeMethods.sqlite3_bind_double((sqlite3_stmt*)_handle.DangerousGetHandle(), index, value);
         GC.KeepAlive(_handle);
         CheckBindResult(result, index);
     }
@@ -534,7 +549,7 @@ public sealed unsafe class Statement : IDisposable
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
         // span reale, anche se Length == 0 -> bind normale con lunghezza 0.
-        var res = (ResultCodes)BindTextCore(index, text);
+        var res = (ResultCode)BindTextCore(index, text);
         CheckBindResult(res, index);
     }
 
@@ -552,16 +567,16 @@ public sealed unsafe class Statement : IDisposable
     /// il parametro lunghezza viene ignorato). Per lo span vuoto usiamo quindi un buffer sentinella
     /// statico, mai scritto e mai dereferenziato (n == 0), solo per garantire un puntatore non-null.
     /// </remarks>
-    private ResultCodes BindTextCore(int index, ReadOnlySpan<byte> text)
+    private ResultCode BindTextCore(int index, ReadOnlySpan<byte> text)
     {
         if (text.Length == 0)
         {
             fixed (byte* pBuf = s_emptySentinel)
             {
-                var res = (ResultCodes)NativeMethods.sqlite3_bind_text(
-                    _handle.AsStructPointer(), index, pBuf, 0, NativeMethods.SQLITE_TRANSIENT);
-				GC.KeepAlive(_handle);
-				return res;
+                var res = (ResultCode)NativeMethods.sqlite3_bind_text(
+                    (sqlite3_stmt*)_handle.DangerousGetHandle(), index, pBuf, 0, NativeMethods.SQLITE_TRANSIENT);
+                GC.KeepAlive(_handle);
+                return res;
             }
         }
 
@@ -569,14 +584,14 @@ public sealed unsafe class Statement : IDisposable
         {
             // Usiamo SQLITE_TRANSIENT (IntPtr(-1)) perché il buffer stackalloc/pool
             // verrà distrutto al termine di questo metodo, quindi SQLite deve copiarlo.
-            var res = (ResultCodes)NativeMethods.sqlite3_bind_text(
-                _handle.AsStructPointer(),
+            var res = (ResultCode)NativeMethods.sqlite3_bind_text(
+                (sqlite3_stmt*)_handle.DangerousGetHandle(),
                 index,
                 pBuf,
                 text.Length,
                 NativeMethods.SQLITE_TRANSIENT); // -1 = SQLITE_TRANSIENT
             GC.KeepAlive(_handle);
-			return res;
+            return res;
         }
     }
 
@@ -639,7 +654,7 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        var res = (ResultCodes)BindBlobCore(index, data);
+        var res = (ResultCode)BindBlobCore(index, data);
         CheckBindResult(res, index);
     }
 
@@ -647,29 +662,29 @@ public sealed unsafe class Statement : IDisposable
     /// Esegue il pinning di <paramref name="data"/> e invoca <c>sqlite3_bind_blob</c>.
     /// Vedi il commento su <see cref="BindTextCore"/> per il razionale del caso Length == 0.
     /// </summary>
-    private ResultCodes BindBlobCore(int index, ReadOnlySpan<byte> data)
+    private ResultCode BindBlobCore(int index, ReadOnlySpan<byte> data)
     {
         if (data.Length == 0)
         {
             fixed (byte* pData = s_emptySentinel)
             {
-                var res = (ResultCodes)NativeMethods.sqlite3_bind_blob(
-                    _handle.AsStructPointer(), index, pData, 0, NativeMethods.SQLITE_TRANSIENT);
+                var res = (ResultCode)NativeMethods.sqlite3_bind_blob(
+                    (sqlite3_stmt*)_handle.DangerousGetHandle(), index, pData, 0, NativeMethods.SQLITE_TRANSIENT);
                 GC.KeepAlive(_handle);
-				return res;
+                return res;
             }
         }
 
         fixed (byte* pData = data)
         {
-            var res = (ResultCodes)NativeMethods.sqlite3_bind_blob(
-                _handle.AsStructPointer(),
+            var res = (ResultCode)NativeMethods.sqlite3_bind_blob(
+                (sqlite3_stmt*)_handle.DangerousGetHandle(),
                 index,
                 pData,
                 data.Length,
                 NativeMethods.SQLITE_TRANSIENT);
             GC.KeepAlive(_handle);
-			return res;
+            return res;
         }
     }
 
@@ -680,26 +695,26 @@ public sealed unsafe class Statement : IDisposable
 
     private void ThrowIfInvalid()
     {
-        if (_handle.IsClosed || _handle.IsInvalid)
+        if (_handle is not { IsClosed: false, IsInvalid: false })
             throw new ObjectDisposedException(nameof(Statement));
     }
 
-    private void CheckResult(ResultCodes res, [CallerMemberName] string caller = "")
+    private void CheckResult(ResultCode res, [CallerMemberName] string caller = "")
     {
-        if (res == ResultCodes.OK)
+        if (res == ResultCode.OK)
             return;
         throw ThrowException(res, $"{nameof(Statement)}.{caller}");
     }
 
     // Piccolo helper per centralizzare il controllo degli errori
-    private void CheckBindResult(ResultCodes res, int index, [CallerMemberName] string caller = "")
+    private void CheckBindResult(ResultCode res, int index, [CallerMemberName] string caller = "")
     {
-        if (res == ResultCodes.OK)
+        if (res == ResultCode.OK)
             return;
         throw EngineException.CreateException(_connectionSafeHandle, res, $"{nameof(Statement)}.{caller} to parameter index {index}");
     }
 
-    private EngineException ThrowException(ResultCodes result, [CallerMemberName] string caller = "")
+    private EngineException ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
         return EngineException.CreateException(_connectionSafeHandle, result, $"{nameof(Statement)}.{caller}");
     }
