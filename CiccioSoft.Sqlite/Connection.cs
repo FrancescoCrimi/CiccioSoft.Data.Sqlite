@@ -33,75 +33,35 @@ public sealed class Connection : IDisposable
         _pooled = pooled;
     }
 
-    public static Connection Open(
-        string dataSource,
-        OpenFlags openFlags = OpenFlags.ReadWrite | OpenFlags.Create | OpenFlags.FullMutex,
-        bool pooling = true,
-        int maxPoolSize = 100,
-        string? poolKey = null)
+    public static Connection Open(string dataSource, OpenFlags openFlags = OpenFlags.ReadWrite | OpenFlags.Create | OpenFlags.FullMutex, bool pooling = true, int maxPoolSize = 100, string? poolKey = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(dataSource);
-
-        if (maxPoolSize < 1)
-            throw new ArgumentOutOfRangeException(nameof(maxPoolSize), maxPoolSize, "The pool size must be greater than zero.");
-
+        if (maxPoolSize < 1) throw new ArgumentOutOfRangeException(nameof(maxPoolSize), maxPoolSize, "The pool size must be greater than zero.");
         string key = poolKey ?? dataSource;
-        SqliteSession session = pooling
-            ? SqliteConnectionPool.Rent(key, dataSource, maxPoolSize, openFlags)
-            : new SqliteSession(NativeConnection.Open(dataSource, openFlags));
-
+        SqliteSession session = pooling ? SqliteConnectionPool.Rent(key, dataSource, maxPoolSize, openFlags) : new SqliteSession(NativeConnection.Open(dataSource, openFlags));
         return new Connection(key, session, pooling);
     }
 
-    public static async Task<Connection> OpenAsync(
-        string dataSource,
-        OpenFlags openFlags = OpenFlags.ReadWrite | OpenFlags.Create | OpenFlags.FullMutex,
-        bool pooling = true,
-        int maxPoolSize = 100,
-        string? poolKey = null,
-        CancellationToken cancellationToken = default)
+    public static async Task<Connection> OpenAsync(string dataSource, OpenFlags openFlags = OpenFlags.ReadWrite | OpenFlags.Create | OpenFlags.FullMutex, bool pooling = true, int maxPoolSize = 100, string? poolKey = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(dataSource);
         cancellationToken.ThrowIfCancellationRequested();
-
-        if (maxPoolSize < 1)
-            throw new ArgumentOutOfRangeException(nameof(maxPoolSize), maxPoolSize, "The pool size must be greater than zero.");
-
+        if (maxPoolSize < 1) throw new ArgumentOutOfRangeException(nameof(maxPoolSize), maxPoolSize, "The pool size must be greater than zero.");
         string key = poolKey ?? dataSource;
-        SqliteSession session = pooling
-            ? await SqliteConnectionPool.RentAsync(key, dataSource, maxPoolSize, openFlags, cancellationToken).ConfigureAwait(false)
-            : new SqliteSession(NativeConnection.Open(dataSource, openFlags));
-
+        SqliteSession session = pooling ? await SqliteConnectionPool.RentAsync(key, dataSource, maxPoolSize, openFlags, cancellationToken).ConfigureAwait(false) : new SqliteSession(NativeConnection.Open(dataSource, openFlags));
         return new Connection(key, session, pooling);
     }
 
     public bool IsOpen => Volatile.Read(ref _disposed) == 0;
 
-    /// <summary>
-    /// Prepares an SQL statement. All SQL interaction with the runtime is performed through statements.
-    /// </summary>
     public Statement Prepare(string sql, PrepareFlags prepareFlags = PrepareFlags.None)
     {
         EnsureNotDisposed();
         ArgumentException.ThrowIfNullOrEmpty(sql);
-
-        SqliteSession session = _session!;
-        session.Gate.Wait();
-        try
-        {
-            Native.Statement nativeStatement = session.Native.Prepare(sql, prepareFlags);
-            return new Statement(this, session, nativeStatement, _transaction);
-        }
-        finally
-        {
-            session.Gate.Release();
-        }
+        return PrepareCore(sql, prepareFlags, _transaction);
     }
 
-    public Task<Statement> PrepareAsync(
-        string sql,
-        PrepareFlags prepareFlags = PrepareFlags.None,
-        CancellationToken cancellationToken = default)
+    public Task<Statement> PrepareAsync(string sql, PrepareFlags prepareFlags = PrepareFlags.None, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(Prepare(sql, prepareFlags));
@@ -110,44 +70,27 @@ public sealed class Connection : IDisposable
     public Transaction BeginTransaction()
     {
         EnsureNotDisposed();
-
-        if (_transaction is not null)
-            throw new InvalidOperationException("A transaction is already active on this connection.");
-
+        if (_transaction is not null) throw new InvalidOperationException("A transaction is already active on this connection.");
         Transaction transaction = new(this, _session!);
-        try
-        {
-            transaction.Begin();
-            _transaction = transaction;
-            return transaction;
-        }
-        catch
-        {
-            transaction.Dispose();
-            throw;
-        }
+        try { transaction.Begin(); _transaction = transaction; return transaction; }
+        catch { transaction.Dispose(); throw; }
     }
 
     public async Task<Transaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         EnsureNotDisposed();
-
-        if (_transaction is not null)
-            throw new InvalidOperationException("A transaction is already active on this connection.");
-
+        if (_transaction is not null) throw new InvalidOperationException("A transaction is already active on this connection.");
         Transaction transaction = new(this, _session!);
-        try
-        {
-            await transaction.BeginAsync(cancellationToken).ConfigureAwait(false);
-            _transaction = transaction;
-            return transaction;
-        }
-        catch
-        {
-            transaction.Dispose();
-            throw;
-        }
+        try { await transaction.BeginAsync(cancellationToken).ConfigureAwait(false); _transaction = transaction; return transaction; }
+        catch { transaction.Dispose(); throw; }
+    }
+
+    internal Statement PrepareControlStatement(string sql)
+    {
+        EnsureNotDisposed();
+        ArgumentException.ThrowIfNullOrEmpty(sql);
+        return PrepareCore(sql, PrepareFlags.None, null);
     }
 
     internal IDisposable AcquireWriteLease(CancellationToken cancellationToken = default)
@@ -164,56 +107,43 @@ public sealed class Connection : IDisposable
 
     internal void EndTransaction(Transaction transaction)
     {
-        if (ReferenceEquals(_transaction, transaction))
-            _transaction = null;
-    }
-
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            return;
-
-        _transaction?.Dispose();
-        _transaction = null;
-
-        SqliteSession? session = Interlocked.Exchange(ref _session, null);
-        if (session is null)
-            return;
-
-        session.Gate.Wait();
-        try
-        {
-            if (_pooled)
-            {
-                session.Gate.Release();
-                SqliteConnectionPool.Return(_poolKey, session);
-            }
-            else
-            {
-                session.Native.Dispose();
-                session.Gate.Release();
-                session.Gate.Dispose();
-            }
-        }
-        catch
-        {
-            if (!_pooled)
-                session.Gate.Dispose();
-            throw;
-        }
-    }
-
-    internal SqliteSession GetSession()
-    {
-        EnsureNotDisposed();
-        return _session!;
+        if (ReferenceEquals(_transaction, transaction)) _transaction = null;
     }
 
     internal Transaction? CurrentTransaction => _transaction;
 
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _transaction?.Dispose();
+        _transaction = null;
+        SqliteSession? session = Interlocked.Exchange(ref _session, null);
+        if (session is null) return;
+        session.Gate.Wait();
+        try
+        {
+            if (_pooled) { session.Gate.Release(); SqliteConnectionPool.Return(_poolKey, session); }
+            else { session.Native.Dispose(); session.Gate.Release(); session.Gate.Dispose(); }
+        }
+        catch { if (!_pooled) session.Gate.Dispose(); throw; }
+    }
+
+    internal SqliteSession GetSession() { EnsureNotDisposed(); return _session!; }
+
+    private Statement PrepareCore(string sql, PrepareFlags prepareFlags, Transaction? transaction)
+    {
+        SqliteSession session = _session!;
+        session.Gate.Wait();
+        try
+        {
+            Native.Statement nativeStatement = session.Native.Prepare(sql, prepareFlags);
+            return new Statement(this, session, nativeStatement, transaction);
+        }
+        finally { session.Gate.Release(); }
+    }
+
     private void EnsureNotDisposed()
     {
-        if (Volatile.Read(ref _disposed) != 0 || _session is null)
-            throw new ObjectDisposedException(nameof(Connection));
+        if (Volatile.Read(ref _disposed) != 0 || _session is null) throw new ObjectDisposedException(nameof(Connection));
     }
 }
