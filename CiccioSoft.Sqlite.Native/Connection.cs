@@ -36,10 +36,12 @@ public sealed unsafe class ConnectionSafeHandle : SafeHandle
 /// This class is not inherently thread-safe. Concurrent access to a single SQLite connection 
 /// should be synchronized or managed according to SQLite's threading modes.
 /// </threadsafety>
-internal sealed unsafe class Connection : IDisposable
+public sealed unsafe class Connection : IDisposable
 {
     private readonly ConnectionSafeHandle _handle;
-    public ConnectionPhysicalState State { get; internal set; } = ConnectionPhysicalState.Created;
+    // Fix here
+    // public ConnectionPhysicalState State { get; internal set; } = ConnectionPhysicalState.Created;
+    public ConnectionPhysicalState State { get; set; } = ConnectionPhysicalState.Created;
 
     // NOTA (Tier 0 v6.0.0, §8): questa classe non possiede più una StatementCache propria
     // dalla revisione a tre livelli. La cache esiste solo per le connessioni gestite da un
@@ -157,7 +159,7 @@ internal sealed unsafe class Connection : IDisposable
     }
 
     // ResetInvariantiPrimaDiRientrareNelPool(): Tier 0 §12, "Leased -> Idle"
-    internal void ResetInvariantsBeforeReturningToPool()
+    public void ResetInvariantsBeforeReturningToPool()
     {
         ThrowIfInvalid();
 
@@ -529,7 +531,7 @@ internal sealed unsafe class Connection : IDisposable
     /// solleva <see cref="EngineException"/> — nessuna gestione silenziosa del "non
     /// completato": la decisione se e come ritentare spetta al chiamante.
     /// </remarks>
-    internal SqliteCheckpointResult WalCheckpointCore(SqliteCheckpointMode mode)
+    public SqliteCheckpointResult WalCheckpointCore(SqliteCheckpointMode mode)
     {
         ThrowIfInvalid();
 
@@ -689,6 +691,25 @@ internal sealed unsafe class Connection : IDisposable
 
     #endregion
 
+
+    public Backup InitBackup(Connection destination,
+                             string destinationDatabaseName = "main",
+                             string sourceDatabaseName = "main")
+    {
+        ThrowIfInvalid();
+        ArgumentNullException.ThrowIfNull(destination);
+        return Backup.InitBackup(destination, this, destinationDatabaseName, sourceDatabaseName);
+    }
+
+    public Blob OpenBlob(string tableName,
+                         string columnName,
+                         long rowId,
+                         bool readWrite = false,
+                         string databaseName = "main")
+    {
+        ThrowIfInvalid();
+        return Blob.Open(this, tableName, columnName, rowId, readWrite, databaseName);
+    }
 
     #region Private Methods
 

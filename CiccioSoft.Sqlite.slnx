@@ -11,6 +11,8 @@
   <Project Path="CiccioSoft.Sqlite.WpfExample/CiccioSoft.Sqlite.WpfExample.csproj" />
   <Project Path="CiccioSoft.Sqlite.Benchmark/CiccioSoft.Sqlite.Benchmark.csproj" />
 
+  <Project Path="CiccioSoft.Sqlite.Native/CiccioSoft.Sqlite.Native.csproj" />
+
   <Project Path="CiccioSoft.Data.Sqlite/CiccioSoft.Data.Sqlite.csproj" />
   <Project Path="CiccioSoft.Data.Sqlite.Tests/CiccioSoft.Data.Sqlite.Tests.csproj" />
   <Project Path="CiccioSoft.Data.Sqlite.Tests.Extra/CiccioSoft.Data.Sqlite.Tests.Extra.csproj" />

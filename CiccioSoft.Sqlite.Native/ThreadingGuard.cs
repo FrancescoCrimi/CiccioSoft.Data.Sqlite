@@ -2,7 +2,7 @@ using System;
 
 namespace CiccioSoft.Sqlite;
 
-internal static class ThreadingGuard
+public static class ThreadingGuard
 {
     private static bool _verified;
     private static bool _requiresFullMutexFallback;

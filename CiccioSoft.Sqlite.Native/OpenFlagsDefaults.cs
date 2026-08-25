@@ -15,9 +15,9 @@ public static class OpenFlagsDefaults
     // flag. NoMutex è la baseline di riferimento sotto modalità Multi-thread (§6.2);
     // BaselineFullMutexFallback è la deviazione automatica quando sqlite3_threadsafe()
     // riporta Serialized (ThreadingGuard) — mai una scelta esposta al chiamante.
-    internal const OpenFlags Baseline =
+    public const OpenFlags Baseline =
         OpenFlags.Uri | OpenFlags.Exrescode | OpenFlags.NoMutex;
-    internal const OpenFlags BaselineFullMutexFallback =
+    public const OpenFlags BaselineFullMutexFallback =
         OpenFlags.Uri | OpenFlags.Exrescode | OpenFlags.FullMutex;
 
     // --- Profili denominati: SOLO per connessioni gestite da un Pool (SqliteConcurrencyMode

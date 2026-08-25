@@ -8,9 +8,7 @@ using System;
 
 namespace CiccioSoft.Sqlite;
 
-public enum SqliteErrorCategory { None, Transient, Applicative, ResourceExhausted, Fatal }
-
-internal static class SqliteErrorClassifier
+public static class SqliteErrorClassifier
 {
     public static SqliteErrorCategory Classify(ResultCode code) => code.ToPrimary() switch
     {

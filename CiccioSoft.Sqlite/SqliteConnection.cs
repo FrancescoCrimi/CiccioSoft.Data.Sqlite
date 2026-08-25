@@ -522,7 +522,7 @@ public sealed class SqliteConnection : IDisposable
                              string sourceDatabaseName = "main")
     {
         ArgumentNullException.ThrowIfNull(destination);
-        return Backup.InitBackup(destination.ActiveConnection, ActiveConnection, destinationDatabaseName, sourceDatabaseName);
+        return ActiveConnection.InitBackup(destination.ActiveConnection, destinationDatabaseName, sourceDatabaseName);
     }
 
     public Blob OpenBlob(string tableName,
@@ -531,6 +531,6 @@ public sealed class SqliteConnection : IDisposable
                          bool readWrite = false,
                          string databaseName = "main")
     {
-        return Blob.Open(ActiveConnection, tableName, columnName, rowId, readWrite, databaseName);
+        return ActiveConnection.OpenBlob(tableName, columnName, rowId, readWrite, databaseName);
     }
 }

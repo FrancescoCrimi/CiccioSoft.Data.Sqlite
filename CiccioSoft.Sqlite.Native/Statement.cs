@@ -736,7 +736,7 @@ public sealed unsafe class Statement : IDisposable
     // Questo rende Dispose() sicuro da chiamare SEMPRE, in ogni modalità operativa
     // (Invariante I26 — stesso comportamento osservabile della stessa chiamata pubblica,
     // indipendentemente da cosa succede internamente).
-    internal bool IsOwnedByCache { get; set; }
+    public bool IsOwnedByCache { get; set; }
 
     /// <summary>
     /// Se lo statement è di proprietà della StatementCache (§11), questa chiamata non ha
@@ -756,5 +756,5 @@ public sealed unsafe class Statement : IDisposable
 
     // Percorso di finalizzazione reale, usato SOLO da StatementCache (eviction LRU,
     // Invariante I13; svuotamento per poisoning, Invariante I14) — mai dal consumatore.
-    internal void DisposeCore() => _handle.Dispose();
+    public void DisposeCore() => _handle.Dispose();
 }
