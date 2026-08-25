@@ -1,68 +1,39 @@
-### Agent Guidelines: CiccioSoft.Data.Sqlite (Modern ADO.NET Provider & OOP Wrapper)
+# CiccioSoft.Data.Sqlite — Agent Guidelines
 
-Questo componente implementa il provider ADO.NET moderno e il wrapper idiomatico OOP ad altissime prestazioni per SQLite, astraendo la complessità dei puntatori e costruendo un'interfaccia ad oggetti enterprise basata interamente su `CiccioSoft.Sqlite`. 
+## Purpose
 
-### 1. Stack Tecnologico e Dipendenze
+ADO.NET provider of the CiccioSoft SQLite family.
 
-* **Target Framework:** `net10.0` (LTS Esclusivo).
-* **Linguaggio:** C# 14 (Nativo).
-* **Dipendenza Unica Core:** CiccioSoft.Sqlite (Nessun utilizzo di SqlitePCL.raw o simili).
+It adapts the underlying libraries to ADO.NET contracts without moving lower-level responsibilities into the provider.
 
-### 2. Filosofia di Sviluppo Enterprise & AOT
+## Scope
 
-### Zero-Allocation Data Streaming (ADO.NET)
+Owns ADO.NET concepts and behavior, including:
 
-* **Slicing di Memoria:** Sfruttare `ReadOnlySpan<byte>` estratto direttamente dai puntatori di `CiccioSoft.Sqlite` per esporre i dati nel `SqliteDataReader` senza allocare array di byte intermedi nell'heap.
-* **Asincronia Ottimizzata:** Implementare i metodi asincroni (`ExecuteReaderAsync`, `ReadAsync`) restituendo `ValueTask` e `ValueTask<T>` per azzerare la pressione sul Garbage Collector.
+- `DbConnection`;
+- `DbCommand`;
+- `DbTransaction`;
+- `DbDataReader`;
+- parameters and provider-specific ADO.NET semantics.
 
-### Design Idiomatico OOP (C# 14)
+Use `CiccioSoft.Sqlite` and its underlying Native layer as the SQLite implementation foundation.
 
-* **Prevenzione SQL Injection Nativa:** Il wrapper deve obbligare l'uso di espressioni interpolate strutturate sfruttando custom string handler per intercettare i parametri prima della compilazione della query SQLite.
-* **No Riflessione Dinamica:** È tassativamente vietato l'uso di reflection o emissione di IL a runtime per mappare le righe del database su oggetti business. Il mapping deve basarsi su C# Source Generators.
+## Design Rules
 
-### Osservabilità di Livello Enterprise
+- Do not reimplement SQLite native primitives.
+- Do not duplicate pooling, statement caching or write coordination already owned by `CiccioSoft.Sqlite`.
+- Do not push ADO.NET abstractions into lower layers.
+- Preserve ADO.NET contracts while adapting SQLite semantics faithfully.
+- Keep provider-specific policy separate from SQLite core behavior.
 
-* **OpenTelemetry Integrato:** Implementare le specifiche semantiche del tracciamento database tramite `ActivitySource` integrato.
-* **High-Performance Logging:** Utilizzare il generatore di sorgenti `[LoggerMessage]` per scrivere log strutturati senza allocare memoria quando il livello di tracciamento non è attivo.
+## Engineering
 
-### 3. Standard di Codifica Obbligatori
+- Minimum SDK: .NET 10.
+- Language: C# 14.
+- Prefer idiomatic modern .NET APIs.
+- Avoid unnecessary allocations and `Task.Run` wrappers for asynchronous I/O/execution paths.
+- Keep changes within the provider boundary.
 
-### Gestione dei Parametri senza Boxing
+## Validation
 
-Evitare il boxing di tipi di valore (`int`, `double`, `DateTime`) dentro `System.Object`. Sfruttare overload generici puliti o interfacce statiche per passare i parametri allo strato interop in modo fortemente tipizzato: 
-
-```csharp
-
-public sealed class SqliteParameter<T> : DbParameter where T : struct
-{
-    public T TypedValue { get; set; }
-    // Implementazione che chiama direttamente l'interop blittabile senza passare da object
-}
-```
-
-### Configurazione del Progetto (.csproj)
-
-```xml
-
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <LangVersion>14.0</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    
-    <!-- Strumenti di Analisi e Validazione AOT -->
-    <PublishAot>true</PublishAot>
-    <IsTrimmable>true</IsTrimmable>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-    <EnableAotAnalyzer>true</EnableAotAnalyzer>
-    <IllinkTreatWarningsAsErrors>true</IllinkTreatWarningsAsErrors>
-  </PropertyGroup>
-  
-  <ItemGroup>
-    <ProjectReference Include="..\CiccioSoft.Sqlite\CiccioSoft.Sqlite.csproj" />
-  </ItemGroup>
-</Project>
-
-```
+For every code change: build → test → verify before the next change.

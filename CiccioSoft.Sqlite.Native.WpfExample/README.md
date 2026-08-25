@@ -1,1 +1,1 @@
-# CiccioSoft.Sqlite.WpfExample
+# CiccioSoft.Sqlite.Native.WpfExample

@@ -1,4 +1,4 @@
-# CiccioSoft.Sqlite.Benchmark
+# CiccioSoft.Sqlite.Native.Benchmark
 
 BenchmarkDotNet benchmark suite for `CiccioSoft.Sqlite`.
 
@@ -7,7 +7,7 @@ The benchmark must be run in Release mode
 
 ### Option 1
 ```
-\bin\Release\net10.0\CiccioSoft.Sqlite.Benchmark.exe
+\bin\Release\net10.0\CiccioSoft.Sqlite.Native.Benchmark.exe
 ```
 
 ### Option 2

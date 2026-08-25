@@ -10,18 +10,33 @@ using System.Runtime.InteropServices;
 
 namespace CiccioSoft.Sqlite.Native;
 
+public sealed unsafe class StatementSafeHandle : SafeHandle
+{
+    internal StatementSafeHandle(sqlite3_stmt* pStmt)
+        : base((nint)pStmt, true)
+    {
+    }
+
+    public override bool IsInvalid => handle == nint.Zero;
+
+    protected override bool ReleaseHandle()
+    {
+        _ = NativeMethods.sqlite3_finalize((sqlite3_stmt*)handle);
+        return true;
+    }
+}
 
 public sealed unsafe class Statement : IDisposable
 {
     private readonly StatementSafeHandle _handle;
-    private readonly Connection _physicalConnection;
+    private readonly Connection _connection;
 
-    internal Statement(StatementSafeHandle handle, Connection physicalConnection)
+    internal Statement(StatementSafeHandle handle, Connection connection)
     {
         ArgumentNullException.ThrowIfNull(handle);
-        ArgumentNullException.ThrowIfNull(physicalConnection);
+        ArgumentNullException.ThrowIfNull(connection);
         _handle = handle;
-        _physicalConnection = physicalConnection;
+        _connection = connection;
     }
 
 
@@ -44,7 +59,6 @@ public sealed unsafe class Statement : IDisposable
         GC.KeepAlive(_handle);
         if (res == ResultCode.Row) return true;
         if (res == ResultCode.Done) return false;
-        // throw new EngineException(res, _physicalConnection.Handle, $"SQLite {GetType().Name}.Step");
         throw ThrowException(res);
     }
 
@@ -562,8 +576,8 @@ public sealed unsafe class Statement : IDisposable
             {
                 var res = (ResultCode)NativeMethods.sqlite3_bind_text(
                     (sqlite3_stmt*)_handle.DangerousGetHandle(), index, pBuf, 0, NativeMethods.SQLITE_TRANSIENT);
-				GC.KeepAlive(_handle);
-				return res;
+                GC.KeepAlive(_handle);
+                return res;
             }
         }
 
@@ -578,7 +592,7 @@ public sealed unsafe class Statement : IDisposable
                 text.Length,
                 NativeMethods.SQLITE_TRANSIENT); // -1 = SQLITE_TRANSIENT
             GC.KeepAlive(_handle);
-			return res;
+            return res;
         }
     }
 
@@ -658,7 +672,7 @@ public sealed unsafe class Statement : IDisposable
                 var res = (ResultCode)NativeMethods.sqlite3_bind_blob(
                     (sqlite3_stmt*)_handle.DangerousGetHandle(), index, pData, 0, NativeMethods.SQLITE_TRANSIENT);
                 GC.KeepAlive(_handle);
-				return res;
+                return res;
             }
         }
 
@@ -671,7 +685,7 @@ public sealed unsafe class Statement : IDisposable
                 data.Length,
                 NativeMethods.SQLITE_TRANSIENT);
             GC.KeepAlive(_handle);
-			return res;
+            return res;
         }
     }
 
@@ -698,12 +712,12 @@ public sealed unsafe class Statement : IDisposable
     {
         if (res == ResultCode.OK)
             return;
-        throw Exception.CreateException(_physicalConnection.Handle, res, $"{nameof(Statement)}.{caller} to parameter index {index}");
+        throw Exception.CreateException(_connection.Handle, res, $"{nameof(Statement)}.{caller} to parameter index {index}");
     }
 
     private Exception ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
-        return Exception.CreateException(_physicalConnection.Handle, result, $"{nameof(Statement)}.{caller}");
+        return Exception.CreateException(_connection.Handle, result, $"{nameof(Statement)}.{caller}");
     }
 
     #endregion

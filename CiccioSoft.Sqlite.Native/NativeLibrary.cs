@@ -10,14 +10,6 @@ using System.Runtime.InteropServices;
 
 namespace CiccioSoft.Sqlite;
 
-public enum NativeSource
-{
-    Bundled,        // libreria nativa inclusa nel pacchetto NuGet
-    SourceGear,     // bundled provenienza SourceGear.sqlite3
-    System,         // libreria di sistema già presente (es. libsqlite3.so.0 su Linux, winsqlite3.dll fornita dall'host su Windows)
-    Custom          // path esplicito qualsiasi, per casi non previsti
-}
-
 public static class NativeLibrary
 {
     private static nint _cachedHandle;

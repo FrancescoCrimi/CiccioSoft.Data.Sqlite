@@ -13,6 +13,22 @@ using System.Text;
 
 namespace CiccioSoft.Sqlite.Native;
 
+public sealed unsafe class ConnectionSafeHandle : SafeHandle
+{
+    internal ConnectionSafeHandle(sqlite3* sqlite3)
+        : base((nint)sqlite3, true)
+    {
+    }
+
+    public override bool IsInvalid => handle == nint.Zero;
+
+    protected override bool ReleaseHandle()
+    {
+        _ = NativeMethods.sqlite3_close_v2((sqlite3*)handle);
+        return true;
+    }
+}
+
 /// <summary>
 /// Provides a high-performance, low-allocation wrapper for a SQLite database connection.
 /// </summary>
@@ -23,7 +39,6 @@ namespace CiccioSoft.Sqlite.Native;
 public sealed unsafe class Connection : IDisposable
 {
     private readonly ConnectionSafeHandle _handle;
-    // private readonly PhysicalConnection _physicalConnection;
     private readonly object _transactionSyncRoot = new();
     private Transaction? _rootTransaction;
 
@@ -32,8 +47,6 @@ public sealed unsafe class Connection : IDisposable
         ArgumentNullException.ThrowIfNull(handle);
         _handle = handle;
     }
-
-    // internal PhysicalConnection PhysicalConnection => _physicalConnection;
 
     /// <summary>
     /// Gets the native connection safe handle owned by this physical connection.
@@ -595,9 +608,6 @@ public sealed unsafe class Connection : IDisposable
         }
     }
 
-
-
-
     public Backup InitBackup(Connection destination,
                              string destinationDatabaseName = "main",
                              string sourceDatabaseName = "main")
@@ -616,7 +626,6 @@ public sealed unsafe class Connection : IDisposable
         ThrowIfInvalid();
         return Blob.Open(this, tableName, columnName, rowId, readWrite, databaseName);
     }
-
 
 
     #region Private Methods
