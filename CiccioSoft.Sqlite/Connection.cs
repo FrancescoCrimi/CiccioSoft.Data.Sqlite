@@ -92,13 +92,19 @@ public sealed class Connection : IDisposable
         }
     }
 
-    public IDisposable AcquireWriter(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Acquires the database writer lease. The caller owns the lease until it is disposed.
+    /// </summary>
+    internal IDisposable AcquireWriteLease(CancellationToken cancellationToken = default)
     {
         EnsureNotDisposed();
         return SingleWriterCoordinator.Acquire(_poolKey, cancellationToken);
     }
 
-    public Task<IDisposable> AcquireWriterAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Asynchronously acquires the database writer lease.
+    /// </summary>
+    internal Task<IDisposable> AcquireWriteLeaseAsync(CancellationToken cancellationToken = default)
     {
         EnsureNotDisposed();
         return SingleWriterCoordinator.AcquireAsync(_poolKey, cancellationToken);
