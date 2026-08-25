@@ -11,12 +11,20 @@ using System.Threading.Tasks;
 
 namespace CiccioSoft.Sqlite;
 
+/// <summary>
+/// Coordinates exclusive writer ownership for a database.
+/// </summary>
+/// <remarks>
+/// Writer ownership is intentionally independent from physical connection
+/// pooling. A writer lease may span a complete write-capable transaction or
+/// cover a single write operation outside a transaction.
+/// </remarks>
 public static class SingleWriterCoordinator
 {
     private sealed class Releaser : IDisposable
     {
         private readonly SemaphoreSlim _gate;
-        private bool _disposed;
+        private int _disposed;
 
         public Releaser(SemaphoreSlim gate)
         {
@@ -25,28 +33,38 @@ public static class SingleWriterCoordinator
 
         public void Dispose()
         {
-            if (_disposed)
-            {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
-            }
 
-            _disposed = true;
             _gate.Release();
         }
     }
 
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates =
+        new(StringComparer.OrdinalIgnoreCase);
 
-    public static IDisposable Acquire(string writerKey, CancellationToken cancellationToken)
+    /// <summary>
+    /// Acquires writer ownership for the specified writer key.
+    /// </summary>
+    public static IDisposable Acquire(string writerKey, CancellationToken cancellationToken = default)
     {
-        SemaphoreSlim gate = Gates.GetOrAdd(writerKey, _ => new SemaphoreSlim(1, 1));
+        ArgumentException.ThrowIfNullOrEmpty(writerKey);
+
+        SemaphoreSlim gate = Gates.GetOrAdd(writerKey, static _ => new SemaphoreSlim(1, 1));
         gate.Wait(cancellationToken);
         return new Releaser(gate);
     }
 
-    public static async Task<IDisposable> AcquireAsync(string writerKey, CancellationToken cancellationToken)
+    /// <summary>
+    /// Asynchronously acquires writer ownership for the specified writer key.
+    /// </summary>
+    public static async Task<IDisposable> AcquireAsync(
+        string writerKey,
+        CancellationToken cancellationToken = default)
     {
-        SemaphoreSlim gate = Gates.GetOrAdd(writerKey, _ => new SemaphoreSlim(1, 1));
+        ArgumentException.ThrowIfNullOrEmpty(writerKey);
+
+        SemaphoreSlim gate = Gates.GetOrAdd(writerKey, static _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         return new Releaser(gate);
     }
