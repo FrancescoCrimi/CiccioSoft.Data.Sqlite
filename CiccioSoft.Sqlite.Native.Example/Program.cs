@@ -28,14 +28,18 @@ class Program
 
     static void blabla()
     {
-        var option = new SqliteConnectionOptions
-        {
-            DataSource = "app.db",
-            AdditionalFlags = OpenFlagsDefaults.Coordinated,
-            ConcurrencyMode = SqliteConcurrencyMode.Native
-        };
-        using var conn = new CiccioSoft.Sqlite.SqliteConnection(option);
-        conn.Open();
+        // var option = new SqliteConnectionOptions
+        // {
+        //     DataSource = "app.db",
+        //     AdditionalFlags = OpenFlagsDefaults.Coordinated,
+        //     ConcurrencyMode = SqliteConcurrencyMode.Native
+        // };
+        // using var conn = new CiccioSoft.Sqlite.SqliteConnection(option);
+        // conn.Open();
+
+        string dataSource = "app.db";
+        OpenFlags flags = OpenFlags.Uri | OpenFlags.Exrescode | OpenFlags.NoMutex | OpenFlags.ReadWrite | OpenFlags.Create;
+        using var conn = Connection.Open(dataSource, flags);
 
         conn.Execute("CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY, payload BLOB)");
 
