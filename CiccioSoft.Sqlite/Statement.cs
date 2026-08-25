@@ -32,14 +32,13 @@ public sealed class Statement : IDisposable
 
     public bool IsReadOnly => _native.IsReadOnly();
 
-    public int ColumnCount
-    {
-        get
-        {
-            EnsureNotDisposed();
-            return _native.ColumnCount();
-        }
-    }
+    public int ColumnCount => ExecuteWithSessionGate(_native.ColumnCount);
+
+    public int ParameterCount => ExecuteWithSessionGate(_native.ParameterCount);
+
+    public string? Sql => ExecuteWithSessionGate(_native.GetSql);
+
+    public string? ExpandedSql => ExecuteWithSessionGate(_native.GetExpandedSql);
 
     public bool Step(CancellationToken cancellationToken = default)
     {
@@ -59,7 +58,10 @@ public sealed class Statement : IDisposable
         _session.Gate.Wait(cancellationToken);
         try
         {
-            return _native.Step();
+            bool hasRow = _native.Step();
+            if (!hasRow && _transaction is null)
+                ReleaseOperationWriterLease();
+            return hasRow;
         }
         catch
         {
@@ -103,21 +105,70 @@ public sealed class Statement : IDisposable
         }
     }
 
+    public string? GetParameterName(int index) => ExecuteWithSessionGate(() => _native.GetParameterNameString(index));
+
+    public int GetParameterIndex(string parameterName) => ExecuteWithSessionGate(() => _native.GetParameterIndex(parameterName));
+
+    public void BindNull(int index) => ExecuteWithSessionGate(() => _native.BindNull(index));
+
+    public void BindInt(int index, int value) => ExecuteWithSessionGate(() => _native.BindInt(index, value));
+
+    public void BindLong(int index, long value) => ExecuteWithSessionGate(() => _native.BindLong(index, value));
+
+    public void BindDouble(int index, double value) => ExecuteWithSessionGate(() => _native.BindDouble(index, value));
+
+    public void BindText(int index, string? value) => ExecuteWithSessionGate(() => _native.BindText(index, value!));
+
+    public void BindText(int index, ReadOnlySpan<byte> value) => ExecuteWithSessionGate(() => _native.BindText(index, value));
+
+    public void BindBlob(int index, ReadOnlySpan<byte> value) => ExecuteWithSessionGate(() => _native.BindBlob(index, value));
+
+    public string? GetColumnName(int index) => ExecuteWithSessionGate(() => _native.GetColumnName(index));
+
+    public string? GetColumnDeclaredType(int index) => ExecuteWithSessionGate(() => _native.GetColumnDeclType(index));
+
+    public string? GetColumnDatabaseName(int index) => ExecuteWithSessionGate(() => _native.GetColumnDatabaseName(index));
+
+    public string? GetColumnTableName(int index) => ExecuteWithSessionGate(() => _native.GetColumnTableName(index));
+
+    public string? GetColumnOriginName(int index) => ExecuteWithSessionGate(() => _native.GetColumnOriginName(index));
+
+    public SqliteType GetColumnType(int index) => ExecuteWithSessionGate(() => _native.GetColumnType(index));
+
+    public int GetInt(int index) => ExecuteWithSessionGate(() => _native.GetInt(index));
+
+    public long GetLong(int index) => ExecuteWithSessionGate(() => _native.GetLong(index));
+
+    public double GetDouble(int index) => ExecuteWithSessionGate(() => _native.GetDouble(index));
+
+    public string? GetText(int index) => ExecuteWithSessionGate(() => _native.GetTextString(index));
+
+    public ReadOnlySpan<byte> GetTextBytes(int index)
+    {
+        EnsureNotDisposed();
+        _session.Gate.Wait();
+        try { return _native.GetText(index); }
+        finally { _session.Gate.Release(); }
+    }
+
+    public ReadOnlySpan<byte> GetBlob(int index)
+    {
+        EnsureNotDisposed();
+        _session.Gate.Wait();
+        try { return _native.GetBlob(index); }
+        finally { _session.Gate.Release(); }
+    }
+
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
 
         try
         {
             _session.Gate.Wait();
-            try
-            {
-                _native.Dispose();
-            }
-            finally
-            {
-                _session.Gate.Release();
-            }
+            try { _native.Dispose(); }
+            finally { _session.Gate.Release(); }
         }
         finally
         {
@@ -136,6 +187,22 @@ public sealed class Statement : IDisposable
     {
         _writerLease?.Dispose();
         _writerLease = null;
+    }
+
+    private T ExecuteWithSessionGate<T>(Func<T> action)
+    {
+        EnsureNotDisposed();
+        _session.Gate.Wait();
+        try { return action(); }
+        finally { _session.Gate.Release(); }
+    }
+
+    private void ExecuteWithSessionGate(Action action)
+    {
+        EnsureNotDisposed();
+        _session.Gate.Wait();
+        try { action(); }
+        finally { _session.Gate.Release(); }
     }
 
     private void EnsureNotDisposed()
