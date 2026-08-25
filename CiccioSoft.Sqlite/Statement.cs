@@ -18,25 +18,20 @@ public sealed class Statement : IDisposable
     private readonly Connection _connection;
     private readonly SqliteSession _session;
     private readonly NativeStatement _native;
+    private readonly Transaction? _transaction;
     private IDisposable? _writerLease;
     private int _disposed;
-    private int _stepped;
 
-    internal Statement(Connection connection, SqliteSession session, NativeStatement native)
+    internal Statement(Connection connection, SqliteSession session, NativeStatement native, Transaction? transaction)
     {
         _connection = connection;
         _session = session;
         _native = native;
+        _transaction = transaction;
     }
 
-    /// <summary>
-    /// Gets whether SQLite classified this prepared statement as read-only.
-    /// </summary>
     public bool IsReadOnly => _native.IsReadOnly();
 
-    /// <summary>
-    /// Gets the number of result columns produced by this statement.
-    /// </summary>
     public int ColumnCount
     {
         get
@@ -46,32 +41,33 @@ public sealed class Statement : IDisposable
         }
     }
 
-    /// <summary>
-    /// Advances the statement to its next result state.
-    /// </summary>
     public bool Step(CancellationToken cancellationToken = default)
     {
         EnsureNotDisposed();
         cancellationToken.ThrowIfCancellationRequested();
 
-        EnsureWriterOwnershipIfRequired();
+        if (_transaction is not null)
+        {
+            if (!IsReadOnly)
+                _transaction.EnsureWriterOwnership(cancellationToken);
+        }
+        else
+        {
+            EnsureOperationWriterOwnership(cancellationToken);
+        }
 
         try
         {
-            bool result = _native.Step();
-            Volatile.Write(ref _stepped, 1);
-            return result;
+            return _native.Step();
         }
         catch
         {
-            ReleaseOperationWriterLease();
+            if (_transaction is null)
+                ReleaseOperationWriterLease();
             throw;
         }
     }
 
-    /// <summary>
-    /// Resets the statement so that it can be executed again.
-    /// </summary>
     public void Reset()
     {
         EnsureNotDisposed();
@@ -82,23 +78,17 @@ public sealed class Statement : IDisposable
         }
         finally
         {
-            Volatile.Write(ref _stepped, 0);
-            ReleaseOperationWriterLease();
+            if (_transaction is null)
+                ReleaseOperationWriterLease();
         }
     }
 
-    /// <summary>
-    /// Clears all parameter bindings.
-    /// </summary>
     public void ClearBindings()
     {
         EnsureNotDisposed();
         _native.ClearBindings();
     }
 
-    /// <summary>
-    /// Releases the prepared statement and the session owned by this statement.
-    /// </summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -106,8 +96,7 @@ public sealed class Statement : IDisposable
 
         try
         {
-            _writerLease?.Dispose();
-            _writerLease = null;
+            ReleaseOperationWriterLease();
             _native.Dispose();
         }
         finally
@@ -116,19 +105,16 @@ public sealed class Statement : IDisposable
         }
     }
 
-    private void EnsureWriterOwnershipIfRequired()
+    private void EnsureOperationWriterOwnership(CancellationToken cancellationToken)
     {
         if (IsReadOnly || _writerLease is not null)
             return;
 
-        _writerLease = _connection.AcquireWriteLease();
+        _writerLease = _connection.AcquireWriteLease(cancellationToken);
     }
 
     private void ReleaseOperationWriterLease()
     {
-        // Transaction-level ownership will be introduced by the transaction
-        // runtime. For now a statement owns a writer lease for its execution
-        // lifecycle and releases it when the statement is reset or disposed.
         _writerLease?.Dispose();
         _writerLease = null;
     }
