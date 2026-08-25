@@ -48,8 +48,14 @@ public sealed class Transaction : IDisposable
     public void Rollback()
     {
         EnsureActive();
-        try { ExecuteControlStatement("ROLLBACK"); }
-        finally { Complete(); }
+        try
+        {
+            ExecuteControlStatement("ROLLBACK");
+        }
+        finally
+        {
+            Complete();
+        }
     }
 
     public Task CommitAsync(CancellationToken cancellationToken = default)
@@ -69,14 +75,16 @@ public sealed class Transaction : IDisposable
     internal void EnsureWriterOwnership(CancellationToken cancellationToken = default)
     {
         EnsureActive();
-        if (_writerLease is not null) return;
+        if (_writerLease is not null)
+            return;
         _writerLease = _connection.AcquireWriteLease(cancellationToken);
     }
 
     internal async Task EnsureWriterOwnershipAsync(CancellationToken cancellationToken = default)
     {
         EnsureActive();
-        if (_writerLease is not null) return;
+        if (_writerLease is not null)
+            return;
         _writerLease = await _connection.AcquireWriteLeaseAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -88,11 +96,19 @@ public sealed class Transaction : IDisposable
         {
             if (Volatile.Read(ref _completed) == 0)
             {
-                try { ExecuteControlStatement("ROLLBACK"); }
-                catch { }
+                try
+                {
+                    ExecuteControlStatement("ROLLBACK");
+                }
+                catch
+                {
+                }
             }
         }
-        finally { Complete(); }
+        finally
+        {
+            Complete();
+        }
     }
 
     private void ExecuteControlStatement(string sql)
@@ -106,7 +122,8 @@ public sealed class Transaction : IDisposable
 
     private void Complete()
     {
-        if (Interlocked.Exchange(ref _completed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _completed, 1) != 0)
+            return;
         _writerLease?.Dispose();
         _writerLease = null;
         _connection.EndTransaction(this);
@@ -114,7 +131,9 @@ public sealed class Transaction : IDisposable
 
     private void EnsureActive()
     {
-        if (Volatile.Read(ref _disposed) != 0) throw new ObjectDisposedException(nameof(Transaction));
-        if (Volatile.Read(ref _completed) != 0) throw new InvalidOperationException("The transaction has already completed.");
+        if (Volatile.Read(ref _disposed) != 0)
+            throw new ObjectDisposedException(nameof(Transaction));
+        if (Volatile.Read(ref _completed) != 0)
+            throw new InvalidOperationException("The transaction has already completed.");
     }
 }

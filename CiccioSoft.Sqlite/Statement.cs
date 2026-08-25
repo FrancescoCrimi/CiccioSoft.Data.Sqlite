@@ -93,8 +93,14 @@ public sealed class Statement : IDisposable
     {
         EnsureNotDisposed();
         _session.Gate.Wait();
-        try { _native.ClearBindings(); }
-        finally { _session.Gate.Release(); }
+        try
+        {
+            _native.ClearBindings();
+        }
+        finally
+        {
+            _session.Gate.Release();
+        }
     }
 
     public void Dispose()
@@ -104,8 +110,14 @@ public sealed class Statement : IDisposable
         try
         {
             _session.Gate.Wait();
-            try { _native.Dispose(); }
-            finally { _session.Gate.Release(); }
+            try
+            {
+                _native.Dispose();
+            }
+            finally
+            {
+                _session.Gate.Release();
+            }
         }
         finally
         {
@@ -115,7 +127,8 @@ public sealed class Statement : IDisposable
 
     private void EnsureOperationWriterOwnership(CancellationToken cancellationToken)
     {
-        if (IsReadOnly || _writerLease is not null) return;
+        if (IsReadOnly || _writerLease is not null)
+            return;
         _writerLease = _connection.AcquireWriteLease(cancellationToken);
     }
 
