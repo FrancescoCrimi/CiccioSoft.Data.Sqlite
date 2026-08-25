@@ -10,7 +10,7 @@ using CiccioSoft.Sqlite.Native;
 
 namespace CiccioSoft.Sqlite;
 
-internal sealed class SqliteSession : IDisposable
+public sealed class SqliteSession : IDisposable
 {
     public Connection Native { get; }
     public SemaphoreSlim Gate { get; } = new(1, 1);

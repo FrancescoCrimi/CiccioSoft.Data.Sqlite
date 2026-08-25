@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CiccioSoft.Sqlite;
 
-internal static class SingleWriterCoordinator
+public static class SingleWriterCoordinator
 {
     private sealed class Releaser : IDisposable
     {

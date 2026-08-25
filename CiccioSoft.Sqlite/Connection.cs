@@ -1,6 +1,6 @@
 ﻿namespace CiccioSoft.Sqlite;
 
-public class Connection
-{
+// public class Connection
+// {
 
-}
+// }

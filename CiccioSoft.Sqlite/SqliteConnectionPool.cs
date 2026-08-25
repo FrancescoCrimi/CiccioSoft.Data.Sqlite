@@ -12,7 +12,7 @@ using CiccioSoft.Sqlite.Native;
 
 namespace CiccioSoft.Sqlite;
 
-internal static class SqliteConnectionPool
+public static class SqliteConnectionPool
 {
     private sealed class PoolState
     {
