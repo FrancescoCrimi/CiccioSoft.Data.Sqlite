@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using CiccioSoft.Data.Sqlite.Properties;
 using CiccioSoft.Sqlite;
 using CiccioSoft.Sqlite.Native;
+using NativeStatement = CiccioSoft.Sqlite.Native.Statement;
 
 namespace CiccioSoft.Data.Sqlite;
 
@@ -35,7 +36,7 @@ public sealed class SqliteDataReader : DbDataReader
     private readonly System.Data.CommandBehavior _behavior;
     private readonly SqliteCommand.CommandExecutionScope _executionScope;
     private readonly SqliteCommand.BatchExecutionState _batchState;
-    private Statement? _stmt;
+    private NativeStatement? _stmt;
     private bool _hasRow;
     private bool _prefetched;
     private bool _readStarted;
@@ -48,7 +49,7 @@ public sealed class SqliteDataReader : DbDataReader
         SqliteConnection connection,
         SqliteSession session,
         System.Data.CommandBehavior behavior,
-        Statement? stmt,
+        NativeStatement? stmt,
         SqliteCommand.BatchExecutionState batchState,
         SqliteCommand.CommandExecutionScope executionScope)
     {
@@ -84,7 +85,7 @@ public sealed class SqliteDataReader : DbDataReader
     }
 
 
-    private Statement Stmt => _stmt ?? throw new InvalidOperationException(Resources.NoData);
+    private NativeStatement Stmt => _stmt ?? throw new InvalidOperationException(Resources.NoData);
 
     public override object this[int ordinal] => GetValue(ordinal);
 
@@ -653,7 +654,7 @@ public sealed class SqliteDataReader : DbDataReader
             _readStarted = false;
             _hasRow = false;
 
-            Statement? next = _executionScope.Execute(() => _command.PrepareAndBindNext(_session, _batchState, throwOnMissingParameter: true));
+            NativeStatement? next = _executionScope.Execute(() => _command.PrepareAndBindNext(_session, _batchState, throwOnMissingParameter: true));
             if (next is null)
             {
                 return false;
@@ -1060,7 +1061,7 @@ public sealed class SqliteDataReader : DbDataReader
                   WHERE c2.name <> c.name);
             """;
 
-        using Statement stmt = _executionScope.Execute(() => _session.Native.Prepare(sql));
+        using NativeStatement stmt = _executionScope.Execute(() => _session.Native.Prepare(sql));
         return _executionScope.Execute(stmt.Step) && stmt.GetLong(0) != 0L;
     }
 
@@ -1103,7 +1104,7 @@ public sealed class SqliteDataReader : DbDataReader
         string escapedColumnName = columnName.Replace("\"", "\"\"", StringComparison.Ordinal);
         string sql = $"SELECT typeof(\"{escapedColumnName}\") FROM \"{escapedTableName}\" WHERE \"{escapedColumnName}\" IS NOT NULL LIMIT 1;";
 
-        using Statement stmt = _executionScope.Execute(() => _session.Native.Prepare(sql));
+        using NativeStatement stmt = _executionScope.Execute(() => _session.Native.Prepare(sql));
         if (!_executionScope.Execute(stmt.Step))
         {
             return false;

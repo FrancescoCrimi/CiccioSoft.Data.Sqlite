@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using CiccioSoft.Data.Sqlite.Properties;
 using CiccioSoft.Sqlite;
 using CiccioSoft.Sqlite.Native;
+using NativeStatement = CiccioSoft.Sqlite.Native.Statement;
 
 namespace CiccioSoft.Data.Sqlite;
 
@@ -26,7 +27,7 @@ public sealed class SqliteCommand : DbCommand
 
     private const PrepareFlags SqlitePreparePersistentFlag = PrepareFlags.Persistent;
     private readonly object _statementCacheSync = new();
-    private readonly List<(Statement Statement, int ParamCount)> _preparedStatements = new(1);
+    private readonly List<(NativeStatement Statement, int ParamCount)> _preparedStatements = new(1);
     private SqliteConnection? _connection;
     private CachedStatement? _cachedStatement;
     private bool _prepared;
@@ -231,7 +232,7 @@ public sealed class SqliteCommand : DbCommand
         using CommandExecutionScope scope = CreateExecutionScope(session, CancellationToken.None);
         scope.Execute(() =>
         {
-            foreach ((Statement _, int _) in PrepareAndEnumerateStatements(session))
+            foreach ((NativeStatement _, int _) in PrepareAndEnumerateStatements(session))
             {
             }
         });
@@ -533,17 +534,17 @@ public sealed class SqliteCommand : DbCommand
         }
     }
 
-    internal Statement? PrepareAndBind(SqliteSession session, BatchExecutionState batchState)
+    internal NativeStatement? PrepareAndBind(SqliteSession session, BatchExecutionState batchState)
         => PrepareAndBindNext(session, batchState, throwOnMissingParameter: true);
 
-    internal Statement? PrepareAndBindNext(SqliteSession session, BatchExecutionState batchState, bool throwOnMissingParameter = false)
+    internal NativeStatement? PrepareAndBindNext(SqliteSession session, BatchExecutionState batchState, bool throwOnMissingParameter = false)
     {
         if (_prepared)
         {
             return PrepareAndBindFromCache(batchState, throwOnMissingParameter);
         }
 
-        Statement? stmt = session.Native.Prepare(batchState.Sql, batchState.SqlByteOffset, out int nextSqlByteOffset, SqlitePreparePersistentFlag);
+        NativeStatement? stmt = session.Native.Prepare(batchState.Sql, batchState.SqlByteOffset, out int nextSqlByteOffset, SqlitePreparePersistentFlag);
         batchState.SqlByteOffset = nextSqlByteOffset;
         if (stmt is null)
         {
@@ -554,7 +555,7 @@ public sealed class SqliteCommand : DbCommand
         return stmt;
     }
 
-    internal void ReleaseStatement(Statement? stmt)
+    internal void ReleaseStatement(NativeStatement? stmt)
     {
         if (stmt is null)
         {
@@ -572,7 +573,7 @@ public sealed class SqliteCommand : DbCommand
         }
     }
 
-    private void BindParameters(Statement stmt, bool throwOnMissingParameter)
+    private void BindParameters(NativeStatement stmt, bool throwOnMissingParameter)
     {
         int parameterCount = stmt.ParameterCount();
         bool[] boundParameters = parameterCount == 0
@@ -614,7 +615,7 @@ public sealed class SqliteCommand : DbCommand
     //     }
     // }
 
-    private static int ResolveParameterIndex(Statement stmt, SqliteParameter parameter, int ordinal)
+    private static int ResolveParameterIndex(NativeStatement stmt, SqliteParameter parameter, int ordinal)
     {
         string parameterName = parameter.ParameterName;
         if (string.IsNullOrEmpty(parameterName))
@@ -672,7 +673,7 @@ public sealed class SqliteCommand : DbCommand
         return commandText.StartsWith("EXPLAIN", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void ThrowIfMissingParameters(Statement stmt, bool[] boundParameters)
+    private static void ThrowIfMissingParameters(NativeStatement stmt, bool[] boundParameters)
     {
         List<string>? missingParameters = null;
         for (int i = 1; i < boundParameters.Length; i++)
@@ -692,7 +693,7 @@ public sealed class SqliteCommand : DbCommand
         }
     }
 
-    private static void BindParameter(Statement stmt, int index, SqliteParameter parameter)
+    private static void BindParameter(NativeStatement stmt, int index, SqliteParameter parameter)
     {
         object? value = parameter.Value;
         if (value is null || value is DBNull)
@@ -745,7 +746,7 @@ public sealed class SqliteCommand : DbCommand
         }
     }
 
-    private static void BindDoubleParameter(Statement stmt, int index, double value)
+    private static void BindDoubleParameter(NativeStatement stmt, int index, double value)
     {
         if (double.IsNaN(value))
         {
@@ -796,7 +797,7 @@ public sealed class SqliteCommand : DbCommand
         return milliseconds / 86400000.0;
     }
 
-    private static void BindTextParameter(Statement stmt, int index, SqliteParameter parameter, string value)
+    private static void BindTextParameter(NativeStatement stmt, int index, SqliteParameter parameter, string value)
     {
         if (parameter.TryGetTruncatedSize(value.Length, out int size))
         {
@@ -806,7 +807,7 @@ public sealed class SqliteCommand : DbCommand
         stmt.BindText(index, value);
     }
 
-    private static void BindBlobParameter(Statement stmt, int index, SqliteParameter parameter, byte[] value)
+    private static void BindBlobParameter(NativeStatement stmt, int index, SqliteParameter parameter, byte[] value)
     {
         stmt.BindBlob(
             index,
@@ -848,14 +849,14 @@ public sealed class SqliteCommand : DbCommand
         }
     }
 
-    private IEnumerable<(Statement Statement, int ParamCount)> PrepareAndEnumerateStatements(SqliteSession session)
+    private IEnumerable<(NativeStatement Statement, int ParamCount)> PrepareAndEnumerateStatements(SqliteSession session)
     {
         DisposePreparedStatements();
 
         var batchState = new BatchExecutionState(CommandText);
         while (true)
         {
-            Statement? stmt = session.Native.Prepare(
+            NativeStatement? stmt = session.Native.Prepare(
                 batchState.Sql,
                 batchState.SqlByteOffset,
                 out int nextSqlByteOffset,
@@ -876,7 +877,7 @@ public sealed class SqliteCommand : DbCommand
         _prepared = true;
     }
 
-    private Statement? PrepareAndBindFromCache(BatchExecutionState batchState, bool throwOnMissingParameter)
+    private NativeStatement? PrepareAndBindFromCache(BatchExecutionState batchState, bool throwOnMissingParameter)
     {
         int index = batchState.PreparedStatementIndex;
         if (index >= _preparedStatements.Count)
@@ -884,7 +885,7 @@ public sealed class SqliteCommand : DbCommand
             return null;
         }
 
-        Statement stmt = _preparedStatements[index].Statement;
+        NativeStatement stmt = _preparedStatements[index].Statement;
         batchState.PreparedStatementIndex = index + 1;
         stmt.Reset();
         stmt.ClearBindings();
@@ -894,7 +895,7 @@ public sealed class SqliteCommand : DbCommand
 
     private void DisposePreparedStatements()
     {
-        foreach ((Statement stmt, int _) in _preparedStatements)
+        foreach ((NativeStatement stmt, int _) in _preparedStatements)
         {
             stmt.Dispose();
         }
@@ -918,7 +919,7 @@ public sealed class SqliteCommand : DbCommand
                     _cachedStatement = null;
                 }
 
-                Statement statement = session.Native.Prepare(CommandText, SqlitePreparePersistentFlag);
+                NativeStatement statement = session.Native.Prepare(CommandText, SqlitePreparePersistentFlag);
                 _cachedStatement = new CachedStatement(session, CommandText, statement);
                 _cachedStatement.TryAcquire();
             }
@@ -944,7 +945,7 @@ public sealed class SqliteCommand : DbCommand
 
     private sealed class CachedStatement
     {
-        public CachedStatement(SqliteSession session, string commandText, Statement statement)
+        public CachedStatement(SqliteSession session, string commandText, NativeStatement statement)
         {
             Session = session;
             CommandText = commandText;
@@ -953,7 +954,7 @@ public sealed class SqliteCommand : DbCommand
 
         public SqliteSession Session { get; }
         public string CommandText { get; }
-        public Statement Statement { get; }
+        public NativeStatement Statement { get; }
         public bool InUse { get; private set; }
 
         public bool TryAcquire()
@@ -984,7 +985,7 @@ public sealed class SqliteCommand : DbCommand
             _cached = cached;
         }
 
-        public Statement Statement => _cached.Statement;
+        public NativeStatement Statement => _cached.Statement;
 
         public void Dispose()
         {

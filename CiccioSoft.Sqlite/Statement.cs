@@ -6,7 +6,6 @@
 
 using System;
 using System.Threading;
-using CiccioSoft.Sqlite.Native;
 using NativeStatement = CiccioSoft.Sqlite.Native.Statement;
 
 namespace CiccioSoft.Sqlite;
@@ -33,7 +32,7 @@ public sealed class Statement : IDisposable
     /// <summary>
     /// Gets whether SQLite classified this prepared statement as read-only.
     /// </summary>
-    public bool IsReadOnly => _native.IsReadOnly;
+    public bool IsReadOnly => _native.IsReadOnly();
 
     /// <summary>
     /// Gets the number of result columns produced by this statement.
@@ -43,14 +42,14 @@ public sealed class Statement : IDisposable
         get
         {
             EnsureNotDisposed();
-            return _native.ColumnCount;
+            return _native.ColumnCount();
         }
     }
 
     /// <summary>
     /// Advances the statement to its next result state.
     /// </summary>
-    public SqliteResult Step(CancellationToken cancellationToken = default)
+    public bool Step(CancellationToken cancellationToken = default)
     {
         EnsureNotDisposed();
         cancellationToken.ThrowIfCancellationRequested();
@@ -59,7 +58,7 @@ public sealed class Statement : IDisposable
 
         try
         {
-            SqliteResult result = _native.Step();
+            bool result = _native.Step();
             Volatile.Write(ref _stepped, 1);
             return result;
         }
@@ -73,13 +72,13 @@ public sealed class Statement : IDisposable
     /// <summary>
     /// Resets the statement so that it can be executed again.
     /// </summary>
-    public SqliteResult Reset()
+    public void Reset()
     {
         EnsureNotDisposed();
 
         try
         {
-            return _native.Reset();
+            _native.Reset();
         }
         finally
         {
@@ -122,7 +121,7 @@ public sealed class Statement : IDisposable
         if (IsReadOnly || _writerLease is not null)
             return;
 
-        _writerLease = _connection.AcquireWriter();
+        _writerLease = _connection.AcquireWriteLease();
     }
 
     private void ReleaseOperationWriterLease()
