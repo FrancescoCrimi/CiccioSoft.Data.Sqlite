@@ -119,9 +119,21 @@ public sealed class Statement : IDisposable
 
     public void BindText(int index, string? value) => ExecuteWithSessionGate(() => _native.BindText(index, value!));
 
-    public void BindText(int index, ReadOnlySpan<byte> value) => ExecuteWithSessionGate(() => _native.BindText(index, value));
+    public void BindText(int index, ReadOnlySpan<byte> value)
+    {
+        EnsureNotDisposed();
+        _session.Gate.Wait();
+        try { _native.BindText(index, value); }
+        finally { _session.Gate.Release(); }
+    }
 
-    public void BindBlob(int index, ReadOnlySpan<byte> value) => ExecuteWithSessionGate(() => _native.BindBlob(index, value));
+    public void BindBlob(int index, ReadOnlySpan<byte> value)
+    {
+        EnsureNotDisposed();
+        _session.Gate.Wait();
+        try { _native.BindBlob(index, value); }
+        finally { _session.Gate.Release(); }
+    }
 
     public string? GetColumnName(int index) => ExecuteWithSessionGate(() => _native.GetColumnName(index));
 
