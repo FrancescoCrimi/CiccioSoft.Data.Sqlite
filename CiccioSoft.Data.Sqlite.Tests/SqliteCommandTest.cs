@@ -23,7 +23,7 @@ public class SqliteCommandTest
 
         if (async)
         {
-            await connection.OpenAsync();
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
         }
         else
         {
@@ -37,7 +37,7 @@ CREATE TABLE "Products" (
           "Name" TEXT NOT NULL
       );
 """;
-        _ = async ? await command.ExecuteNonQueryAsync() : command.ExecuteNonQuery();
+        _ = async ? await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken) : command.ExecuteNonQuery();
 
         // sqlite3_limit(connection.Handle!, 0, 10);
         connection.Interop.Limit(0, 10);
@@ -48,7 +48,7 @@ CREATE TABLE "Products" (
 
         try
         {
-            _ = async ? await command.ExecuteReaderAsync() : command.ExecuteReader();
+            _ = async ? await command.ExecuteReaderAsync(TestContext.Current.CancellationToken) : command.ExecuteReader();
         }
         catch (SqliteException ex)
         {
@@ -132,7 +132,8 @@ CREATE TABLE "Products" (
     {
         var command = new SqliteCommand
         {
-            Connection = new SqliteConnection("Command Timeout=1") { DefaultTimeout = 2 }, CommandTimeout = 3
+            Connection = new SqliteConnection("Command Timeout=1") { DefaultTimeout = 2 },
+            CommandTimeout = 3
         };
 
         Assert.Equal(3, command.CommandTimeout);
@@ -888,7 +889,7 @@ CREATE TABLE "Products" (
                         await Task.Delay(5000);
                     }
                 }
-            }),
+            }, TestContext.Current.CancellationToken),
             Task.Run(async () =>
             {
                 await Task.Delay(1000);
@@ -907,7 +908,7 @@ CREATE TABLE "Products" (
 
                     command.ExecuteNonQuery();
                 }
-            }));
+            }, TestContext.Current.CancellationToken));
     }
 
     [Fact(Skip = "#35585")]
@@ -936,7 +937,7 @@ CREATE TABLE "Products" (
                             await Task.Delay(5000);
                         }
                     }
-                }),
+                }, TestContext.Current.CancellationToken),
                 Task.Run(async () =>
                 {
                     await Task.Delay(1000);
@@ -951,7 +952,7 @@ CREATE TABLE "Products" (
 
                         command.ExecuteNonQuery();
                     }
-                }));
+                }, TestContext.Current.CancellationToken));
         }
         finally
         {

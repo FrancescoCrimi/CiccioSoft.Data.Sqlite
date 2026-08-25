@@ -1,4 +1,10 @@
-﻿using System;
+﻿// Copyright (c) 2026 Francesco Crimi
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
+using System;
 using System.IO;
 using System.Security.Cryptography;
 
@@ -20,11 +26,12 @@ public class NuovaClasse
     )
     """);
 
+        //----------------------------------------------------------------------
         // ---- IMPORT: streaming di un file da disco verso la colonna BLOB ----
-
-        // const string sourcePath = @"C:\data\backup-2026-07-22.zip";
-        const string sourcePath = "backup.zip";
+        //----------------------------------------------------------------------
+        const string sourcePath = "blob.zip";
         const int ChunkSize = 64 * 1024; // 64 KB: bilancia n. di syscall vs. footprint di memoria
+        Span<byte> buffer = stackalloc byte[ChunkSize];
 
         long fileLength = new FileInfo(sourcePath).Length;
 
@@ -46,7 +53,6 @@ public class NuovaClasse
         using (var blob = Blob.Open(conn, "files", "payload", rowId, readWrite: true))
         using (var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
         {
-            Span<byte> buffer = stackalloc byte[ChunkSize];
             long offset = 0;
             int bytesRead;
 
@@ -70,12 +76,13 @@ public class NuovaClasse
             updateStmt.BindLong(2, rowId);
             updateStmt.Step();
         }
-
         Console.WriteLine($"Importato '{sourcePath}' ({fileLength:N0} byte) come riga {rowId}");
 
-        // ---- EXPORT: streaming dalla colonna BLOB verso un nuovo file su disco ----
 
-        const string destPath = "restored-backup.zip";
+        //----------------------------------------------------------------------------
+        // ---- EXPORT: streaming dalla colonna BLOB verso un nuovo file su disco ----
+        //----------------------------------------------------------------------------
+        const string destPath = "restored-blob.zip";
 
         using (var stmt = conn.Prepare("SELECT payload FROM files WHERE id = ?"))
         {
@@ -88,7 +95,6 @@ public class NuovaClasse
         using (var dest = File.Create(destPath))
         {
             int totalSize = blob.Bytes();
-            Span<byte> buffer = stackalloc byte[ChunkSize];
             int offset = 0;
 
             while (offset < totalSize)
@@ -102,12 +108,12 @@ public class NuovaClasse
                 offset += toRead;
             }
         }
-
         Console.WriteLine($"Esportato in '{destPath}'");
 
+        //----------------------------------------------------------------------------
         // ---- Caso d'uso per Reopen: rigenerare le thumbnail/checksum di N file
         //      già presenti, riutilizzando lo stesso handle blob senza riaprirlo ----
-
+        //----------------------------------------------------------------------------
         using (var idsStmt = conn.Prepare("SELECT id FROM files"))
         using (var blob = Blob.Open(conn, "files", "payload", rowId: 1, readWrite: false))
         {
@@ -120,7 +126,6 @@ public class NuovaClasse
                 else blob.Reopen(currentId);  // costo trascurabile: nessuna nuova sqlite3_blob_open
 
                 using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-                Span<byte> buffer = stackalloc byte[ChunkSize];
                 int totalSize = blob.Bytes();
                 int offset = 0;
 
@@ -135,5 +140,6 @@ public class NuovaClasse
                 // verifica integrità, log, ecc.
             }
         }
+
     }
 }

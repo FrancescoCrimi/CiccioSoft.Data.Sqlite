@@ -47,7 +47,7 @@ public sealed class ConnectionLifecycleTests
     {
         string missing = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.db");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             Connection.Open(missing, OpenFlags.ReadOnly));
 
         Assert.Equal(ResultCode.CantOpen, ex.BaseResultCode);

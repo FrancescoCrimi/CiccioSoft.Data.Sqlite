@@ -93,7 +93,7 @@ public class AsyncConcurrencyTests : IDisposable
     {
         // Setup: Create table and insert data
         using var connection = new SqliteConnection(_dbPath);
-        await connection.OpenAsync();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
 
         using var createCommand = new SqliteCommand("CREATE TABLE Test (Id INTEGER PRIMARY KEY, Value TEXT)", connection);
         createCommand.ExecuteNonQuery();
@@ -128,7 +128,7 @@ public class AsyncConcurrencyTests : IDisposable
     {
         // Setup: Create table
         using var connection = new SqliteConnection(_dbPath);
-        await connection.OpenAsync();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
         using var createCommand = new SqliteCommand("CREATE TABLE Test (Id INTEGER PRIMARY KEY, Value TEXT)", connection);
         createCommand.ExecuteNonQuery();
 
@@ -137,16 +137,16 @@ public class AsyncConcurrencyTests : IDisposable
         for (int i = 0; i < 10; i++)
         {
             int taskId = i;
-            tasks.Add(Task.Run(() => InsertValuesAsync(_dbPath, taskId)));
+            tasks.Add(Task.Run(() => InsertValuesAsync(_dbPath, taskId), TestContext.Current.CancellationToken));
         }
 
         await Task.WhenAll(tasks);
 
         // Verify: All inserts should succeed
         using var verifyConnection = new SqliteConnection(_dbPath);
-        await verifyConnection.OpenAsync();
+        await verifyConnection.OpenAsync(TestContext.Current.CancellationToken);
         using var countCommand = new SqliteCommand("SELECT COUNT(*) FROM Test", verifyConnection);
-        var count = (long)countCommand.ExecuteScalar();
+        var count = (long?)countCommand.ExecuteScalar();
         Assert.Equal(100, count); // 10 tasks * 10 inserts each
     }
 
@@ -155,7 +155,7 @@ public class AsyncConcurrencyTests : IDisposable
     {
         // Setup: Create table and initial data
         using var connection = new SqliteConnection(_dbPath);
-        await connection.OpenAsync();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
         using var createCommand = new SqliteCommand("CREATE TABLE Test (Id INTEGER PRIMARY KEY, Value TEXT)", connection);
         createCommand.ExecuteNonQuery();
         for (int i = 0; i < 50; i++)
@@ -178,7 +178,7 @@ public class AsyncConcurrencyTests : IDisposable
         for (int i = 0; i < 5; i++)
         {
             int taskId = i;
-            tasks.Add(Task.Run(() => InsertValuesAsync(_dbPath, taskId)));
+            tasks.Add(Task.Run(() => InsertValuesAsync(_dbPath, taskId), TestContext.Current.CancellationToken));
         }
 
         await Task.WhenAll(tasks);
@@ -192,9 +192,9 @@ public class AsyncConcurrencyTests : IDisposable
 
         // Final count should include all writes
         using var verifyConnection = new SqliteConnection(_dbPath);
-        await verifyConnection.OpenAsync();
+        await verifyConnection.OpenAsync(TestContext.Current.CancellationToken);
         using var countCommand = new SqliteCommand("SELECT COUNT(*) FROM Test", verifyConnection);
-        var finalCount = (long)countCommand.ExecuteScalar();
+        var finalCount = (long?)countCommand.ExecuteScalar();
         Assert.Equal(100, finalCount); // 50 initial + 50 from writes
     }
 
@@ -202,7 +202,7 @@ public class AsyncConcurrencyTests : IDisposable
     public async Task AsyncMethods_DoNotBlock()
     {
         using var connection = new SqliteConnection(_dbPath);
-        var openTask = connection.OpenAsync();
+        var openTask = connection.OpenAsync(TestContext.Current.CancellationToken);
         var completedImmediately = openTask.IsCompleted;
 
         await openTask; // Ensure it completes
@@ -213,9 +213,9 @@ public class AsyncConcurrencyTests : IDisposable
         connection.ExecuteNonQuery("INSERT INTO Test (Value) VALUES ('Test')");
 
         using var command = new SqliteCommand("SELECT * FROM Test", connection);
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken);
 
-        var readTask = reader.ReadAsync();
+        var readTask = reader.ReadAsync(TestContext.Current.CancellationToken);
         Assert.True(readTask.IsCompleted, "ReadAsync should complete immediately as it's a sync wrapper");
 
         var hasRow = await readTask;
@@ -226,7 +226,7 @@ public class AsyncConcurrencyTests : IDisposable
     public async Task CancellationToken_Propagates()
     {
         using var connection = new SqliteConnection(_dbPath);
-        await connection.OpenAsync();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
 
         connection.ExecuteNonQuery("CREATE TABLE Test (Id INTEGER PRIMARY KEY, Value TEXT)");
 

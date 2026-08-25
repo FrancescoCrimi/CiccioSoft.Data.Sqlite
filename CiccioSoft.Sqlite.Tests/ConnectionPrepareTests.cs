@@ -30,7 +30,7 @@ public sealed class ConnectionPrepareTests
     {
         using var connection = ConnectionFactory.OpenMemory();
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             connection.Prepare("SELEC * FROM nowhere;"));
 
         Assert.Equal(ResultCode.Error, ex.BaseResultCode);
@@ -157,7 +157,7 @@ public sealed class ConnectionPrepareTests
         using var connection = ConnectionFactory.OpenMemory();
         connection.Execute("CREATE TABLE t (id INTEGER);");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             connection.GetTableColumnMetadata(
                 "t",
                 "missing",

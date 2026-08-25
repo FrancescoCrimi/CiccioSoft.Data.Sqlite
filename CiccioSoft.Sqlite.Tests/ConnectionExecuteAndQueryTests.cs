@@ -45,7 +45,7 @@ public sealed class ConnectionExecuteAndQueryTests
     {
         using var connection = ConnectionFactory.OpenMemory();
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             connection.Execute("CREATE TABL broken (id INTEGER);"));
 
         Assert.Equal(ResultCode.Error, ex.BaseResultCode);
@@ -182,7 +182,7 @@ public sealed class ConnectionExecuteAndQueryTests
         connection.Execute("CREATE TABLE t (id INTEGER PRIMARY KEY);");
         connection.Execute("INSERT INTO t VALUES (1);");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             connection.Execute("INSERT INTO t VALUES (1);"));
 
         Assert.Equal(ResultCode.Constraint, ex.BaseResultCode);
@@ -194,7 +194,7 @@ public sealed class ConnectionExecuteAndQueryTests
     {
         using var connection = ConnectionFactory.OpenMemory();
 
-        Assert.Throws<EngineException>(() =>
+        Assert.Throws<Exception>(() =>
             connection.Execute("SELECT FROM;"));
 
         int offset = connection.GetLastErrorOffset();

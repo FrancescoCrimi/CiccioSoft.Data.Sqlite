@@ -1,11 +1,31 @@
-﻿using System;
+﻿// Copyright (c) 2026 Francesco Crimi
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.IO.Compression;
 
 namespace CiccioSoft.Sqlite.Example;
 
 internal static class Utils
 {
+
+    internal static void SaveToZip(string zipPath, string entryPath, ReadOnlySpan<byte> buffer)
+    {
+        using var fileStream = File.Create(zipPath);
+        using var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
+
+        ZipArchiveEntry entry = archive.CreateEntry(entryPath, CompressionLevel.NoCompression);
+        using var entryStream = entry.Open();
+
+        entryStream.Write(buffer);
+    }
+
+
     internal static void SalvaFileUtf16(string percorsoFile, ReadOnlySpan<char> utf16Buffer)
     {
         // Trasforma lo Span<char> in Span<byte> reinterpretando la memoria (Costo zero)

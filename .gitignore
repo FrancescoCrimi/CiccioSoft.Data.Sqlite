@@ -506,6 +506,8 @@ test.db
 app.db
 backup.zip
 restored-backup.zip
+blob.zip
+restored-blob.zip
 
 SQLitePCL.raw/
 Microsoft.Data.Sqlite/

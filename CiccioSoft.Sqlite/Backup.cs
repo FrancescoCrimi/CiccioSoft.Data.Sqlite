@@ -67,7 +67,7 @@ public sealed unsafe class Backup : IDisposable
                 var result = (ResultCode)NativeMethods.sqlite3_errcode((sqlite3*)destination.Handle.DangerousGetHandle());
                 GC.KeepAlive(destination.Handle);   // ridondante qui (destination.Handle è riusato subito sotto),
                                                     // presente per uniformità con l'invariante del progetto
-                throw EngineException.CreateException(destination.Handle, result, $"{nameof(Backup)}.Init");
+                throw Exception.CreateException(destination.Handle, result, $"{nameof(Backup)}.Init");
             }
 
             return new Backup(new BackupSafeHandle(backupHandle));

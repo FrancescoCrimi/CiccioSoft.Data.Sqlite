@@ -198,7 +198,7 @@ public sealed class SqliteConnection : DbConnection
                 _writerKey = ResolveWriterKey(_connectionString, _dataSource);
                 _state = ConnectionState.Open;
             }
-            catch (EngineException ex)
+            catch (CiccioSoft.Sqlite.Exception ex)
             {
                 throw new SqliteException(ex.Message, ex);
             }
@@ -442,7 +442,7 @@ public sealed class SqliteConnection : DbConnection
         {
             session.Native.Execute(sql);
         }
-        catch (EngineException ex)
+        catch (CiccioSoft.Sqlite.Exception ex)
         {
             throw new SqliteException(ex.Message, ex);
         }
@@ -652,7 +652,7 @@ public sealed class SqliteConnection : DbConnection
         }
 
         // Intercetta eventuali SqliteInteropException
-        catch (EngineException siex)
+        catch (CiccioSoft.Sqlite.Exception siex)
         {
             throw new SqliteException(siex.Message, siex);
         }

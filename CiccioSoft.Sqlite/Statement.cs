@@ -49,7 +49,7 @@ public sealed unsafe class Statement : IDisposable
     /// - <c>SQLITE_ROW</c>: Data is ready to be read via Column methods.
     /// - <c>SQLITE_DONE</c>: Query finished or an INSERT/UPDATE/DELETE was executed.
     /// </remarks>
-    /// <exception cref="EngineException">Thrown if an error occurs during execution (e.g., constraint violations).</exception>
+    /// <exception cref="Exception">Thrown if an error occurs during execution (e.g., constraint violations).</exception>
     public bool Step()
     {
         ThrowIfInvalid();
@@ -69,7 +69,7 @@ public sealed unsafe class Statement : IDisposable
     /// <summary>
     /// Resets the prepared statement back to its initial state, ready to be re-executed.
     /// </summary>
-    /// <exception cref="EngineException">Thrown if the reset operation fails.</exception>
+    /// <exception cref="Exception">Thrown if the reset operation fails.</exception>
     public void Reset()
     {
         ThrowIfInvalid();
@@ -86,7 +86,7 @@ public sealed unsafe class Statement : IDisposable
     /// <summary>
     /// Resets all bound parameters in the prepared statement back to a NULL state.
     /// </summary>
-    /// <exception cref="Exception">Thrown if the native clearing of bindings fails.</exception>
+    /// <exception cref="System.Exception">Thrown if the native clearing of bindings fails.</exception>
     public void ClearBindings()
     {
         ThrowIfInvalid();
@@ -350,7 +350,7 @@ public sealed unsafe class Statement : IDisposable
     /// <c>null</c> if the database value is SQL NULL; 
     /// <see cref="string.Empty"/> if the database value is an empty string.
     /// </returns>
-    /// <exception cref="Exception">Thrown if the column cannot be read or the statement is in an invalid state.</exception>
+    /// <exception cref="System.Exception">Thrown if the column cannot be read or the statement is in an invalid state.</exception>
     public string? GetTextString(int index)
     {
         ThrowIfInvalid();
@@ -370,7 +370,7 @@ public sealed unsafe class Statement : IDisposable
     /// </summary>
     /// <param name="index">The 0-based index of the column to retrieve.</param>
     /// <returns>A <see cref="ReadOnlySpan{Byte}"/> pointing directly to the native SQLite memory; <see cref="ReadOnlySpan{Byte}.Empty"/> if NULL.</returns>
-    /// <exception cref="Exception">Thrown if the column cannot be read or the statement is in an invalid state.</exception>
+    /// <exception cref="System.Exception">Thrown if the column cannot be read or the statement is in an invalid state.</exception>
     public ReadOnlySpan<byte> GetBlob(int index)
     {
         ThrowIfInvalid();
@@ -491,7 +491,7 @@ public sealed unsafe class Statement : IDisposable
     /// </summary>
     /// <param name="index">The 1-based index of the parameter to bind.</param>
     /// <param name="value">The integer value to bind.</param>
-    /// <exception cref="EngineException">Thrown if the binding operation fails.</exception>
+    /// <exception cref="Exception">Thrown if the binding operation fails.</exception>
     public void BindInt(int index, int value)
     {
         ThrowIfInvalid();
@@ -610,7 +610,7 @@ public sealed unsafe class Statement : IDisposable
     /// </summary>
     /// <param name="index">The 1-based index of the parameter to bind.</param>
     /// <param name="text">The string value to bind. If null, a SQL NULL is bound instead.</param>
-    /// <exception cref="Exception">Thrown if the binding fails or the statement is invalid.</exception>
+    /// <exception cref="System.Exception">Thrown if the binding fails or the statement is invalid.</exception>
     public void BindText(int index, string text)
     {
         // Se la stringa è nulla, bindiamo NULL.
@@ -640,7 +640,7 @@ public sealed unsafe class Statement : IDisposable
     /// The binary data to bind as a <see cref="ReadOnlySpan{Byte}"/>. A default/uninitialized span
     /// binds a SQL NULL; a real span of length 0 binds an empty (zero-length) BLOB, not NULL.
     /// </param>
-    /// <exception cref="Exception">Thrown if the binding fails or the statement is in an invalid state.</exception>
+    /// <exception cref="System.Exception">Thrown if the binding fails or the statement is in an invalid state.</exception>
     public void BindBlob(int index, ReadOnlySpan<byte> data)
     {
         // Distingue lo span default/null dallo span vuoto reale. (implicit conversion da null)
@@ -711,12 +711,12 @@ public sealed unsafe class Statement : IDisposable
     {
         if (res == ResultCode.OK)
             return;
-        throw EngineException.CreateException(_connectionSafeHandle, res, $"{nameof(Statement)}.{caller} to parameter index {index}");
+        throw Exception.CreateException(_connectionSafeHandle, res, $"{nameof(Statement)}.{caller} to parameter index {index}");
     }
 
-    private EngineException ThrowException(ResultCode result, [CallerMemberName] string caller = "")
+    private Exception ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
-        return EngineException.CreateException(_connectionSafeHandle, result, $"{nameof(Statement)}.{caller}");
+        return Exception.CreateException(_connectionSafeHandle, result, $"{nameof(Statement)}.{caller}");
     }
 
     #endregion

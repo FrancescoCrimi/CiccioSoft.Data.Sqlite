@@ -30,7 +30,7 @@ public class SqliteConnectionStringBuilderTests
 
     [Fact(Skip = "outdate")]
     public void JournalMode_defaults_to_empty()
-        => Assert.Empty(new SqliteConnectionStringBuilder().JournalMode);
+        => Assert.Empty(new SqliteConnectionStringBuilder().JournalMode!);
 
     [Fact]
     public void Ctor_parses_known_values()
@@ -64,7 +64,7 @@ public class SqliteConnectionStringBuilderTests
         };
 
         Assert.Equal("file.db", builder["Data Source"]);
-        Assert.False((bool)builder["Pooling"]);
+        Assert.False((bool?)builder["Pooling"]);
         Assert.Equal(32, builder["Max Pool Size"]);
         Assert.Equal(123, builder["Default Timeout"]);
         Assert.Equal("MEMORY", builder["Journal Mode"]);
