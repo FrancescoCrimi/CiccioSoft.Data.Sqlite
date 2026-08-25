@@ -8,7 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using CiccioSoft.Sqlite.Native;
+using NativeConnection = CiccioSoft.Sqlite.Native.Connection;
 
 namespace CiccioSoft.Sqlite;
 
@@ -82,7 +82,7 @@ public static class SqliteConnectionPool
             {
                 try
                 {
-                    return new SqliteSession(Connection.Open(dataSource, openFlags));
+                    return new SqliteSession(NativeConnection.Open(dataSource, openFlags));
                 }
                 catch
                 {
@@ -157,7 +157,7 @@ public static class SqliteConnectionPool
             {
                 try
                 {
-                    return new SqliteSession(Connection.Open(dataSource, openFlags));
+                    return new SqliteSession(NativeConnection.Open(dataSource, openFlags));
                 }
                 catch
                 {

@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using CiccioSoft.Data.Sqlite.Properties;
 using CiccioSoft.Sqlite;
 using CiccioSoft.Sqlite.Native;
+using NativeConnection = CiccioSoft.Sqlite.Native.Connection;
 
 namespace CiccioSoft.Data.Sqlite;
 
@@ -47,7 +48,7 @@ public sealed class SqliteConnection : DbConnection
     /// <summary>
     ///     Gets the underlying low-level SQLite interop object for advanced/native operations.
     /// </summary>
-    public Connection Interop
+    public NativeConnection Interop
     {
         get
         {
@@ -61,7 +62,7 @@ public sealed class SqliteConnection : DbConnection
     ///     Gets a handle to underlying database connection.
     /// </summary>
     /// <value>A handle to underlying database connection.</value>
-    public Connection? Handle
+    public NativeConnection? Handle
         => _session?.Native;
 
     [DefaultValue("")]
@@ -104,7 +105,7 @@ public sealed class SqliteConnection : DbConnection
     {
         get
         {
-            return Connection.LibVersion()!;
+            return NativeConnection.LibVersion()!;
         }
     }
 
@@ -190,7 +191,7 @@ public sealed class SqliteConnection : DbConnection
                 bool pooling = IsPoolingEnabled();
                 SqliteSession session = pooling
                     ? SqliteConnectionPool.Rent(_connectionString, dataSource, _settings.MaxPoolSize, openFlags)
-                    : new SqliteSession(Connection.Open(dataSource, openFlags));
+                    : new SqliteSession(NativeConnection.Open(dataSource, openFlags));
 
                 ApplyConnectionSettings(session.Native);
 
@@ -558,7 +559,7 @@ public sealed class SqliteConnection : DbConnection
         return flags;
     }
 
-    private void ApplyConnectionSettings(Connection native)
+    private void ApplyConnectionSettings(NativeConnection native)
     {
         native.BusyTimeout(Math.Max(0, _settings.DefaultTimeout * 1000));
 

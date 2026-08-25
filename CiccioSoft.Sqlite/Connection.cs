@@ -8,7 +8,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using NativeConnection = CiccioSoft.Sqlite.Native.Connection;
-using CiccioSoft.Sqlite.Native;
 
 namespace CiccioSoft.Sqlite;
 
