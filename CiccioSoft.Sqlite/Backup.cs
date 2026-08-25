@@ -5,8 +5,25 @@
 // https://opensource.org/licenses/MIT.
 
 using System;
+using System.Runtime.InteropServices;
 
 namespace CiccioSoft.Sqlite;
+
+public sealed unsafe class BackupSafeHandle : SafeHandle
+{
+    internal BackupSafeHandle(sqlite3_backup* sqlite3_backup)
+        : base((nint)sqlite3_backup, true)
+    {
+    }
+
+    public override bool IsInvalid => handle == nint.Zero;
+
+    protected override bool ReleaseHandle()
+    {
+        _ = NativeMethods.sqlite3_backup_finish((sqlite3_backup*)handle);
+        return true;
+    }
+}
 
 public sealed unsafe class Backup : IDisposable
 {

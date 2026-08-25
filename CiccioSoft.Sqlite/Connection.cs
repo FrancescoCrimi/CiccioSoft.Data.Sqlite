@@ -13,6 +13,22 @@ using System.Text;
 
 namespace CiccioSoft.Sqlite;
 
+public sealed unsafe class ConnectionSafeHandle : SafeHandle
+{
+    internal ConnectionSafeHandle(sqlite3* sqlite3)
+        : base((nint)sqlite3, true)
+    {
+    }
+
+    public override bool IsInvalid => handle == nint.Zero;
+
+    protected override bool ReleaseHandle()
+    {
+        _ = NativeMethods.sqlite3_close_v2((sqlite3*)handle);
+        return true;
+    }
+}
+
 /// <summary>
 /// Provides a high-performance, low-allocation wrapper for a SQLite database connection.
 /// </summary>

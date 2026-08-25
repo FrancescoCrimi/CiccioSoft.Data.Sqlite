@@ -10,6 +10,21 @@ using System.Runtime.InteropServices;
 
 namespace CiccioSoft.Sqlite;
 
+public sealed unsafe class StatementSafeHandle : SafeHandle
+{
+    internal StatementSafeHandle(sqlite3_stmt* pStmt)
+        : base((nint)pStmt, true)
+    {
+    }
+
+    public override bool IsInvalid => handle == nint.Zero;
+
+    protected override bool ReleaseHandle()
+    {
+        _ = NativeMethods.sqlite3_finalize((sqlite3_stmt*)handle);
+        return true;
+    }
+}
 
 public sealed unsafe class Statement : IDisposable
 {
