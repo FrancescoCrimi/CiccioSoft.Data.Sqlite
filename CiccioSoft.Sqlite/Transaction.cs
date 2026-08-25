@@ -7,7 +7,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using CiccioSoft.Sqlite.Native;
 
 namespace CiccioSoft.Sqlite;
 
@@ -28,15 +27,9 @@ public sealed class Transaction : IDisposable
         _session = session;
     }
 
-    /// <summary>
-    /// Gets whether the transaction is still active.
-    /// </summary>
     public bool IsActive => Volatile.Read(ref _completed) == 0 && Volatile.Read(ref _disposed) == 0;
 
-    internal void Begin()
-    {
-        ExecuteControlStatement("BEGIN");
-    }
+    internal void Begin() => ExecuteControlStatement("BEGIN");
 
     internal Task BeginAsync(CancellationToken cancellationToken)
     {
@@ -45,127 +38,75 @@ public sealed class Transaction : IDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Commits the transaction and releases any writer ownership acquired by it.
-    /// </summary>
     public void Commit()
     {
         EnsureActive();
-
-        try
-        {
-            ExecuteControlStatement("COMMIT");
-        }
-        catch
-        {
-            // A failed COMMIT leaves SQLite's transaction state authoritative.
-            // Ownership is retained until rollback/disposal can complete it.
-            throw;
-        }
-
+        ExecuteControlStatement("COMMIT");
         Complete();
     }
 
-    /// <summary>
-    /// Rolls the transaction back and releases any writer ownership acquired by it.
-    /// </summary>
     public void Rollback()
     {
         EnsureActive();
-
-        try
-        {
-            ExecuteControlStatement("ROLLBACK");
-        }
-        finally
-        {
-            Complete();
-        }
+        try { ExecuteControlStatement("ROLLBACK"); }
+        finally { Complete(); }
     }
 
-    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    public Task CommitAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Commit();
-        await Task.CompletedTask.ConfigureAwait(false);
+        return Task.CompletedTask;
     }
 
-    public async Task RollbackAsync(CancellationToken cancellationToken = default)
+    public Task RollbackAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Rollback();
-        await Task.CompletedTask.ConfigureAwait(false);
+        return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Acquires transaction-level writer ownership when a write-capable statement is executed.
-    /// </summary>
     internal void EnsureWriterOwnership(CancellationToken cancellationToken = default)
     {
         EnsureActive();
-
-        if (_writerLease is not null)
-            return;
-
+        if (_writerLease is not null) return;
         _writerLease = _connection.AcquireWriteLease(cancellationToken);
     }
 
     internal async Task EnsureWriterOwnershipAsync(CancellationToken cancellationToken = default)
     {
         EnsureActive();
-
-        if (_writerLease is not null)
-            return;
-
+        if (_writerLease is not null) return;
         _writerLease = await _connection.AcquireWriteLeaseAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    internal bool OwnsWriterLease => _writerLease is not null;
-
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
         try
         {
             if (Volatile.Read(ref _completed) == 0)
             {
-                try
-                {
-                    ExecuteControlStatement("ROLLBACK");
-                }
-                catch
-                {
-                    // Disposal must still release runtime ownership.
-                }
+                try { ExecuteControlStatement("ROLLBACK"); }
+                catch { }
             }
         }
-        finally
-        {
-            Complete();
-        }
+        finally { Complete(); }
     }
 
     private void ExecuteControlStatement(string sql)
     {
-        _session.Gate.Wait();
-        try
-        {
-            using Native.Statement statement = _session.Native.Prepare(sql, PrepareFlags.None);
-            statement.Step();
-        }
-        finally
-        {
-            _session.Gate.Release();
-        }
+        // BEGIN/COMMIT/ROLLBACK are represented by runtime Statements too.
+        // They are prepared without transaction affinity to avoid recursive
+        // transaction writer-ownership acquisition.
+        using Statement statement = _connection.PrepareControlStatement(sql);
+        statement.Step();
     }
 
     private void Complete()
     {
-        if (Interlocked.Exchange(ref _completed, 1) != 0)
-            return;
-
+        if (Interlocked.Exchange(ref _completed, 1) != 0) return;
         _writerLease?.Dispose();
         _writerLease = null;
         _connection.EndTransaction(this);
@@ -173,10 +114,7 @@ public sealed class Transaction : IDisposable
 
     private void EnsureActive()
     {
-        if (Volatile.Read(ref _disposed) != 0)
-            throw new ObjectDisposedException(nameof(Transaction));
-
-        if (Volatile.Read(ref _completed) != 0)
-            throw new InvalidOperationException("The transaction has already completed.");
+        if (Volatile.Read(ref _disposed) != 0) throw new ObjectDisposedException(nameof(Transaction));
+        if (Volatile.Read(ref _completed) != 0) throw new InvalidOperationException("The transaction has already completed.");
     }
 }
