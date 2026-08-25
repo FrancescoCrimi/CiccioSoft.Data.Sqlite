@@ -8,6 +8,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using NativeConnection = CiccioSoft.Sqlite.Native.Connection;
+using CiccioSoft.Sqlite.Native;
 
 namespace CiccioSoft.Sqlite;
 
@@ -15,8 +16,8 @@ namespace CiccioSoft.Sqlite;
 /// Represents a managed runtime connection to a SQLite database.
 /// </summary>
 /// <remarks>
-/// This type manages the lifetime and reuse of a physical SQLite connection.
-/// It is not an ADO.NET connection abstraction.
+/// SQL interaction is performed through prepared <see cref="Statement"/> instances.
+/// This type is not an ADO.NET connection abstraction.
 /// </remarks>
 public sealed class Connection : IDisposable
 {
@@ -76,34 +77,43 @@ public sealed class Connection : IDisposable
 
     public bool IsOpen => Volatile.Read(ref _disposed) == 0;
 
-    public void Execute(string sql, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Prepares an SQL statement. All SQL interaction with the runtime is performed through statements.
+    /// </summary>
+    public Statement Prepare(string sql, PrepareFlags prepareFlags = PrepareFlags.None)
     {
+        EnsureNotDisposed();
         ArgumentException.ThrowIfNullOrEmpty(sql);
-        SqliteSession session = GetSession();
 
-        session.Gate.Wait(cancellationToken);
+        SqliteSession session = _session!;
+        session.Gate.Wait();
         try
         {
-            session.Native.Execute(sql);
+            Native.Statement nativeStatement = session.Native.Prepare(sql, prepareFlags);
+            return new Statement(this, session, nativeStatement);
         }
-        finally
+        catch
         {
             session.Gate.Release();
+            throw;
         }
     }
 
-    /// <summary>
-    /// Acquires the database writer lease. The caller owns the lease until it is disposed.
-    /// </summary>
+    public Task<Statement> PrepareAsync(
+        string sql,
+        PrepareFlags prepareFlags = PrepareFlags.None,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Prepare(sql, prepareFlags));
+    }
+
     internal IDisposable AcquireWriteLease(CancellationToken cancellationToken = default)
     {
         EnsureNotDisposed();
         return SingleWriterCoordinator.Acquire(_poolKey, cancellationToken);
     }
 
-    /// <summary>
-    /// Asynchronously acquires the database writer lease.
-    /// </summary>
     internal Task<IDisposable> AcquireWriteLeaseAsync(CancellationToken cancellationToken = default)
     {
         EnsureNotDisposed();
