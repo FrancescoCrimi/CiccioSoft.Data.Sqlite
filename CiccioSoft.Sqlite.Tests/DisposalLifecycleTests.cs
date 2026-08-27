@@ -92,7 +92,7 @@ public sealed class DisposalLifecycleTests
         connection.Execute("INSERT INTO files (payload) VALUES (zeroblob(8));");
         long rowId = connection.LastInsertRowId();
 
-        var blob = Blob.Open(connection, "files", "payload", rowId, readWrite: true);
+        var blob = connection.OpenBlob("files", "payload", rowId, readWrite: true);
         blob.Dispose();
 
         byte[] buffer = new byte[4];
@@ -111,7 +111,7 @@ public sealed class DisposalLifecycleTests
         source.Execute("CREATE TABLE t (id INTEGER);");
         using var destination = destDb.Open();
 
-        var backup = Backup.InitBackup(destination, source);
+        var backup = source.InitBackup(destination);
         backup.Dispose();
 
         Assert.Throws<ObjectDisposedException>(() => backup.Step());
@@ -129,7 +129,7 @@ public sealed class DisposalLifecycleTests
         connection.Dispose();
 
         Assert.Throws<ObjectDisposedException>(() =>
-            Blob.Open(connection, "files", "payload", rowId));
+            connection.OpenBlob("files", "payload", rowId));
     }
 
     [Fact]
@@ -142,9 +142,9 @@ public sealed class DisposalLifecycleTests
         disposed.Dispose();
 
         Assert.Throws<ObjectDisposedException>(() =>
-            Backup.InitBackup(disposed, live));
+            live.InitBackup(disposed));
         Assert.Throws<ObjectDisposedException>(() =>
-            Backup.InitBackup(live, disposed));
+            disposed.InitBackup(live));
     }
 
     [Fact]

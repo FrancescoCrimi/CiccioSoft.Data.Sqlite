@@ -41,6 +41,7 @@ public class Example
         var db = Connection.Open(dbPath);
 
         ConsoleOutput.Message("Connessione aperta");
+        ConsoleOutput.KeyValue("Version", Connection.LibVersion());
         ConsoleOutput.KeyValue("DataSource", dbPath);
         return db;
     }
@@ -180,7 +181,7 @@ public class Example
         }
 
         using (var source = File.OpenRead(filePath))
-        using (var blob = Blob.Open(db, "Users", "Photo", 1, readWrite: true))
+        using (var blob = db.OpenBlob("Users", "Photo", 1, readWrite: true))
         {
             long offset = 0;
             int bytesRead;
@@ -196,7 +197,7 @@ public class Example
         ConsoleOutput.Message("EXPORT: streaming dalla colonna BLOB verso un nuovo file su disco");
         //---------------------------------------------------------------------------------------//
         const string destPath = "image.jpg";
-        using (var blob = Blob.Open(db, "Users", "Photo", 1, readWrite: false))
+        using (var blob = db.OpenBlob("Users", "Photo", 1, readWrite: false))
         using (var dest = File.Create(destPath))
         {
             int totalSize = blob.Bytes();
@@ -219,7 +220,7 @@ public class Example
         ConsoleOutput.Message("Reopen: riutilizzare lo stesso handle blob senza riaprirlo");
         //--------------------------------------------------------------------------------//
         using (var idsStmt = db.Prepare("SELECT id FROM files"))
-        using (var blob = Blob.Open(db, "files", "payload", rowId: 1, readWrite: false))
+        using (var blob = db.OpenBlob("files", "payload", rowId: 1, readWrite: false))
         {
             bool first = true;
             while (idsStmt.Step())
@@ -256,7 +257,7 @@ public class Example
         {
             // backupDb.Open();
             // Il wrapper esegue il backup tramite metodo statico sulla classe Sqlite3Backup
-            var backup = Backup.InitBackup(backupDb, db);
+            var backup = db.InitBackup(backupDb);
             ResultCode rc;
             do
             {

@@ -40,6 +40,8 @@ public sealed unsafe class Blob : IDisposable
 
     private Blob(BlobSafeHandle handle, ConnectionSafeHandle connectionSafeHandle)
     {
+        ArgumentNullException.ThrowIfNull(handle);
+        ArgumentNullException.ThrowIfNull(connectionSafeHandle);
         _handle = handle;
         _connectionSafeHandle = connectionSafeHandle;
     }
@@ -56,7 +58,7 @@ public sealed unsafe class Blob : IDisposable
     /// <returns>A new <see cref="Blob"/> instance wrapping the open handle.</returns>
     /// <exception cref="ObjectDisposedException">Thrown if the connection is no longer valid.</exception>
     /// <exception cref="Exception">Thrown if the BLOB cannot be opened (e.g. row/column not found).</exception>
-    public static Blob Open(Connection connection,
+    internal static Blob Open(Connection connection,
                             string tableName,
                             string columnName,
                             long rowId,

@@ -20,7 +20,7 @@ public sealed class BlobEmptySpanTests
         
         long rowid = connection.LastInsertRowId();
         
-        using var blob = Blob.Open(connection, "t", "b", rowid, readWrite: true);
+        using var blob = connection.OpenBlob("t", "b", rowid, readWrite: true);
         
         // This should not crash even if the span is empty
         blob.Write(ReadOnlySpan<byte>.Empty, 0);

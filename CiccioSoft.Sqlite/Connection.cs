@@ -42,6 +42,7 @@ public sealed unsafe class Connection : IDisposable
 
     private Connection(ConnectionSafeHandle handle)
     {
+        ArgumentNullException.ThrowIfNull(handle);
         _handle = handle;
     }
 
@@ -563,6 +564,25 @@ public sealed unsafe class Connection : IDisposable
             if (pooled != null)
                 ArrayPool<byte>.Shared.Return(pooled);
         }
+    }
+
+    public Backup InitBackup(Connection destination,
+                             string destinationDatabaseName = "main",
+                             string sourceDatabaseName = "main")
+    {
+        ThrowIfInvalid();
+        ArgumentNullException.ThrowIfNull(destination);
+        return Backup.InitBackup(destination, this, destinationDatabaseName, sourceDatabaseName);
+    }
+
+    public Blob OpenBlob(string tableName,
+                         string columnName,
+                         long rowId,
+                         bool readWrite = false,
+                         string databaseName = "main")
+    {
+        ThrowIfInvalid();
+        return Blob.Open(this, tableName, columnName, rowId, readWrite, databaseName);
     }
 
 
