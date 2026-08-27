@@ -37,7 +37,7 @@ public static class SqliteConnectionPool
 
         while (true)
         {
-            if (TryRentIdle(state, out SqliteSession? session))
+            if (TryRentIdle(state, out SqliteSession session))
                 return session;
 
             int current = Volatile.Read(ref state.Count);
@@ -84,7 +84,7 @@ public static class SqliteConnectionPool
 
         while (true)
         {
-            if (TryRentIdle(state, out SqliteSession? session))
+            if (TryRentIdle(state, out SqliteSession session))
                 return session;
 
             int current = Volatile.Read(ref state.Count);
@@ -121,7 +121,7 @@ public static class SqliteConnectionPool
         ArgumentNullException.ThrowIfNull(connectionString);
         ArgumentNullException.ThrowIfNull(session);
 
-        if (!IsActive(connectionString, out PoolState? state))
+        if (!IsActive(connectionString, out PoolState state))
         {
             session.Dispose();
             return;
@@ -143,10 +143,10 @@ public static class SqliteConnectionPool
     {
         ArgumentNullException.ThrowIfNull(connectionString);
 
-        if (!Pools.TryRemove(connectionString, out PoolState? state))
+        if (!Pools.TryRemove(connectionString, out PoolState state))
             return;
 
-        while (state.Bag.TryTake(out SqliteSession? session))
+        while (state.Bag.TryTake(out SqliteSession session))
         {
             session.Dispose();
             Interlocked.Decrement(ref state.Count);
@@ -157,7 +157,7 @@ public static class SqliteConnectionPool
             state.Semaphore.Release();
     }
 
-    private static bool TryRentIdle(PoolState state, out SqliteSession? session)
+    private static bool TryRentIdle(PoolState state, out SqliteSession session)
     {
         while (state.Bag.TryTake(out session))
         {
@@ -168,18 +168,18 @@ public static class SqliteConnectionPool
             Interlocked.Decrement(ref state.Count);
         }
 
-        session = null;
+        session = null!;
         return false;
     }
 
     private static bool IsActive(string connectionString, PoolState state)
     {
-        return Pools.TryGetValue(connectionString, out PoolState? active) && ReferenceEquals(active, state);
+        return Pools.TryGetValue(connectionString, out PoolState active) && ReferenceEquals(active, state);
     }
 
-    private static bool IsActive(string connectionString, out PoolState? state)
+    private static bool IsActive(string connectionString, out PoolState state)
     {
-        return Pools.TryGetValue(connectionString, out state);
+        return Pools.TryGetValue(connectionString, out state!);
     }
 
     private static void ReleaseWaiter(PoolState state)
