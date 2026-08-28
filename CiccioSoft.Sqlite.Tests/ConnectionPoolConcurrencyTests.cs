@@ -32,7 +32,8 @@ public sealed class ConnectionPoolConcurrencyTests
         const int iterations = 100;
         int active = 0;
         int maximumActive = 0;
-        var sessions = new ConcurrentDictionary<SqliteSession, byte>();
+        var activeSessions = new ConcurrentDictionary<SqliteSession, byte>();
+        var allSessions = new ConcurrentDictionary<SqliteSession, byte>();
 
         try
         {
@@ -44,16 +45,26 @@ public sealed class ConnectionPoolConcurrencyTests
                     for (int iteration = 0; iteration < iterations; iteration++)
                     {
                         SqliteSession session = await SqliteConnectionPool.RentAsync(
-                            key, ":memory:", maxPoolSize, DefaultFlags);
+                            key, ":memory:", maxPoolSize, DefaultFlags,
+                            TestContext.Current.CancellationToken);
 
-                        Assert.True(sessions.TryAdd(session, 0));
-                        int current = Interlocked.Increment(ref active);
-                        UpdateMaximum(ref maximumActive, current);
+                        try
+                        {
+                            Assert.True(allSessions.TryAdd(session, 0));
+                            Assert.True(activeSessions.TryAdd(session, 0),
+                                "The same physical session was leased concurrently.");
 
-                        await Task.Yield();
+                            int current = Interlocked.Increment(ref active);
+                            UpdateMaximum(ref maximumActive, current);
 
-                        Interlocked.Decrement(ref active);
-                        SqliteConnectionPool.Return(key, session);
+                            await Task.Yield();
+                        }
+                        finally
+                        {
+                            Interlocked.Decrement(ref active);
+                            Assert.True(activeSessions.TryRemove(session, out _));
+                            SqliteConnectionPool.Return(key, session);
+                        }
                     }
                 }, TestContext.Current.CancellationToken);
             }
@@ -61,7 +72,8 @@ public sealed class ConnectionPoolConcurrencyTests
             await WithTimeout(Task.WhenAll(workers));
 
             Assert.InRange(maximumActive, 1, maxPoolSize);
-            Assert.InRange(sessions.Count, 1, maxPoolSize);
+            Assert.InRange(allSessions.Count, 1, maxPoolSize);
+            Assert.Empty(activeSessions);
         }
         finally
         {
@@ -97,7 +109,6 @@ public sealed class ConnectionPoolConcurrencyTests
 
             SqliteConnectionPool.Return(key, first);
 
-            Task secondTask = winner == asyncWaiter ? syncWaiter : asyncWaiter;
             SqliteSession second = winner == asyncWaiter
                 ? await syncWaiter.WaitAsync(TestTimeout, TestContext.Current.CancellationToken)
                 : await asyncWaiter.WaitAsync(TestTimeout, TestContext.Current.CancellationToken);
