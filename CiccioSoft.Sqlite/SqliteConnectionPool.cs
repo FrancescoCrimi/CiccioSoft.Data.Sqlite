@@ -38,6 +38,12 @@ public static class SqliteConnectionPool
 
         while (true)
         {
+            if (!IsActive(connectionString, state))
+            {
+                state = Pools.GetOrAdd(connectionString, _ => new PoolState());
+                continue;
+            }
+
             if (TryRentIdle(state, out SqliteSession? session))
                 return session;
 
@@ -85,6 +91,12 @@ public static class SqliteConnectionPool
 
         while (true)
         {
+            if (!IsActive(connectionString, state))
+            {
+                state = Pools.GetOrAdd(connectionString, _ => new PoolState());
+                continue;
+            }
+
             if (TryRentIdle(state, out SqliteSession? session))
                 return session;
 
