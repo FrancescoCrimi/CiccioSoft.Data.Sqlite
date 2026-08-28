@@ -511,6 +511,8 @@ restored-backup.zip
 blob.zip
 restored-blob.zip
 
+file*.jpg
+
 SQLitePCL.raw/
 Microsoft.Data.Sqlite/
 Microsoft.Data.Sqlite.Core/

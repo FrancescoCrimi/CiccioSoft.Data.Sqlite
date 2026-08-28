@@ -6,43 +6,56 @@
 
 using System;
 using System.IO;
+using System.Text;
 
 namespace CiccioSoft.Sqlite.Example;
 
 public class Example
 {
-    string dbPath = "example.db";
-    string backupDbPath = "backup.db";
+    string _dbPath = "example.db";
+    string _backupDbPath = "backup.db";
+    string[] _imageFiles = Directory.GetFiles("images", "*.jpg");
+    (string Nome, int Eta)[] _persone = new (string Nome, int Eta)[]
+    {
+        ("Francesco Rossi", 28),
+        ("Giulia Ferrari", 34),
+        ("Alessandro Russo", 45),
+        ("Sofia Bianchi", 22),
+        ("Lorenzo Romano", 51),
+        ("Mattia Gallo", 19),
+        ("Aurora Fontana", 25),
+        ("Andrea Costa", 31),
+        ("Leonardo Conti", 40),
+        ("Emma Esposito", 60)
+    };
 
     public Example()
     {
         ConsoleOutput.Section("CiccioSoft.Sqlite.NewExample");
-        var db = OpenDefaultConnection();
+        var db = OpenConnection();
         ExecuteDdl(db);
         ExecuteInsert(db);
-        ExecuteSelect(db);
         ExecuteUpdate(db);
         ExecuteDelete(db);
         ExecutePreparedInsert(db);
-        ExecutePreparedSelect(db);
         ExecuteTransaction(db);
-        // ExecuteBlob(db);
+        ExecuteBlob(db);
         ExecuteBackup(db);
         ExecuteDropTable(db);
     }
 
-    internal Connection OpenDefaultConnection()
+    internal Connection OpenConnection()
     {
         ConsoleOutput.Section("1. Connessione");
         ConsoleOutput.Message("Apertura connessione...");
 
-        if (File.Exists(dbPath)) File.Delete(dbPath);
-        if (File.Exists(backupDbPath)) File.Delete(backupDbPath);
-        var db = Connection.Open(dbPath);
+        if (File.Exists(_dbPath)) File.Delete(_dbPath);
+        if (File.Exists(_backupDbPath)) File.Delete(_backupDbPath);
+        var db = Connection.Open(_dbPath);
 
         ConsoleOutput.Message("Connessione aperta");
         ConsoleOutput.KeyValue("Version", Connection.LibVersion());
-        ConsoleOutput.KeyValue("DataSource", dbPath);
+        ConsoleOutput.KeyValue("DataSource", _dbPath);
         return db;
     }
 
@@ -58,71 +71,69 @@ public class Example
     {
         ConsoleOutput.Section("3. INSERT");
         ConsoleOutput.Message("Inserimento dati base...");
-        db.Execute("INSERT INTO Users (Name, Age) VALUES ('Mario Rossi', 30)");
-        db.Execute("INSERT INTO Users (Name, Age) VALUES ('Luca Bianchi', 25)");
-    }
 
-    private void ExecuteSelect(Connection db)
-    {
-        ConsoleOutput.Section("4. SELECT");
-        ConsoleOutput.Message("Lettura dati (SELECT)...");
+        string hexLiteral = FileToHexLiteral(_imageFiles[0]);
+        db.Execute($"INSERT INTO Users (Name, Age, Photo) VALUES ('{_persone[0].Nome}', {_persone[0].Eta}, {hexLiteral});");
+
+        hexLiteral = FileToHexLiteral(_imageFiles[1]);
+        db.Execute($"INSERT INTO Users (Name, Age, Photo) VALUES ('{_persone[1].Nome}', {_persone[1].Eta}, {hexLiteral});");
+
+        ConsoleOutput.Message("Mostra dati");
         ShowSelect(db);
     }
 
     private void ExecuteUpdate(Connection db)
     {
-        ConsoleOutput.Section("5. UPDATE");
+        ConsoleOutput.Section("4. UPDATE");
         ConsoleOutput.Message("Aggiornamento dati...");
-        db.Execute("UPDATE Users SET Age = 31 WHERE Name = 'Mario Rossi'");
-        db.Execute("UPDATE Users SET Age = 26 WHERE Name = 'Luca Bianchi'");
+        db.Execute("UPDATE Users SET Age = 29 WHERE Id = 1");
+        db.Execute("UPDATE Users SET Age = 33 WHERE Id = 2");
+        ConsoleOutput.Message("Mostra dati");
         ShowSelect(db);
     }
 
     private void ExecuteDelete(Connection db)
     {
-        ConsoleOutput.Section("6. DELETE");
+        ConsoleOutput.Section("5. DELETE");
         ConsoleOutput.Message("Eliminazione dati...");
-        db.Execute("DELETE FROM Users WHERE Name = 'Luca Bianchi'");
+        db.Execute("DELETE FROM Users WHERE Id = 2");
+        ConsoleOutput.Message("Mostra dati");
         ShowSelect(db);
     }
 
     private void ExecutePreparedInsert(Connection db)
     {
-        ConsoleOutput.Section("7. Prepared statement – INSERT parametrizzato");
+        ConsoleOutput.Section("6. Prepared statement – INSERT parametrizzato");
         ConsoleOutput.Message("Inserimento con Prepared Statement...");
-        using (var insertStmt = db.Prepare("INSERT INTO Users (Name, Age) VALUES (?, ?)"))
-        {
-            insertStmt.BindText(1, "Giulia Verdi");
-            insertStmt.BindInt(2, 28);
-            insertStmt.Step();
-        }
-    }
 
-    private void ExecutePreparedSelect(Connection db)
-    {
-        ConsoleOutput.Section("8. Prepared statement – SELECT con bind_result");
-        ConsoleOutput.Message("Selezione con Prepared Statement (Bind Result)...");
-        using (var stmt = db.Prepare("SELECT Id, Name, Age FROM Users WHERE Age > ?"))
+        using (var stmt = db.Prepare("INSERT INTO Users (Name, Age, Photo) VALUES (?, ?, ?)"))
         {
-            stmt.BindInt(1, 20);
-            while (stmt.Step())
+            for (int i = 2; i < 5; i++)
             {
-            	int id = stmt.GetInt(0);
-                string? name = stmt.GetTextString(1);
-                int age = stmt.GetInt(2);
-                Console.WriteLine($"   - Utente: {id} - {name}, {age} anni");
+                string imageFile = _imageFiles[i];
+                byte[] immagineRaw = File.ReadAllBytes(imageFile);
+                stmt.BindText(1, _persone[i].Nome);
+                stmt.BindInt(2, _persone[i].Eta);
+                stmt.BindBlob(3, immagineRaw);
+                stmt.Step();
+                stmt.Reset();
             }
         }
+        ConsoleOutput.Message("Mostra dati");
+        ShowSelect(db);
     }
 
     private void ExecuteTransaction(Connection db)
     {
-        ConsoleOutput.Section("9. Transazione – autocommit / commit / rollback");
+        ConsoleOutput.Section("7. Transazione – autocommit / commit / rollback");
         ConsoleOutput.Message("Esecuzione Transazione (Rollback di prova)...");
         db.Execute("BEGIN TRANSACTION");
         try
         {
             db.Execute("INSERT INTO Users (Name, Age) VALUES ('Utente Errato', 99)");
+            ConsoleOutput.Message("Mostra dati Transazione attiva");
+            ShowSelect(db);
+
             // Simuliamo un errore logico
             throw new System.Exception("Errore simulato, annullamento operazione.");
             // db.Execute("COMMIT"); // Mai raggiunto in questo esempio
@@ -130,13 +141,15 @@ public class Example
         catch (System.Exception)
         {
             db.Execute("ROLLBACK");
-            Console.WriteLine("   - Rollback eseguito con successo.");
+            ConsoleOutput.Message("Rollback eseguito con successo.");
+            ConsoleOutput.Message("Mostra dati dopo RoolBack");
+            ShowSelect(db);
         }
     }
 
     private void ExecuteBlob(Connection db)
     {
-        ConsoleOutput.Section("10. Blob");
+        ConsoleOutput.Section("8. Blob");
         ConsoleOutput.Message("Salvataggio dato BLOB...");
 
         int chunkSize = 1024 * 4;
@@ -154,7 +167,7 @@ public class Example
         //     blobStmt.Step();
         // }
 
-        // using (var blob = Blob.Open(db, "Users", "Photo", 1, readWrite: true))
+        // using (var blob = db.OpenBlob("Users", "Photo", 1, readWrite: true))
         // {
         //     int offset = 0;
         //     while (offset < Utils.PhotoData.Length)
@@ -168,59 +181,59 @@ public class Example
         // }
 
 
-        //---------------------------------------------------------------------------------//
-        ConsoleOutput.Message("IMPORT: streaming di un file da disco verso la colonna BLOB");
-        //---------------------------------------------------------------------------------//
-        string filePath = Path.Combine(currentDir, "Images", "Beatles-Abbey-Road.jpg");
-        long fileLength = new FileInfo(filePath).Length;
+        // //---------------------------------------------------------------------------------//
+        // ConsoleOutput.Message("IMPORT: streaming di un file da disco verso la colonna BLOB");
+        // //---------------------------------------------------------------------------------//
+        // string filePath = _imageFiles[6];
+        // long fileLength = new FileInfo(filePath).Length;
 
-        using (var blobStmt = db.Prepare("UPDATE Users SET Photo = zeroblob(?) WHERE Id = 1"))
-        {
-            blobStmt.BindLong(1, (long)fileLength);
-            blobStmt.Step();
-        }
+        // using (var blobStmt = db.Prepare("UPDATE Users SET Photo = zeroblob(?) WHERE Id = 1"))
+        // {
+        //     blobStmt.BindLong(1, (long)fileLength);
+        //     blobStmt.Step();
+        // }
 
-        using (var source = File.OpenRead(filePath))
-        using (var blob = db.OpenBlob("Users", "Photo", 1, readWrite: true))
-        {
-            long offset = 0;
-            int bytesRead;
-            while ((bytesRead = source.Read(buffer)) > 0)
-            {
-                var chunk = buffer[..bytesRead];
-                blob.Write(chunk, blobOffset: (int)offset);
-                offset += bytesRead;
-            }
-        }
+        // using (var source = File.OpenRead(filePath))
+        // using (var blob = db.OpenBlob("Users", "Photo", 1, readWrite: true))
+        // {
+        //     long offset = 0;
+        //     int bytesRead;
+        //     while ((bytesRead = source.Read(buffer)) > 0)
+        //     {
+        //         var chunk = buffer[..bytesRead];
+        //         blob.Write(chunk, blobOffset: (int)offset);
+        //         offset += bytesRead;
+        //     }
+        // }
 
-        //---------------------------------------------------------------------------------------//
-        ConsoleOutput.Message("EXPORT: streaming dalla colonna BLOB verso un nuovo file su disco");
-        //---------------------------------------------------------------------------------------//
-        const string destPath = "image.jpg";
-        using (var blob = db.OpenBlob("Users", "Photo", 1, readWrite: false))
-        using (var dest = File.Create(destPath))
-        {
-            int totalSize = blob.Bytes();
-            int offset = 0;
+        // //---------------------------------------------------------------------------------------//
+        // ConsoleOutput.Message("EXPORT: streaming dalla colonna BLOB verso un nuovo file su disco");
+        // //---------------------------------------------------------------------------------------//
+        // const string destPath = "image.jpg";
+        // using (var blob = db.OpenBlob("Users", "Photo", 1, readWrite: false))
+        // using (var dest = File.Create(destPath))
+        // {
+        //     int totalSize = blob.Bytes();
+        //     int offset = 0;
 
-            while (offset < totalSize)
-            {
-                int remaining = totalSize - offset;
-                int toRead = Math.Min(chunkSize, remaining);
+        //     while (offset < totalSize)
+        //     {
+        //         int remaining = totalSize - offset;
+        //         int toRead = Math.Min(chunkSize, remaining);
 
-                blob.Read(buffer[..toRead], blobOffset: offset);
-                dest.Write(buffer[..toRead]);
+        //         blob.Read(buffer[..toRead], blobOffset: offset);
+        //         dest.Write(buffer[..toRead]);
 
-                offset += toRead;
-            }
-        }
+        //         offset += toRead;
+        //     }
+        // }
 
 
         //--------------------------------------------------------------------------------//
         ConsoleOutput.Message("Reopen: riutilizzare lo stesso handle blob senza riaprirlo");
         //--------------------------------------------------------------------------------//
-        using (var idsStmt = db.Prepare("SELECT id FROM files"))
-        using (var blob = db.OpenBlob("files", "payload", rowId: 1, readWrite: false))
+        using (var idsStmt = db.Prepare("SELECT id FROM Users"))
+        using (var blob = db.OpenBlob("Users", "Photo", rowId: 1, readWrite: false))
         {
             bool first = true;
             while (idsStmt.Step())
@@ -251,12 +264,10 @@ public class Example
 
     private void ExecuteBackup(Connection db)
     {
-        ConsoleOutput.Section("11. Backup");
+        ConsoleOutput.Section("9. Backup");
         ConsoleOutput.Message("Esecuzione Backup...");
-        using (var backupDb = Connection.Open(backupDbPath))
+        using (var backupDb = Connection.Open(_backupDbPath))
         {
-            // backupDb.Open();
-            // Il wrapper esegue il backup tramite metodo statico sulla classe Sqlite3Backup
             var backup = db.InitBackup(backupDb);
             ResultCode rc;
             do
@@ -264,13 +275,13 @@ public class Example
                 rc = backup.Step(pages: -1);
             }
             while (rc == ResultCode.OK);
-            Console.WriteLine($"   - Backup salvato in: {backupDbPath}");
+            Console.WriteLine($"   - Backup salvato in: {_backupDbPath}");
         }
     }
 
     private void ExecuteDropTable(Connection db)
     {
-        ConsoleOutput.Section("12. Cleanup – DROP TABLE");
+        ConsoleOutput.Section("10. Cleanup – DROP TABLE");
         ConsoleOutput.Message("Pulizia (DROP TABLE)...");
         db.Execute("DROP TABLE Users");
         ConsoleOutput.Message("Esecuzione dell'esempio completata con successo!");
@@ -278,15 +289,31 @@ public class Example
 
     private void ShowSelect(Connection db)
     {
-        using (var stmt = db.Prepare("SELECT Id, Name, Age FROM Users"))
+        using (var stmt = db.Prepare("SELECT Id, Name, Age FROM Users WHERE Age > ?"))
         {
+            stmt.BindInt(1, 18);
             while (stmt.Step())
             {
-            	int id = stmt.GetInt(0);
+                int id = stmt.GetInt(0);
                 string? name = stmt.GetTextString(1);
                 int age = stmt.GetInt(2);
                 Console.WriteLine($"   - Utente: {id} - {name}, {age} anni");
             }
         }
+    }
+
+    private string FileToHexLiteral(string filename)
+    {
+        byte[] immagineRaw = File.ReadAllBytes(filename);
+
+        StringBuilder hexBuilder = new StringBuilder();
+        hexBuilder.Append("X'");
+        foreach (byte b in immagineRaw)
+        {
+            hexBuilder.Append(b.ToString("X2"));
+        }
+        hexBuilder.Append("'");
+        string blobHex = hexBuilder.ToString();
+        return blobHex;
     }
 }
