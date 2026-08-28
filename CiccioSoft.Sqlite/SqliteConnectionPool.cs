@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,12 +19,47 @@ namespace CiccioSoft.Sqlite;
 /// </summary>
 public static class SqliteConnectionPool
 {
+    private sealed class PoolRetiredException : Exception
+    {
+        public static readonly PoolRetiredException Instance = new();
+
+        private PoolRetiredException()
+        {
+        }
+    }
+
+    private sealed class PoolRetryException : Exception
+    {
+        public static readonly PoolRetryException Instance = new();
+
+        private PoolRetryException()
+        {
+        }
+    }
+
+    private sealed class Waiter
+    {
+        public readonly TaskCompletionSource<SqliteSession> Completion =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public CancellationTokenRegistration CancellationRegistration;
+
+        public Task<SqliteSession> Task => Completion.Task;
+    }
+
     private sealed class PoolState
     {
-        public readonly ConcurrentBag<SqliteSession> Bag = new();
-        public readonly SemaphoreSlim Semaphore = new(0, int.MaxValue);
+        public readonly object Sync = new();
+
+        public readonly Queue<SqliteSession> Idle = new();
+
+        public readonly HashSet<SqliteSession> Sessions = new();
+
+        public readonly Queue<Waiter> Waiters = new();
+
         public int Count;
-        public int Waiters;
+
+        public bool Retired;
     }
 
     private static readonly ConcurrentDictionary<string, PoolState> Pools =
@@ -39,55 +75,61 @@ public static class SqliteConnectionPool
         ArgumentNullException.ThrowIfNull(dataSource);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxPoolSize);
 
-        PoolState state = Pools.GetOrAdd(
-            connectionString,
-            static _ => new PoolState());
-
         while (true)
         {
-            if (!IsActive(connectionString, state))
-            {
-                state = Pools.GetOrAdd(
-                    connectionString,
-                    static _ => new PoolState());
+            PoolState state = Pools.GetOrAdd(
+                connectionString,
+                static _ => new PoolState());
 
-                continue;
+            Waiter? waiter = null;
+            bool create = false;
+
+            lock (state.Sync)
+            {
+                if (!IsCurrentState(connectionString, state) ||
+                    state.Retired)
+                {
+                    continue;
+                }
+
+                if (TryTakeIdleLocked(state, out SqliteSession? session))
+                    return session;
+
+                if (state.Count < maxPoolSize)
+                {
+                    state.Count++;
+                    create = true;
+                }
+                else
+                {
+                    waiter = CreateWaiterLocked(state, CancellationToken.None);
+                }
             }
 
-            if (TryRentIdle(state, out SqliteSession? session))
-                return session;
-
-            if (TryCreateSession(state, dataSource, maxPoolSize, openFlags, out session))
-                return session;
-
-            /*
-             * The waiter protocol is deliberately:
-             *
-             *   1. register as waiter;
-             *   2. re-check the pool;
-             *   3. wait only if no resource/capacity exists.
-             *
-             * This second check closes the window between the initial
-             * availability check and waiter registration.
-             */
-            Interlocked.Increment(ref state.Waiters);
+            if (create)
+            {
+                return CreateSession(
+                    connectionString,
+                    state,
+                    dataSource,
+                    openFlags);
+            }
 
             try
             {
-                if (!IsActive(connectionString, state))
-                    continue;
-
-                if (TryRentIdle(state, out session))
-                    return session;
-
-                if (TryCreateSession(state, dataSource, maxPoolSize, openFlags, out session))
-                    return session;
-
-                state.Semaphore.Wait();
+                return WaitForSession(waiter!);
+            }
+            catch (PoolRetiredException)
+            {
+                continue;
+            }
+            catch (PoolRetryException)
+            {
+                continue;
             }
             finally
             {
-                Interlocked.Decrement(ref state.Waiters);
+                waiter!.CancellationRegistration.Dispose();
             }
         }
     }
@@ -103,54 +145,69 @@ public static class SqliteConnectionPool
         ArgumentNullException.ThrowIfNull(dataSource);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxPoolSize);
 
-        PoolState state = Pools.GetOrAdd(
-            connectionString,
-            static _ => new PoolState());
-
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!IsActive(connectionString, state))
-            {
-                state = Pools.GetOrAdd(
-                    connectionString,
-                    static _ => new PoolState());
+            PoolState state = Pools.GetOrAdd(
+                connectionString,
+                static _ => new PoolState());
 
-                continue;
+            Waiter? waiter = null;
+            bool create = false;
+
+            lock (state.Sync)
+            {
+                if (!IsCurrentState(connectionString, state) ||
+                    state.Retired)
+                {
+                    continue;
+                }
+
+                if (TryTakeIdleLocked(state, out SqliteSession? session))
+                    return session;
+
+                if (state.Count < maxPoolSize)
+                {
+                    state.Count++;
+                    create = true;
+                }
+                else
+                {
+                    waiter = CreateWaiterLocked(
+                        state,
+                        cancellationToken);
+                }
             }
 
-            if (TryRentIdle(state, out SqliteSession? session))
-                return session;
-
-            if (TryCreateSession(state, dataSource, maxPoolSize, openFlags, out session))
-                return session;
-
-            /*
-             * Register before performing the final availability check.
-             * A Return() occurring after this point will observe the waiter
-             * and release the semaphore.
-             */
-            Interlocked.Increment(ref state.Waiters);
+            if (create)
+            {
+                return await CreateSessionAsync(
+                    connectionString,
+                    state,
+                    dataSource,
+                    openFlags,
+                    cancellationToken).ConfigureAwait(false);
+            }
 
             try
             {
-                if (!IsActive(connectionString, state))
+                try
+                {
+                    return await waiter!.Task.ConfigureAwait(false);
+                }
+                catch (PoolRetiredException)
+                {
                     continue;
-
-                if (TryRentIdle(state, out session))
-                    return session;
-
-                if (TryCreateSession(state, dataSource, maxPoolSize, openFlags, out session))
-                    return session;
-
-                await state.Semaphore
-                    .WaitAsync(cancellationToken)
-                    .ConfigureAwait(false);
+                }
+                catch (PoolRetryException)
+                {
+                    continue;
+                }
             }
             finally
             {
-                Interlocked.Decrement(ref state.Waiters);
+                waiter!.CancellationRegistration.Dispose();
             }
         }
     }
@@ -162,138 +219,308 @@ public static class SqliteConnectionPool
         ArgumentNullException.ThrowIfNull(connectionString);
         ArgumentNullException.ThrowIfNull(session);
 
-        if (!IsActive(connectionString, out PoolState? state))
+        if (!Pools.TryGetValue(
+                connectionString,
+                out PoolState? state))
         {
             session.Dispose();
             return;
         }
 
-        if (!session.IsValid() || !session.TryReleaseLease())
+        Waiter? waiter = null;
+        bool dispose = false;
+        bool handedOff = false;
+
+        lock (state.Sync)
         {
-            session.Dispose();
+            if (state.Retired ||
+                !IsCurrentState(connectionString, state) ||
+                !state.Sessions.Contains(session))
+            {
+                dispose = true;
+            }
+            else if (!session.IsValid())
+            {
+                state.Sessions.Remove(session);
+                state.Count--;
+                dispose = true;
+            }
+            else if (!session.TryReleaseLease())
+            {
+                state.Sessions.Remove(session);
+                state.Count--;
+                dispose = true;
+            }
+            else
+            {
+                waiter = DequeueLiveWaiterLocked(state);
 
-            Interlocked.Decrement(ref state.Count);
-            ReleaseWaiter(state);
+                if (waiter is not null)
+                {
+                    if (session.TryAcquireLease() &&
+                        waiter.Completion.TrySetResult(session))
+                    {
+                        handedOff = true;
+                    }
+                    else
+                    {
+                        waiter = null;
+                    }
+                }
 
-            return;
+                if (!handedOff)
+                    state.Idle.Enqueue(session);
+            }
         }
 
-        state.Bag.Add(session);
-        ReleaseWaiter(state);
+        if (dispose)
+        {
+            session.Dispose();
+            return;
+        }
     }
 
     public static void Clear(string connectionString)
     {
         ArgumentNullException.ThrowIfNull(connectionString);
 
-        if (!Pools.TryRemove(
+        if (!Pools.TryGetValue(
                 connectionString,
                 out PoolState? state))
         {
             return;
         }
 
-        while (state.Bag.TryTake(out SqliteSession? session))
+        List<SqliteSession>? sessionsToDispose = null;
+        List<Waiter>? waitersToRelease = null;
+
+        lock (state.Sync)
         {
-            session.Dispose();
-            Interlocked.Decrement(ref state.Count);
+            if (state.Retired)
+                return;
+
+            if (!IsCurrentState(connectionString, state))
+                return;
+
+            state.Retired = true;
+
+            Pools.TryRemove(
+                new KeyValuePair<string, PoolState>(
+                    connectionString,
+                    state));
+
+            while (state.Idle.TryDequeue(out SqliteSession? session))
+            {
+                state.Sessions.Remove(session);
+                state.Count--;
+
+                (sessionsToDispose ??= new()).Add(session);
+            }
+
+            while (state.Waiters.TryDequeue(out Waiter? waiter))
+                (waitersToRelease ??= new()).Add(waiter);
         }
 
-        /*
-         * The state is retired at this point.
-         *
-         * Existing waiters are released so that they can observe that
-         * their PoolState is no longer active and transition to the
-         * newly-created state.
-         */
-        int waiters = Volatile.Read(ref state.Waiters);
+        if (waitersToRelease is not null)
+        {
+            foreach (Waiter waiter in waitersToRelease)
+            {
+                waiter.Completion.TrySetException(
+                    PoolRetiredException.Instance);
+            }
+        }
 
-        for (int i = 0; i < waiters; i++)
-            state.Semaphore.Release();
+        if (sessionsToDispose is not null)
+        {
+            foreach (SqliteSession session in sessionsToDispose)
+                session.Dispose();
+        }
     }
 
-    private static bool TryRentIdle(
+    private static Waiter CreateWaiterLocked(
+        PoolState state,
+        CancellationToken cancellationToken)
+    {
+        var waiter = new Waiter();
+
+        if (cancellationToken.CanBeCanceled)
+        {
+            waiter.CancellationRegistration =
+                cancellationToken.Register(
+                    static state =>
+                    {
+                        var tuple =
+                            ((Waiter Waiter, CancellationToken Token))state!;
+
+                        tuple.Waiter.Completion.TrySetCanceled(
+                            tuple.Token);
+                    },
+                    (waiter, cancellationToken));
+        }
+
+        state.Waiters.Enqueue(waiter);
+
+        return waiter;
+    }
+
+    private static Waiter? DequeueLiveWaiterLocked(
+        PoolState state)
+    {
+        while (state.Waiters.TryDequeue(out Waiter? waiter))
+        {
+            if (!waiter.Completion.Task.IsCompleted)
+                return waiter;
+        }
+
+        return null;
+    }
+
+    private static bool TryTakeIdleLocked(
         PoolState state,
         [NotNullWhen(true)] out SqliteSession? session)
     {
-        while (state.Bag.TryTake(out session))
+        while (state.Idle.TryDequeue(out session))
         {
-            if (session is not null &&
+            if (session.IsValid() &&
                 session.TryAcquireLease())
             {
                 return true;
             }
 
-            session?.Dispose();
-            Interlocked.Decrement(ref state.Count);
+            state.Sessions.Remove(session);
+            state.Count--;
+
+            session.Dispose();
         }
 
         session = null;
         return false;
     }
 
-    private static bool TryCreateSession(
+    private static SqliteSession CreateSession(
+        string connectionString,
         PoolState state,
         string dataSource,
-        int maxPoolSize,
-        OpenFlags openFlags,
-        [NotNullWhen(true)] out SqliteSession? session)
+        OpenFlags openFlags)
     {
-        while (true)
+        SqliteSession session;
+
+        try
         {
-            int current = Volatile.Read(ref state.Count);
-
-            if (current >= maxPoolSize)
-            {
-                session = null;
-                return false;
-            }
-
-            if (Interlocked.CompareExchange(
-                    ref state.Count,
-                    current + 1,
-                    current) != current)
-            {
-                continue;
-            }
-
-            try
-            {
-                session = new SqliteSession(
-                    NativeConnection.Open(dataSource, openFlags));
-
-                return true;
-            }
-            catch
-            {
-                Interlocked.Decrement(ref state.Count);
-                throw;
-            }
+            session = new SqliteSession(
+                NativeConnection.Open(dataSource, openFlags));
         }
+        catch
+        {
+            ReleaseCreationSlot(
+                connectionString,
+                state);
+
+            throw;
+        }
+
+        lock (state.Sync)
+        {
+            if (!IsCurrentState(connectionString, state) ||
+                state.Retired)
+            {
+                state.Count--;
+                session.Dispose();
+
+                return Rent(
+                    connectionString,
+                    dataSource,
+                    Math.Max(state.Count + 1, 1),
+                    openFlags);
+            }
+
+            state.Sessions.Add(session);
+        }
+
+        return session;
     }
 
-    private static bool IsActive(
+    private static async Task<SqliteSession> CreateSessionAsync(
+        string connectionString,
+        PoolState state,
+        string dataSource,
+        OpenFlags openFlags,
+        CancellationToken cancellationToken)
+    {
+        SqliteSession session;
+
+        try
+        {
+            session = new SqliteSession(
+                NativeConnection.Open(dataSource, openFlags));
+        }
+        catch
+        {
+            ReleaseCreationSlot(
+                connectionString,
+                state);
+
+            throw;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (state.Sync)
+        {
+            if (!IsCurrentState(connectionString, state) ||
+                state.Retired)
+            {
+                state.Count--;
+                session.Dispose();
+
+                return RentAsync(
+                    connectionString,
+                    dataSource,
+                    Math.Max(state.Count + 1, 1),
+                    openFlags,
+                    cancellationToken).GetAwaiter().GetResult();
+            }
+
+            state.Sessions.Add(session);
+        }
+
+        return session;
+    }
+
+    private static void ReleaseCreationSlot(
+        string connectionString,
+        PoolState state)
+    {
+        Waiter? waiter = null;
+
+        lock (state.Sync)
+        {
+            state.Count--;
+
+            if (IsCurrentState(connectionString, state) &&
+                !state.Retired)
+            {
+                waiter = DequeueLiveWaiterLocked(state);
+            }
+        }
+
+        waiter?.Completion.TrySetException(
+            PoolRetryException.Instance);
+    }
+
+    private static bool IsCurrentState(
         string connectionString,
         PoolState state)
     {
         return Pools.TryGetValue(
                    connectionString,
-                   out PoolState? active) &&
-               ReferenceEquals(active, state);
+                   out PoolState? current) &&
+               ReferenceEquals(current, state);
     }
 
-    private static bool IsActive(
-        string connectionString,
-        [NotNullWhen(true)] out PoolState? state)
+    private static SqliteSession WaitForSession(
+        Waiter waiter)
     {
-        return Pools.TryGetValue(
-            connectionString,
-            out state);
-    }
-
-    private static void ReleaseWaiter(PoolState state)
-    {
-        if (Volatile.Read(ref state.Waiters) > 0)
-            state.Semaphore.Release();
+        return waiter.Task.GetAwaiter().GetResult();
     }
 }
