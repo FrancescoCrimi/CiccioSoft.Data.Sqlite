@@ -80,13 +80,13 @@ public sealed class ConnectionPoolLifecycleTests
         try
         {
             Task<SqliteSession> waiting = Task.Run(() => SqliteConnectionPool.Rent(key, ":memory:", 1, DefaultFlags));
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(waiting.IsCompleted);
 
             SqliteConnectionPool.Return(key, occupied);
             occupied = null!;
 
-            Task completed = await Task.WhenAny(waiting, Task.Delay(WaitTimeout));
+            Task completed = await Task.WhenAny(waiting, Task.Delay(WaitTimeout, TestContext.Current.CancellationToken));
             Assert.Same(waiting, completed);
 
             SqliteSession reused = await waiting;
@@ -105,18 +105,18 @@ public sealed class ConnectionPoolLifecycleTests
     public async Task RentAsync_waiting_for_full_pool_is_released_by_Return()
     {
         string key = NewPoolKey();
-        SqliteSession occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags);
+        SqliteSession occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags, TestContext.Current.CancellationToken);
 
         try
         {
-            Task<SqliteSession> waiting = SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags);
-            await Task.Delay(100);
+            Task<SqliteSession> waiting = SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags, TestContext.Current.CancellationToken);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(waiting.IsCompleted);
 
             SqliteConnectionPool.Return(key, occupied);
             occupied = null!;
 
-            Task completed = await Task.WhenAny(waiting, Task.Delay(WaitTimeout));
+            Task completed = await Task.WhenAny(waiting, Task.Delay(WaitTimeout, TestContext.Current.CancellationToken));
             Assert.Same(waiting, completed);
 
             SqliteSession reused = await waiting;
@@ -135,7 +135,7 @@ public sealed class ConnectionPoolLifecycleTests
     public async Task RentAsync_honors_cancellation_while_waiting_for_full_pool()
     {
         string key = NewPoolKey();
-        SqliteSession occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags);
+        SqliteSession occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags, TestContext.Current.CancellationToken);
 
         try
         {
@@ -176,7 +176,7 @@ public sealed class ConnectionPoolLifecycleTests
                         Interlocked.Decrement(ref inUse);
                         SqliteConnectionPool.Return(key, session);
                     }
-                });
+                }, TestContext.Current.CancellationToken);
             }
 
             await Task.WhenAll(workers);
@@ -221,13 +221,13 @@ public sealed class ConnectionPoolLifecycleTests
         try
         {
             Task<SqliteSession> waiting = Task.Run(() => SqliteConnectionPool.Rent(key, ":memory:", 1, DefaultFlags));
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(waiting.IsCompleted);
 
             SqliteConnectionPool.Clear(key);
             occupied = null!;
 
-            Task completed = await Task.WhenAny(waiting, Task.Delay(WaitTimeout));
+            Task completed = await Task.WhenAny(waiting, Task.Delay(WaitTimeout, TestContext.Current.CancellationToken));
             Assert.Same(waiting, completed);
 
             SqliteSession replacement = await waiting;
@@ -246,18 +246,18 @@ public sealed class ConnectionPoolLifecycleTests
     public async Task Clear_releases_an_async_waiter_and_allows_a_new_pool_to_be_created()
     {
         string key = NewPoolKey();
-        SqliteSession occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags);
+        SqliteSession occupied = await SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags, TestContext.Current.CancellationToken);
 
         try
         {
-            Task<SqliteSession> waiting = SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags);
-            await Task.Delay(100);
+            Task<SqliteSession> waiting = SqliteConnectionPool.RentAsync(key, ":memory:", 1, DefaultFlags, TestContext.Current.CancellationToken);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(waiting.IsCompleted);
 
             SqliteConnectionPool.Clear(key);
             occupied = null!;
 
-            Task completed = await Task.WhenAny(waiting, Task.Delay(WaitTimeout));
+            Task completed = await Task.WhenAny(waiting, Task.Delay(WaitTimeout, TestContext.Current.CancellationToken));
             Assert.Same(waiting, completed);
 
             SqliteSession replacement = await waiting;
@@ -281,8 +281,8 @@ public sealed class ConnectionPoolLifecycleTests
 
         try
         {
-            Task<SqliteSession> rentOnB = SqliteConnectionPool.RentAsync(keyB, ":memory:", 1, DefaultFlags);
-            Task completed = await Task.WhenAny(rentOnB, Task.Delay(WaitTimeout));
+            Task<SqliteSession> rentOnB = SqliteConnectionPool.RentAsync(keyB, ":memory:", 1, DefaultFlags, TestContext.Current.CancellationToken);
+            Task completed = await Task.WhenAny(rentOnB, Task.Delay(WaitTimeout, TestContext.Current.CancellationToken));
             Assert.Same(rentOnB, completed);
 
             SqliteSession sessionB = await rentOnB;
