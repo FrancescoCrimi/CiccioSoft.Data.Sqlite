@@ -55,7 +55,7 @@ public sealed class ConnectionPoolConcurrencyTests
                         Interlocked.Decrement(ref active);
                         SqliteConnectionPool.Return(key, session);
                     }
-                });
+                }, TestContext.Current.CancellationToken);
             }
 
             await WithTimeout(Task.WhenAll(workers));
@@ -79,18 +79,18 @@ public sealed class ConnectionPoolConcurrencyTests
         try
         {
             Task<SqliteSession> asyncWaiter = SqliteConnectionPool.RentAsync(
-                key, ":memory:", maxPoolSize, DefaultFlags);
+                key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken);
             Task<SqliteSession> syncWaiter = Task.Run(
                 () => SqliteConnectionPool.Rent(key, ":memory:", maxPoolSize, DefaultFlags));
 
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
             Assert.False(asyncWaiter.IsCompleted);
             Assert.False(syncWaiter.IsCompleted);
 
             SqliteConnectionPool.Return(key, occupied);
             occupied = null!;
 
-            Task winner = await Task.WhenAny(asyncWaiter, syncWaiter).WaitAsync(TestTimeout);
+            Task winner = await Task.WhenAny(asyncWaiter, syncWaiter).WaitAsync(TestTimeout, TestContext.Current.CancellationToken);
             SqliteSession first = winner == asyncWaiter
                 ? await asyncWaiter
                 : await syncWaiter;
@@ -99,8 +99,8 @@ public sealed class ConnectionPoolConcurrencyTests
 
             Task secondTask = winner == asyncWaiter ? syncWaiter : asyncWaiter;
             SqliteSession second = winner == asyncWaiter
-                ? await syncWaiter.WaitAsync(TestTimeout)
-                : await asyncWaiter.WaitAsync(TestTimeout);
+                ? await syncWaiter.WaitAsync(TestTimeout, TestContext.Current.CancellationToken)
+                : await asyncWaiter.WaitAsync(TestTimeout, TestContext.Current.CancellationToken);
 
             Assert.True(first.IsValid());
             Assert.True(second.IsValid());
@@ -125,16 +125,16 @@ public sealed class ConnectionPoolConcurrencyTests
             for (int round = 0; round < rounds; round++)
             {
                 SqliteSession occupied = await SqliteConnectionPool.RentAsync(
-                    key, ":memory:", 1, DefaultFlags);
+                    key, ":memory:", 1, DefaultFlags, TestContext.Current.CancellationToken);
 
                 Task<SqliteSession> waiter = SqliteConnectionPool.RentAsync(
-                    key, ":memory:", 1, DefaultFlags);
+                    key, ":memory:", 1, DefaultFlags, TestContext.Current.CancellationToken);
 
-                await Task.Delay(1);
+                await Task.Delay(1, TestContext.Current.CancellationToken);
                 SqliteConnectionPool.Clear(key);
                 occupied = null!;
 
-                SqliteSession replacement = await waiter.WaitAsync(TestTimeout);
+                SqliteSession replacement = await waiter.WaitAsync(TestTimeout, TestContext.Current.CancellationToken);
                 Assert.True(replacement.IsValid());
                 SqliteConnectionPool.Return(key, replacement);
             }
@@ -156,10 +156,10 @@ public sealed class ConnectionPoolConcurrencyTests
             for (int iteration = 0; iteration < iterations; iteration++)
             {
                 SqliteSession session = await SqliteConnectionPool.RentAsync(
-                    key, ":memory:", 2, DefaultFlags);
+                    key, ":memory:", 2, DefaultFlags, TestContext.Current.CancellationToken);
 
-                Task returnTask = Task.Run(() => SqliteConnectionPool.Return(key, session));
-                Task clearTask = Task.Run(() => SqliteConnectionPool.Clear(key));
+                Task returnTask = Task.Run(() => SqliteConnectionPool.Return(key, session), TestContext.Current.CancellationToken);
+                Task clearTask = Task.Run(() => SqliteConnectionPool.Clear(key), TestContext.Current.CancellationToken);
 
                 await WithTimeout(Task.WhenAll(returnTask, clearTask));
             }
@@ -175,8 +175,8 @@ public sealed class ConnectionPoolConcurrencyTests
     {
         string key = NewPoolKey();
         const int maxPoolSize = 2;
-        SqliteSession first = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags);
-        SqliteSession second = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags);
+        SqliteSession first = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken);
+        SqliteSession second = await SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken);
 
         try
         {
@@ -188,7 +188,7 @@ public sealed class ConnectionPoolConcurrencyTests
                     using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(10));
                     await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
                         SqliteConnectionPool.RentAsync(key, ":memory:", maxPoolSize, DefaultFlags, cts.Token));
-                });
+                }, TestContext.Current.CancellationToken);
             }
 
             await WithTimeout(Task.WhenAll(cancelled));
@@ -199,9 +199,9 @@ public sealed class ConnectionPoolConcurrencyTests
             second = null!;
 
             SqliteSession replacementA = await SqliteConnectionPool.RentAsync(
-                key, ":memory:", maxPoolSize, DefaultFlags).WaitAsync(TestTimeout);
+                key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken).WaitAsync(TestTimeout, TestContext.Current.CancellationToken);
             SqliteSession replacementB = await SqliteConnectionPool.RentAsync(
-                key, ":memory:", maxPoolSize, DefaultFlags).WaitAsync(TestTimeout);
+                key, ":memory:", maxPoolSize, DefaultFlags, TestContext.Current.CancellationToken).WaitAsync(TestTimeout, TestContext.Current.CancellationToken);
 
             Assert.True(replacementA.IsValid());
             Assert.True(replacementB.IsValid());
