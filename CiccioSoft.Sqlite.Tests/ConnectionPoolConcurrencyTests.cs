@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CiccioSoft.Sqlite;
 using Xunit;
+using System.Linq;
 
 namespace CiccioSoft.Sqlite.Tests;
 
@@ -23,63 +24,166 @@ public sealed class ConnectionPoolConcurrencyTests
 
     private static string NewPoolKey() => $"stress-test-{Guid.NewGuid():N}";
 
-    [Fact]
-    public async Task Many_async_workers_can_rent_and_return_repeatedly()
+    // [Fact]
+    // public async Task Many_async_workers_can_rent_and_return_repeatedly()
+    // {
+    //     string key = NewPoolKey();
+    //     const int maxPoolSize = 4;
+    //     const int workerCount = 32;
+    //     const int iterations = 100;
+    //     int active = 0;
+    //     int maximumActive = 0;
+    //     var activeSessions = new ConcurrentDictionary<SqliteSession, byte>();
+    //     var allSessions = new ConcurrentDictionary<SqliteSession, byte>();
+
+    //     try
+    //     {
+    //         Task[] workers = new Task[workerCount];
+    //         for (int i = 0; i < workerCount; i++)
+    //         {
+    //             workers[i] = Task.Run(async () =>
+    //             {
+    //                 for (int iteration = 0; iteration < iterations; iteration++)
+    //                 {
+    //                     SqliteSession session = await SqliteConnectionPool.RentAsync(
+    //                         key, ":memory:", maxPoolSize, DefaultFlags,
+    //                         TestContext.Current.CancellationToken);
+
+    //                     try
+    //                     {
+    //                         Assert.True(allSessions.TryAdd(session, 0));
+    //                         Assert.True(activeSessions.TryAdd(session, 0),
+    //                             "The same physical session was leased concurrently.");
+
+    //                         int current = Interlocked.Increment(ref active);
+    //                         UpdateMaximum(ref maximumActive, current);
+
+    //                         await Task.Yield();
+    //                     }
+    //                     finally
+    //                     {
+    //                         Interlocked.Decrement(ref active);
+    //                         Assert.True(activeSessions.TryRemove(session, out _));
+    //                         SqliteConnectionPool.Return(key, session);
+    //                     }
+    //                 }
+    //             }, TestContext.Current.CancellationToken);
+    //         }
+
+    //         await WithTimeout(Task.WhenAll(workers));
+
+    //         Assert.InRange(maximumActive, 1, maxPoolSize);
+    //         Assert.InRange(allSessions.Count, 1, maxPoolSize);
+    //         Assert.Empty(activeSessions);
+    //     }
+    //     finally
+    //     {
+    //         SqliteConnectionPool.Clear(key);
+    //     }
+    // }
+
+
+[Fact]
+public async Task Many_async_workers_can_rent_and_return_repeatedly()
+{
+    string key = NewPoolKey();
+
+    const int workerCount = 32;
+    const int iterationsPerWorker = 100;
+    const int maxPoolSize = 4;
+
+    // string connectionString = CreateConnectionString();
+    // string dataSource = CreateDataSource();
+
+    SqliteConnectionPool.Clear(key);
+
+    var allSessions = new ConcurrentDictionary<SqliteSession, byte>();
+    var activeSessions = new ConcurrentDictionary<SqliteSession, byte>();
+
+    int peakActiveSessions = 0;
+    int completedIterations = 0;
+
+    async Task Worker()
     {
-        string key = NewPoolKey();
-        const int maxPoolSize = 4;
-        const int workerCount = 32;
-        const int iterations = 100;
-        int active = 0;
-        int maximumActive = 0;
-        var activeSessions = new ConcurrentDictionary<SqliteSession, byte>();
-        var allSessions = new ConcurrentDictionary<SqliteSession, byte>();
-
-        try
+        for (int i = 0; i < iterationsPerWorker; i++)
         {
-            Task[] workers = new Task[workerCount];
-            for (int i = 0; i < workerCount; i++)
+            SqliteSession session =
+                await SqliteConnectionPool.RentAsync(
+                    key,
+                    ":memory:",
+                    maxPoolSize,
+                    OpenFlags.ReadWrite | OpenFlags.Create);
+
+            try
             {
-                workers[i] = Task.Run(async () =>
+                // La stessa istanza fisica può essere riutilizzata.
+                allSessions.TryAdd(session, 0);
+
+                // Questa è la vera proprietà di concorrenza:
+                // una sessione non può essere leased contemporaneamente
+                // da due consumer.
+                Assert.True(
+                    activeSessions.TryAdd(session, 0),
+                    "La stessa SqliteSession è stata leased contemporaneamente da più worker.");
+
+                int active = activeSessions.Count;
+
+                int previousPeak;
+                do
                 {
-                    for (int iteration = 0; iteration < iterations; iteration++)
-                    {
-                        SqliteSession session = await SqliteConnectionPool.RentAsync(
-                            key, ":memory:", maxPoolSize, DefaultFlags,
-                            TestContext.Current.CancellationToken);
+                    previousPeak = Volatile.Read(ref peakActiveSessions);
 
-                        try
-                        {
-                            Assert.True(allSessions.TryAdd(session, 0));
-                            Assert.True(activeSessions.TryAdd(session, 0),
-                                "The same physical session was leased concurrently.");
+                    if (active <= previousPeak)
+                        break;
+                }
+                while (Interlocked.CompareExchange(
+                           ref peakActiveSessions,
+                           active,
+                           previousPeak) != previousPeak);
 
-                            int current = Interlocked.Increment(ref active);
-                            UpdateMaximum(ref maximumActive, current);
-
-                            await Task.Yield();
-                        }
-                        finally
-                        {
-                            Interlocked.Decrement(ref active);
-                            Assert.True(activeSessions.TryRemove(session, out _));
-                            SqliteConnectionPool.Return(key, session);
-                        }
-                    }
-                }, TestContext.Current.CancellationToken);
+                await Task.Yield();
             }
+            finally
+            {
+                Assert.True(
+                    activeSessions.TryRemove(session, out _),
+                    "La SqliteSession non risultava leased dal worker corrente.");
 
-            await WithTimeout(Task.WhenAll(workers));
+                SqliteConnectionPool.Return(
+                    key,
+                    session);
 
-            Assert.InRange(maximumActive, 1, maxPoolSize);
-            Assert.InRange(allSessions.Count, 1, maxPoolSize);
-            Assert.Empty(activeSessions);
-        }
-        finally
-        {
-            SqliteConnectionPool.Clear(key);
+                Interlocked.Increment(ref completedIterations);
+            }
         }
     }
+
+    Task[] workers = Enumerable
+        .Range(0, workerCount)
+        .Select(_ => Worker())
+        .ToArray();
+
+    await WithTimeout(Task.WhenAll(workers));
+
+    Assert.Equal(
+        workerCount * iterationsPerWorker,
+        completedIterations);
+
+    Assert.Empty(activeSessions);
+
+    Assert.InRange(
+        allSessions.Count,
+        1,
+        maxPoolSize);
+
+    Assert.InRange(
+        peakActiveSessions,
+        1,
+        maxPoolSize);
+
+    SqliteConnectionPool.Clear(key);
+}
+
 
     [Fact]
     public async Task Sync_and_async_waiters_can_compete_without_losing_a_release()
