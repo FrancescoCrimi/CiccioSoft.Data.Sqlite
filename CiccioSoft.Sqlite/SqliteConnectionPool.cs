@@ -112,7 +112,8 @@ public static class SqliteConnectionPool
                     connectionString,
                     state,
                     dataSource,
-                    openFlags);
+                    openFlags,
+                    maxPoolSize);
             }
 
             try
@@ -187,6 +188,7 @@ public static class SqliteConnectionPool
                     state,
                     dataSource,
                     openFlags,
+                    maxPoolSize,
                     cancellationToken).ConfigureAwait(false);
             }
 
@@ -227,7 +229,6 @@ public static class SqliteConnectionPool
             return;
         }
 
-        Waiter? waiter = null;
         bool dispose = false;
         bool handedOff = false;
 
@@ -253,19 +254,14 @@ public static class SqliteConnectionPool
             }
             else
             {
-                waiter = DequeueLiveWaiterLocked(state);
+                Waiter? waiter = DequeueLiveWaiterLocked(state);
 
                 if (waiter is not null)
                 {
-                    if (session.TryAcquireLease() &&
-                        waiter.Completion.TrySetResult(session))
-                    {
-                        handedOff = true;
-                    }
-                    else
-                    {
-                        waiter = null;
-                    }
+                    // The session was released above, so the lease can be
+                    // transferred atomically with respect to pool state.
+                    handedOff = session.TryAcquireLease() &&
+                                waiter.Completion.TrySetResult(session);
                 }
 
                 if (!handedOff)
@@ -274,10 +270,7 @@ public static class SqliteConnectionPool
         }
 
         if (dispose)
-        {
             session.Dispose();
-            return;
-        }
     }
 
     public static void Clear(string connectionString)
@@ -401,7 +394,8 @@ public static class SqliteConnectionPool
         string connectionString,
         PoolState state,
         string dataSource,
-        OpenFlags openFlags)
+        OpenFlags openFlags,
+        int maxPoolSize)
     {
         SqliteSession session;
 
@@ -430,7 +424,7 @@ public static class SqliteConnectionPool
                 return Rent(
                     connectionString,
                     dataSource,
-                    Math.Max(state.Count + 1, 1),
+                    maxPoolSize,
                     openFlags);
             }
 
@@ -445,6 +439,7 @@ public static class SqliteConnectionPool
         PoolState state,
         string dataSource,
         OpenFlags openFlags,
+        int maxPoolSize,
         CancellationToken cancellationToken)
     {
         SqliteSession session;
@@ -463,28 +458,41 @@ public static class SqliteConnectionPool
             throw;
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-
-        lock (state.Sync)
+        try
         {
-            if (!IsCurrentState(connectionString, state) ||
-                state.Retired)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (state.Sync)
             {
-                state.Count--;
-                session.Dispose();
-
-                return RentAsync(
-                    connectionString,
-                    dataSource,
-                    Math.Max(state.Count + 1, 1),
-                    openFlags,
-                    cancellationToken).GetAwaiter().GetResult();
+                if (!IsCurrentState(connectionString, state) ||
+                    state.Retired)
+                {
+                    state.Count--;
+                    session.Dispose();
+                    session = null!;
+                }
+                else
+                {
+                    state.Sessions.Add(session);
+                    return session;
+                }
             }
-
-            state.Sessions.Add(session);
+        }
+        catch
+        {
+            session.Dispose();
+            ReleaseCreationSlotAfterCancellation(
+                connectionString,
+                state);
+            throw;
         }
 
-        return session;
+        return await RentAsync(
+            connectionString,
+            dataSource,
+            maxPoolSize,
+            openFlags,
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static void ReleaseCreationSlot(
@@ -497,6 +505,25 @@ public static class SqliteConnectionPool
         {
             state.Count--;
 
+            if (IsCurrentState(connectionString, state) &&
+                !state.Retired)
+            {
+                waiter = DequeueLiveWaiterLocked(state);
+            }
+        }
+
+        waiter?.Completion.TrySetException(
+            PoolRetryException.Instance);
+    }
+
+    private static void ReleaseCreationSlotAfterCancellation(
+        string connectionString,
+        PoolState state)
+    {
+        Waiter? waiter = null;
+
+        lock (state.Sync)
+        {
             if (IsCurrentState(connectionString, state) &&
                 !state.Retired)
             {
