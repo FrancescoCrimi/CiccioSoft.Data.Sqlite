@@ -62,7 +62,7 @@ public class WriteString
     [GlobalSetup(Target = nameof(WriteString_Interop))]
     public void GlobalSetup_Interop()
     {
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        NativeLibrary.Configure(NativeSource.SourceGear);
         var option = new SqliteConnectionOptions
         {
             DataSource = DbFile,

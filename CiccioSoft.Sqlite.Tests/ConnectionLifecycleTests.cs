@@ -53,7 +53,7 @@ public sealed class ConnectionLifecycleTests
             ConcurrencyMode = SqliteConcurrencyMode.Native
         };
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             new SqliteConnection(option).Open());
 
         Assert.Equal(ResultCode.CantOpen, ex.PrimaryResultCode);

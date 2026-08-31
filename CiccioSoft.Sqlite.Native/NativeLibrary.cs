@@ -10,14 +10,14 @@ using System.Runtime.InteropServices;
 
 namespace CiccioSoft.Sqlite;
 
-public static class SqliteNativeLibrary
+public static class NativeLibrary
 {
     private static nint _cachedHandle;
-    private static SqliteNativeSource? _configured;
+    private static NativeSource? _configured;
     private static string? _customPath;
     private static readonly System.Threading.Lock _gate = new();
 
-    public static void Configure(SqliteNativeSource source, string? customPath = null)
+    public static void Configure(NativeSource source, string? customPath = null)
     {
         lock (_gate)
         {
@@ -34,25 +34,25 @@ public static class SqliteNativeLibrary
 
             string target = source switch
             {
-                SqliteNativeSource.Bundled =>
+                NativeSource.Bundled =>
                     OperatingSystem.IsWindows() ? "sqlite3" : "libsqlite3",
-                SqliteNativeSource.SourceGear =>
+                NativeSource.SourceGear =>
                     OperatingSystem.IsWindows() ? "e_sqlite3" : "libe_sqlite3",
-                SqliteNativeSource.System =>
+                NativeSource.System =>
                     OperatingSystem.IsWindows() ? "winsqlite3" : "libsqlite3",
-                SqliteNativeSource.Custom =>
+                NativeSource.Custom =>
                     customPath ?? throw new ArgumentException(
                         $"{source} richiede customPath valorizzato.", nameof(customPath)),
                 _ => throw new ArgumentOutOfRangeException(nameof(source))
             };
 
-            if (System.Runtime.InteropServices.NativeLibrary.TryLoad(target, typeof(SqliteNativeLibrary).Assembly, null, out nint handle))
+            if (System.Runtime.InteropServices.NativeLibrary.TryLoad(target, typeof(NativeLibrary).Assembly, null, out nint handle))
                 _cachedHandle = handle;
             else
                 throw new DllNotFoundException(
                     $"Impossibile caricare '{target}' per la sorgente {source}.");
 
-            System.Runtime.InteropServices.NativeLibrary.SetDllImportResolver(typeof(SqliteNativeLibrary).Assembly, Resolver);
+            System.Runtime.InteropServices.NativeLibrary.SetDllImportResolver(typeof(NativeLibrary).Assembly, Resolver);
             _configured = source;
             _customPath = customPath;
         }

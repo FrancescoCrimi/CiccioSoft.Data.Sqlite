@@ -78,7 +78,7 @@ public class ReadSpan
     [GlobalSetup(Target = nameof(ReadSpan_Interop))]
     public void Setup_Interop()
     {
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        Sqlite.NativeLibrary.Configure(Sqlite.NativeSource.SourceGear);
         var option = new SqliteConnectionOptions
         {
             DataSource = DbFile,

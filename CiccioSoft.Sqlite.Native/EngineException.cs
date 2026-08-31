@@ -12,9 +12,9 @@ namespace CiccioSoft.Sqlite;
 /// <summary>
 /// Represents an error returned by the native SQLite interop layer.
 /// </summary>
-public sealed unsafe class EngineException : Exception
+public sealed unsafe class Exception : System.Exception
 {
-    private EngineException(string message, ResultCode resultCode, string errorString, string errorMessage)
+    private Exception(string message, ResultCode resultCode, string errorString, string errorMessage)
         : base(message)
     {
         ResultCode = resultCode;
@@ -56,7 +56,7 @@ public sealed unsafe class EngineException : Exception
 
     internal SqliteErrorCategory Category { get; init; }
 
-    internal static EngineException CreateException(ConnectionSafeHandle connectionSafeHandle, ResultCode resultCode, string caller)
+    internal static Exception CreateException(ConnectionSafeHandle connectionSafeHandle, ResultCode resultCode, string caller)
     {
         byte* pErrStr = NativeMethods.sqlite3_errstr((int)resultCode);
         string errorString = Marshal.PtrToStringUTF8((nint)pErrStr) ?? "Unknown error code";
@@ -84,6 +84,6 @@ public sealed unsafe class EngineException : Exception
             $"ResultCode: {resultCode}, " +
             $"Message: {errorMessage}";
 
-        return new EngineException(message, resultCode, errorString, errorMessage);
+        return new Exception(message, resultCode, errorString, errorMessage);
     }
 }

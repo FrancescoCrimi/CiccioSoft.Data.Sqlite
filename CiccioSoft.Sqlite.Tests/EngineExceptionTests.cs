@@ -19,7 +19,7 @@ public sealed class EngineExceptionTests
         connection.Execute("CREATE TABLE t (id INTEGER PRIMARY KEY, email TEXT UNIQUE);");
         connection.Execute("INSERT INTO t VALUES (1, 'a@x.com');");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             connection.Execute("INSERT INTO t VALUES (2, 'a@x.com');"));
 
         Assert.Equal(ResultCode.Constraint, ex.PrimaryResultCode);
@@ -39,7 +39,7 @@ public sealed class EngineExceptionTests
     {
         using var connection = ConnectionFactory.OpenMemory();
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             connection.Prepare("NOT VALID SQL !!!"));
 
         Assert.Equal(ResultCode.Error, ex.PrimaryResultCode);
@@ -55,7 +55,7 @@ public sealed class EngineExceptionTests
             $"no-such-dir-{Guid.NewGuid():N}",
             "db.sqlite");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             Connection.Open(path, OpenFlags.ReadWrite));
 
         Assert.Equal(ResultCode.CantOpen, ex.PrimaryResultCode);
@@ -70,7 +70,7 @@ public sealed class EngineExceptionTests
         connection.Execute("CREATE TABLE t (id INTEGER PRIMARY KEY);");
         connection.Execute("INSERT INTO t VALUES (1);");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             connection.Execute("INSERT INTO t VALUES (1);"));
 
         Assert.Equal((ResultCode)((int)ex.ResultCode & 0xFF), ex.PrimaryResultCode);

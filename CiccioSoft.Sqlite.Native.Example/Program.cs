@@ -10,7 +10,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        NativeLibrary.Configure(NativeSource.SourceGear);
         new Example();
     }
 }

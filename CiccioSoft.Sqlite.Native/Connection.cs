@@ -64,7 +64,7 @@ public sealed unsafe class Connection : IDisposable
     /// </summary>
     /// <param name="filename">The path to the database file to be opened.</param>
     /// <returns>A new <see cref="Connection"/> instance representing the database connection.</returns>
-    /// <exception cref="EngineException">Thrown if the database cannot be opened.</exception>
+    /// <exception cref="Exception">Thrown if the database cannot be opened.</exception>
     public static Connection Open(string filename)
     {
         return Open(filename, OpenFlagsDefaults.Baseline | OpenFlags.ReadWrite | OpenFlags.Create);
@@ -77,7 +77,7 @@ public sealed unsafe class Connection : IDisposable
     /// <param name="flags">The SQLite open flags (for example <c>SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE</c>).</param>
     /// <param name="vfs">Optional VFS module name. Use <c>null</c> to use SQLite default VFS.</param>
     /// <returns>A new <see cref="Connection"/> connection.</returns>
-    /// <exception cref="EngineException">Thrown if the database cannot be opened.</exception>
+    /// <exception cref="Exception">Thrown if the database cannot be opened.</exception>
     public static Connection Open(string filename, OpenFlags flags, string? vfs = null)
     {
         // Controllo immediato sul null
@@ -114,7 +114,7 @@ public sealed unsafe class Connection : IDisposable
             if (result != ResultCode.OK)
             {
                 // 2. Estraiamo il messaggio nativo MENTRE l'handle è ancora vivo
-                var ex = EngineException.CreateException(connectionSafeHandle, result, $"{nameof(Connection)}.Open");
+                var ex = Exception.CreateException(connectionSafeHandle, result, $"{nameof(Connection)}.Open");
 
                 // 3. Ora che abbiamo i dati, liberiamo IMMEDIATAMENTE l'handle per evitare leak
                 connectionSafeHandle.Dispose();
@@ -212,7 +212,7 @@ public sealed unsafe class Connection : IDisposable
     /// </summary>
     /// <param name="sql">The SQL string to execute (e.g., 'CREATE TABLE', 'INSERT', 'VACUUM').</param>
     /// <exception cref="ObjectDisposedException">Thrown if the database connection is closed.</exception>
-    /// <exception cref="EngineException">Thrown if SQLite returns an error during execution.</exception>
+    /// <exception cref="Exception">Thrown if SQLite returns an error during execution.</exception>
     public void Execute(string sql)
     {
         ThrowIfInvalid();
@@ -227,7 +227,7 @@ public sealed unsafe class Connection : IDisposable
     /// <param name="sql">The SQL query string to compile.</param>
     /// <returns>A new <see cref="Statement"/> instance wrapping the compiled statement.</returns>
     /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
-    /// <exception cref="EngineException">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
+    /// <exception cref="Exception">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
     public Statement Prepare(string sql)
     {
         return Prepare(sql, PrepareFlags.None);
@@ -240,7 +240,7 @@ public sealed unsafe class Connection : IDisposable
     /// <param name="prepareFlags">Flags such as <see cref="PrepareFlags.Persistent"/> or <see cref="PrepareFlags.NoVtab"/>.</param>
     /// <returns>A new <see cref="Statement"/> instance wrapping the compiled statement.</returns>
     /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
-    /// <exception cref="EngineException">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
+    /// <exception cref="Exception">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
     public Statement Prepare(string sql, PrepareFlags prepareFlags = PrepareFlags.None)
     {
         ThrowIfInvalid();
@@ -283,7 +283,7 @@ public sealed unsafe class Connection : IDisposable
     /// </returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sqlByteOffset"/> is outside the SQL byte buffer range.</exception>
     /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
-    /// <exception cref="EngineException">Thrown if the statement cannot be prepared.</exception>
+    /// <exception cref="Exception">Thrown if the statement cannot be prepared.</exception>
     public Statement? Prepare(string sql, int sqlByteOffset, out int nextSqlByteOffset, PrepareFlags prepareFlags = PrepareFlags.None)
     {
         ThrowIfInvalid();
@@ -397,7 +397,7 @@ public sealed unsafe class Connection : IDisposable
     /// </summary>
     /// <param name="schemaName">The name of the schema (e.g., "main"). Pass null for the global connection state.</param>
     /// <returns>The specific transaction state.</returns>
-    /// <exception cref="EngineException">Thrown if the schema name is invalid.</exception>
+    /// <exception cref="Exception">Thrown if the schema name is invalid.</exception>
     public TransactionState TransactionState(string? schemaName = null)
     {
         ThrowIfInvalid();
@@ -435,7 +435,7 @@ public sealed unsafe class Connection : IDisposable
     /// </summary>
     /// <param name="databaseName">The name of the database (e.g., "main", "temp").</param>
     /// <returns>True if the database is read-only; false if it is read/write.</returns>
-    /// <exception cref="EngineException">Thrown if the database name is not found on this connection.</exception>
+    /// <exception cref="Exception">Thrown if the database name is not found on this connection.</exception>
     public bool DbReadOnly(string databaseName = "main")
     {
         ThrowIfInvalid();
@@ -528,7 +528,7 @@ public sealed unsafe class Connection : IDisposable
     /// esiste solo per <c>SqliteConnection</c> in modalità Coordinated (Livello 3), mai
     /// per uso diretto su <see cref="Connection"/>. Qualunque esito diverso da
     /// <see cref="ResultCode.OK"/> (inclusi <see cref="ResultCode.Busy"/> e simili)
-    /// solleva <see cref="EngineException"/> — nessuna gestione silenziosa del "non
+    /// solleva <see cref="Exception"/> — nessuna gestione silenziosa del "non
     /// completato": la decisione se e come ritentare spetta al chiamante.
     /// </remarks>
     public SqliteCheckpointResult WalCheckpointCore(SqliteCheckpointMode mode)
@@ -608,7 +608,7 @@ public sealed unsafe class Connection : IDisposable
     /// </para>
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown if tableName or columnName is null.</exception>
-    /// <exception cref="EngineException">Thrown if the metadata cannot be retrieved.</exception>
+    /// <exception cref="Exception">Thrown if the metadata cannot be retrieved.</exception>
     public void GetTableColumnMetadata(string tableName,
                                        string columnName,
                                        out string? dataType,
@@ -723,12 +723,12 @@ public sealed unsafe class Connection : IDisposable
     {
         if (result == ResultCode.OK)
             return;
-        throw EngineException.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
+        throw Exception.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
     }
 
     private void ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
-        throw EngineException.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
+        throw Exception.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
     }
 
     #endregion

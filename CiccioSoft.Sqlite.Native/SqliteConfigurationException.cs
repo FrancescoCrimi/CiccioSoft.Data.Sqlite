@@ -11,16 +11,16 @@ namespace CiccioSoft.Sqlite;
 /// <summary>
 /// Segnala una configurazione non valida rilevata prima di qualunque interazione con
 /// SQLite (build nativa incompatibile, combinazione identità/modalità non ammessa, ecc.).
-/// Non deriva da <see cref="EngineException"/>: non rappresenta un errore restituito dal
+/// Non deriva da <see cref="Exception"/>: non rappresenta un errore restituito dal
 /// motore nativo, ma un problema rilevato dalla libreria stessa.
 /// </summary>
-public sealed class SqliteConfigurationException : Exception
+public sealed class SqliteConfigurationException : System.Exception
 {
     public SqliteConfigurationException(string message) : base(message)
     {
     }
 
-    public SqliteConfigurationException(string message, Exception innerException)
+    public SqliteConfigurationException(string message, System.Exception innerException)
         : base(message, innerException)
     {
     }

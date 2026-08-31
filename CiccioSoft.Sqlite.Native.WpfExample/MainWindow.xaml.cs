@@ -25,7 +25,7 @@ public partial class MainWindow : Window
 
         try
         {
-            SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+            NativeLibrary.Configure(NativeSource.SourceGear);
             _connection = Connection.Open("test.db");
         }
         catch
@@ -60,7 +60,7 @@ public partial class MainWindow : Window
                 VisualizzatoreImmagine.Source = ToBitmapImage(OttieniByteBmpDiEsempio());
             }
         }
-        catch (Exception)
+        catch (System.Exception)
         {
             TestoDescrizione.Text = "Errore caricamento immagine.";
             VisualizzatoreImmagine.Source = ToBitmapImage(OttieniByteBmpDiEsempio());
@@ -111,7 +111,7 @@ public partial class MainWindow : Window
             _connection.Execute("COMMIT;");
 
         }
-        catch (Exception)
+        catch (System.Exception)
         {
             // 3. SE QUALCOSA FALLISCE: Annulliamo tutto e liberiamo il database immediatamente
             _connection.Execute("ROLLBACK;");

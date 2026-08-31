@@ -218,7 +218,7 @@ public sealed class SqliteConnection : IDisposable
     /// </returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sqlByteOffset"/> is outside the SQL byte buffer range.</exception>
     /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
-    /// <exception cref="EngineException">Thrown if the statement cannot be prepared.</exception>
+    /// <exception cref="Exception">Thrown if the statement cannot be prepared.</exception>
     public Statement? Prepare(string sql, int sqlByteOffset, out int nextSqlByteOffset, PrepareFlags prepareFlags = PrepareFlags.None)
     {
         return ActiveConnection.Prepare(sql, sqlByteOffset, out nextSqlByteOffset, prepareFlags);
@@ -289,7 +289,7 @@ public sealed class SqliteConnection : IDisposable
     /// </summary>
     /// <param name="schemaName">The name of the schema (e.g., "main"). Pass null for the global connection state.</param>
     /// <returns>The specific transaction state.</returns>
-    /// <exception cref="EngineException">Thrown if the schema name is invalid.</exception>
+    /// <exception cref="Exception">Thrown if the schema name is invalid.</exception>
     public TransactionState TransactionState(string? schemaName = null)
     {
         return ActiveConnection.TransactionState(schemaName);
@@ -300,7 +300,7 @@ public sealed class SqliteConnection : IDisposable
     /// </summary>
     /// <param name="databaseName">The name of the database (e.g., "main", "temp").</param>
     /// <returns>True if the database is read-only; false if it is read/write.</returns>
-    /// <exception cref="EngineException">Thrown if the database name is not found on this connection.</exception>
+    /// <exception cref="Exception">Thrown if the database name is not found on this connection.</exception>
     public bool DbReadOnly(string databaseName = "main")
     {
         return ActiveConnection.DbReadOnly(databaseName);
@@ -370,7 +370,7 @@ public sealed class SqliteConnection : IDisposable
     /// </para>
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown if tableName or columnName is null.</exception>
-    /// <exception cref="EngineException">Thrown if the metadata cannot be retrieved.</exception>
+    /// <exception cref="Exception">Thrown if the metadata cannot be retrieved.</exception>
     public void GetTableColumnMetadata(string tableName,
                                        string columnName,
                                        out string? dataType,

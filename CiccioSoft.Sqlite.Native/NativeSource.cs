@@ -6,7 +6,7 @@
 
 namespace CiccioSoft.Sqlite;
 
-public enum SqliteNativeSource
+public enum NativeSource
 {
     Bundled,        // libreria nativa inclusa nel pacchetto NuGet
     SourceGear,     // bundled provenienza SourceGear.sqlite3

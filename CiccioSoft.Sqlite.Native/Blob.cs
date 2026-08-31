@@ -55,7 +55,7 @@ public sealed unsafe class Blob : IDisposable
     /// <param name="databaseName">The attached database name (default "main").</param>
     /// <returns>A new <see cref="Blob"/> instance wrapping the open handle.</returns>
     /// <exception cref="ObjectDisposedException">Thrown if the connection is no longer valid.</exception>
-    /// <exception cref="EngineException">Thrown if the BLOB cannot be opened (e.g. row/column not found).</exception>
+    /// <exception cref="Exception">Thrown if the BLOB cannot be opened (e.g. row/column not found).</exception>
     internal static Blob Open(Connection connection,
                               string tableName,
                               string columnName,
@@ -92,7 +92,7 @@ public sealed unsafe class Blob : IDisposable
             if (result != ResultCode.OK)
             {
                 blobSafeHandle.Dispose();
-                throw EngineException.CreateException(connection.Handle, result, $"{nameof(Blob)}.Open on {tableName}.{columnName} (rowid {rowId})");
+                throw Exception.CreateException(connection.Handle, result, $"{nameof(Blob)}.Open on {tableName}.{columnName} (rowid {rowId})");
             }
 
             return new Blob(blobSafeHandle, connection.Handle);
@@ -115,7 +115,7 @@ public sealed unsafe class Blob : IDisposable
     /// </summary>
     /// <param name="destination">The buffer to fill; its length determines how many bytes are read.</param>
     /// <param name="blobOffset">The zero-based byte offset within the BLOB to start reading from.</param>
-    /// <exception cref="EngineException">Thrown if the read fails (e.g. offset+length out of range).</exception>
+    /// <exception cref="Exception">Thrown if the read fails (e.g. offset+length out of range).</exception>
     public void Read(Span<byte> destination, int blobOffset)
     {
         ThrowIfInvalid();
@@ -138,7 +138,7 @@ public sealed unsafe class Blob : IDisposable
     /// </summary>
     /// <param name="source">The data to write.</param>
     /// <param name="blobOffset">The zero-based byte offset within the BLOB to start writing at.</param>
-    /// <exception cref="EngineException">Thrown if the write fails (e.g. read-only handle, offset out of range).</exception>
+    /// <exception cref="Exception">Thrown if the write fails (e.g. read-only handle, offset out of range).</exception>
     public void Write(ReadOnlySpan<byte> source, int blobOffset)
     {
         ThrowIfInvalid();
@@ -159,7 +159,7 @@ public sealed unsafe class Blob : IDisposable
     /// avoiding the cost of closing and reopening a new handle.
     /// </summary>
     /// <param name="rowId">The rowid of the new row to point to.</param>
-    /// <exception cref="EngineException">Thrown if the target row/column is not found or reopen fails.</exception>
+    /// <exception cref="Exception">Thrown if the target row/column is not found or reopen fails.</exception>
     public void Reopen(long rowId)
     {
         ThrowIfInvalid();
@@ -180,7 +180,7 @@ public sealed unsafe class Blob : IDisposable
     {
         if (res == ResultCode.OK)
             return;
-        throw EngineException.CreateException(_connectionSafeHandle, res, $"{nameof(Blob)}.{caller}");
+        throw Exception.CreateException(_connectionSafeHandle, res, $"{nameof(Blob)}.{caller}");
     }
 
     #endregion

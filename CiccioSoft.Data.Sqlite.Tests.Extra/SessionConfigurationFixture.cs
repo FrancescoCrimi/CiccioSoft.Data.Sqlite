@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT.
 
 using System.Threading.Tasks;
-using CiccioSoft.Sqlite;
 using Xunit;
 
 namespace CiccioSoft.Data.Sqlite;
@@ -16,7 +15,7 @@ public class SessionConfigurationFixture : IAsyncLifetime
     {
         // 🚀 QUESTO CODICE GIRA SOLO QUANDO I TEST PARTONO DAVVERO
         // Viene eseguito una sola volta all'avvio della sessione per questo assembly
-        SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
+        CiccioSoft.Sqlite.NativeLibrary.Configure(CiccioSoft.Sqlite.NativeSource.SourceGear);
         return ValueTask.CompletedTask;
     }
 

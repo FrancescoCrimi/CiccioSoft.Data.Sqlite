@@ -116,7 +116,7 @@ public sealed class BlobTests
         using (connection)
         using (var blob = connection.OpenBlob("files", "payload", rowId, readWrite: false))
         {
-            var ex = Assert.Throws<EngineException>(() =>
+            var ex = Assert.Throws<Exception>(() =>
                 blob.Write(new byte[] { 1, 2, 3, 4 }, 0));
 
             Assert.Equal(ResultCode.ReadOnly, ex.PrimaryResultCode);
@@ -131,7 +131,7 @@ public sealed class BlobTests
         using (var blob = connection.OpenBlob("files", "payload", rowId))
         {
             byte[] buffer = new byte[8];
-            var ex = Assert.Throws<EngineException>(() => blob.Read(buffer, 0));
+            var ex = Assert.Throws<Exception>(() => blob.Read(buffer, 0));
             Assert.Equal(ResultCode.Error, ex.PrimaryResultCode);
         }
     }
@@ -142,7 +142,7 @@ public sealed class BlobTests
         using var connection = ConnectionFactory.OpenMemory();
         connection.Execute("CREATE TABLE files (id INTEGER PRIMARY KEY, payload BLOB);");
 
-        var ex = Assert.Throws<EngineException>(() =>
+        var ex = Assert.Throws<Exception>(() =>
             connection.OpenBlob("files", "payload", rowId: 999));
 
         Assert.Equal(ResultCode.Error, ex.PrimaryResultCode);

@@ -26,7 +26,7 @@ internal sealed class SingleWriterCoordinator
         {
             if (ct.IsCancellationRequested) { esito.TrySetCanceled(ct); return; }
             try { esito.TrySetResult(await lavoro().ConfigureAwait(false)); }
-            catch (Exception ex) { esito.TrySetException(ex); }
+            catch (System.Exception ex) { esito.TrySetException(ex); }
         }, ct).ConfigureAwait(false);
         return await esito.Task.ConfigureAwait(false);
     }

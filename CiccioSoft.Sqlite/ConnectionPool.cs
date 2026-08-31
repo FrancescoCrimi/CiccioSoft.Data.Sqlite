@@ -85,7 +85,7 @@ internal sealed class SqliteConnectionPool
         }
     }
 
-    public async Task ReturnAsync(PooledConnection pooled, Exception? observedError)
+    public async Task ReturnAsync(PooledConnection pooled, System.Exception? observedError)
     {
         var category = ClassifyObservedError(observedError);
 
@@ -111,10 +111,10 @@ internal sealed class SqliteConnectionPool
         // contro la capacità del pool — è solo tornata disponibile nel canale idle.
     }
 
-    private static SqliteErrorCategory ClassifyObservedError(Exception? observedError) => observedError switch
+    private static SqliteErrorCategory ClassifyObservedError(System.Exception? observedError) => observedError switch
     {
         null => SqliteErrorCategory.None,
-        EngineException ee => SqliteErrorClassifier.Classify(ee.ResultCode),
+        Exception ee => SqliteErrorClassifier.Classify(ee.ResultCode),
         // Un'eccezione non riconosciuta (non EngineException) durante l'uso di una
         // connessione rentata lascia lo stato nativo incerto: trattarla come Fatal
         // (poisoning) è la scelta prudente — assumere "nessun problema" per omissione
@@ -130,7 +130,7 @@ internal sealed class SqliteConnectionPool
             try
             {
                 var opened = _openPooledConnection();   // può fallire: disco pieno, permessi,
-                                                          // file rimosso concorrentemente
+                                                        // file rimosso concorrentemente
                 Interlocked.Increment(ref _liveCount);
                 await _idle.Writer.WriteAsync(opened).ConfigureAwait(false);
             }
@@ -140,7 +140,7 @@ internal sealed class SqliteConnectionPool
                 throw;
             }
         }
-        catch (Exception ex)
+        catch (System.Exception ex)
         {
             // Nessun rilancio: questo metodo è invocato senza await, rilanciare qui
             // produrrebbe comunque un'eccezione non osservata — esattamente il problema
@@ -150,7 +150,7 @@ internal sealed class SqliteConnectionPool
     }
 }
 
-public sealed class ReplenishFailedEventArgs(Exception exception) : EventArgs
+public sealed class ReplenishFailedEventArgs(System.Exception exception) : EventArgs
 {
-    public Exception Exception { get; } = exception;
+    public System.Exception Exception { get; } = exception;
 }

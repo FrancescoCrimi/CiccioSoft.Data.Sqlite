@@ -128,7 +128,7 @@ public sealed class StatementLifecycleTests
         connection.Execute("INSERT INTO t VALUES (1);");
 
         using var stmt = connection.Prepare("INSERT INTO t VALUES (1);");
-        var ex = Assert.Throws<EngineException>(() => stmt.Step());
+        var ex = Assert.Throws<Exception>(() => stmt.Step());
 
         Assert.Equal(ResultCode.Constraint, ex.PrimaryResultCode);
         Assert.Contains("Step", ex.Message, StringComparison.Ordinal);
