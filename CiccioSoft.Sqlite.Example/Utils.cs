@@ -17,22 +17,22 @@ internal static class Utils
 
     internal static void WriteUtf8File(int length)
     {
-        var utf8Buffer = Utils.GenUtf8LoremIpsum(length);          // Gen Utf8
+        var utf8Buffer = Utils.GenUtf8LoremIpsum(length);        // Gen Utf8
         Console.OutputEncoding = Encoding.UTF8;                  // Forza la console in UTF-8
-        Console.Out.Write(Encoding.UTF8.GetString(utf8Buffer));     // Output console
+        Console.Out.Write(Encoding.UTF8.GetString(utf8Buffer));  // Output console
         Utils.SalvaFileUtf8("TxtUtf8.txt", utf8Buffer);          // Salva su file
     }
 
     internal static void WriteUtf16File(int length)
     {
-        var utf16Buffer = Utils.GenUtf16LoremIpsum(length);     // Gen Utf16
+        var utf16Buffer = Utils.GenUtf16LoremIpsum(length);      // Gen Utf16
         Console.WriteLine(utf16Buffer);                          // Console
         Utils.SalvaFileUtf16("TxtUtf16.txt", utf16Buffer);       // Salva su file
     }
 
     internal static void WriteUtf8ZipFile(int length)
     {
-        var utf8Buffer = Utils.GenUtf8LoremIpsum(length);          // Gen Utf8
+        var utf8Buffer = Utils.GenUtf8LoremIpsum(length);        // Gen Utf8
         Utils.SaveToZip("blob.zip", "blob.txt", utf8Buffer);
     }
 

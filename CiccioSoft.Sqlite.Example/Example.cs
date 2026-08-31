@@ -31,7 +31,7 @@ public class Example
 
     public Example()
     {
-        ConsoleOutput.Section("CiccioSoft.Sqlite.NewExample");
+        ConsoleOutput.Section("CiccioSoft.Sqlite.Example");
         var db = OpenConnection();
         ExecuteDdl(db);
         ExecuteInsert(db);

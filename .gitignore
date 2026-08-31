@@ -500,16 +500,10 @@ write.db-shm
 write.db-wal
 
 sqlite3.dll
-
 test.db
 app.db
 example.db
 backup.db
-
-backup.zip
-restored-backup.zip
-blob.zip
-restored-blob.zip
 
 file*.jpg
 
