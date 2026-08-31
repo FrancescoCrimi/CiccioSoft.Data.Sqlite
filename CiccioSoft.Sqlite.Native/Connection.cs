@@ -39,6 +39,9 @@ public sealed unsafe class ConnectionSafeHandle : SafeHandle
 public sealed unsafe class Connection : IDisposable
 {
     private readonly ConnectionSafeHandle _handle;
+    private readonly object _transactionSyncRoot = new();
+    private Native.Transaction? _rootTransaction;
+
     // Fix here
     // public ConnectionPhysicalState State { get; internal set; } = ConnectionPhysicalState.Created;
     public ConnectionPhysicalState State { get; set; } = ConnectionPhysicalState.Created;
@@ -188,7 +191,55 @@ public sealed unsafe class Connection : IDisposable
     // esiste alcuno stato interno da marcare.
 
 
+    public Native.Transaction BeginTransaction(Sqlite.TransactionMode mode = TransactionMode.Deferred)
+    {
+        ThrowIfInvalid();
+
+        if (!Enum.IsDefined(mode))
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, "The transaction mode is not supported.");
+
+        Native.Transaction transaction;
+
+        lock (_transactionSyncRoot)
+        {
+            if (_rootTransaction is not null)
+            {
+                throw new InvalidOperationException("A root transaction is already active for this connection.");
+            }
+
+            transaction = new Native.Transaction(this);
+            _rootTransaction = transaction;
+        }
+
+        try
+        {
+            Execute(GetBeginSql(mode));
+            // transaction.Activate();
+            return transaction;
+        }
+        catch
+        {
+            // transaction.MarkFailed();
+            // ClearRootTransaction(transaction);
+            throw;
+        }
+    }
+
     #region method aka Sqlite function
+
+    /// <summary>
+    /// One-Step Query Execution Interface.
+    /// </summary>
+    /// <param name="sql">The SQL string to execute (e.g., 'CREATE TABLE', 'INSERT', 'VACUUM').</param>
+    /// <exception cref="ObjectDisposedException">Thrown if the database connection is closed.</exception>
+    /// <exception cref="Exception">Thrown if SQLite returns an error during execution.</exception>
+    public void Execute(string sql)
+    {
+        ThrowIfInvalid();
+
+        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
+        Execute(utf8Buffer.AsSpan());
+    }
 
     public void Execute(ReadOnlySpan<byte> sql)
     {
@@ -205,20 +256,6 @@ public sealed unsafe class Connection : IDisposable
             GC.KeepAlive(_handle);
             CheckResult(result);
         }
-    }
-
-    /// <summary>
-    /// One-Step Query Execution Interface.
-    /// </summary>
-    /// <param name="sql">The SQL string to execute (e.g., 'CREATE TABLE', 'INSERT', 'VACUUM').</param>
-    /// <exception cref="ObjectDisposedException">Thrown if the database connection is closed.</exception>
-    /// <exception cref="Exception">Thrown if SQLite returns an error during execution.</exception>
-    public void Execute(string sql)
-    {
-        ThrowIfInvalid();
-
-        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
-        Execute(utf8Buffer.AsSpan());
     }
 
     /// <summary>
@@ -729,6 +766,17 @@ public sealed unsafe class Connection : IDisposable
     private void ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
         throw Exception.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
+    }
+
+    private static string GetBeginSql(TransactionMode mode)
+    {
+        return mode switch
+        {
+            TransactionMode.Deferred => "BEGIN DEFERRED;",
+            TransactionMode.Immediate => "BEGIN IMMEDIATE;",
+            TransactionMode.Exclusive => "BEGIN EXCLUSIVE;",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "The transaction mode is not supported.")
+        };
     }
 
     #endregion
