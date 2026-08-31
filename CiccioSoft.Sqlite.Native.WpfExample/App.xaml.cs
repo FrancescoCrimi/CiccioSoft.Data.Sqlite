@@ -4,11 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-using System.Configuration;
-using System.Data;
 using System.Windows;
 
-namespace CiccioSoft.Sqlite.WpfExample;
+namespace CiccioSoft.Sqlite.Native.WpfExample;
 
 /// <summary>
 /// Interaction logic for App.xaml

@@ -8,7 +8,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
-namespace CiccioSoft.Sqlite.WpfExample;
+namespace CiccioSoft.Sqlite.Native.WpfExample;
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml
@@ -17,7 +17,7 @@ public partial class MainWindow : Window
 {
     private int _indiceCorrente = 0;
     private int _countImages;
-    private readonly CiccioSoft.Sqlite.SqliteConnection? _connection;
+    private readonly Connection? _connection;
 
     public MainWindow()
     {
@@ -26,15 +26,7 @@ public partial class MainWindow : Window
         try
         {
             SqliteNativeLibrary.Configure(SqliteNativeSource.SourceGear);
-            var option = new SqliteConnectionOptions
-            {
-                DataSource = "test.db",
-                AdditionalFlags = OpenFlagsDefaults.Coordinated,
-                ConcurrencyMode = SqliteConcurrencyMode.Native
-            };
-            var connection = new CiccioSoft.Sqlite.SqliteConnection(option);
-            connection.Open();
-            _connection = connection;
+            _connection = Connection.Open("test.db");
         }
         catch
         {
@@ -94,7 +86,7 @@ public partial class MainWindow : Window
         if (!Directory.Exists(percorsoRelativo)) return;
 
         // Ottiene l'elenco dei file usando il percorso relativo
-        string[] fileBmp = Directory.GetFiles(percorsoRelativo, "*.bmp");
+        string[] fileBmp = Directory.GetFiles(percorsoRelativo, "*.jpg");
         if (fileBmp.Length == 0) return;
 
         // 1. Apriamo la transazione PRIMA di fare qualsiasi altra cosa
