@@ -54,10 +54,10 @@ public sealed unsafe class Exception : System.Exception
 
     internal static Exception CreateException(ConnectionSafeHandle connectionSafeHandle, ResultCode resultCode, string caller)
     {
-        string errorMessage;
         byte* pErrStr = NativeMethods.sqlite3_errstr((int)resultCode);
         string errorString = Marshal.PtrToStringUTF8((nint)pErrStr) ?? "Unknown error code";
 
+        string errorMessage;
         if (connectionSafeHandle is { IsClosed: false, IsInvalid: false })
         {
             // sqlite3_errmsg returns the most recent error message for this specific connection,
@@ -80,8 +80,6 @@ public sealed unsafe class Exception : System.Exception
             $"ResultCode: {resultCode}, " +
             $"Message: {errorMessage}";
 
-        // return new CiccioSoft.Sqlite.Native.Exception(result, errorMessage, caller);
         return new CiccioSoft.Sqlite.Native.Exception(message, resultCode, errorString, errorMessage);
-
     }
 }
