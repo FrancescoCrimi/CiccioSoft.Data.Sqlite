@@ -501,11 +501,11 @@ write.db-wal
 
 sqlite3.dll
 test.db
-
-
 app.db
-backup.zip
-restored-backup.zip
+example.db
+backup.db
+
+file*.jpg
 
 SQLitePCL.raw/
 Microsoft.Data.Sqlite/

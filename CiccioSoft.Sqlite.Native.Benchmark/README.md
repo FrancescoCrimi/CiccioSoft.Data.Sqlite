@@ -12,5 +12,5 @@ The benchmark must be run in Release mode
 
 ### Option 2
 ```
- dotnet run -c Release
+dotnet run -c Release
 ```

@@ -86,7 +86,7 @@ public partial class MainWindow : Window
         if (!Directory.Exists(percorsoRelativo)) return;
 
         // Ottiene l'elenco dei file usando il percorso relativo
-        string[] fileBmp = Directory.GetFiles(percorsoRelativo, "*.bmp");
+        string[] fileBmp = Directory.GetFiles(percorsoRelativo, "*.jpg");
         if (fileBmp.Length == 0) return;
 
         // 1. Apriamo la transazione PRIMA di fare qualsiasi altra cosa
