@@ -66,7 +66,7 @@ public sealed class TransactionSemanticsTests
 
         using var stmt = connection.Prepare("SELECT v FROM t ORDER BY id;");
         Assert.True(stmt.Step());
-        Assert.Equal("keep", stmt.GetTextString(0));
+        Assert.Equal("keep", stmt.GetText(0));
         Assert.False(stmt.Step());
     }
 

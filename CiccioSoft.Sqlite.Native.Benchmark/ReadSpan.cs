@@ -121,7 +121,7 @@ public class ReadSpan
             while (stmt.Step())
             {
                 long id = stmt.GetLong(0);
-                ReadOnlySpan<byte> nameSpan = stmt.GetText(1);
+                ReadOnlySpan<byte> nameSpan = stmt.GetTextAsSpan(1);
                 double score = stmt.GetDouble(2);
                 _consumer.Consume(id);
                 _consumer.Consume(nameSpan[0]);

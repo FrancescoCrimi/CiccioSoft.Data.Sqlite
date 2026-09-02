@@ -128,7 +128,7 @@ public partial class MainWindow : Window
         stmt.BindInt(1, index);
         stmt.Step();
         _indiceCorrente = stmt.GetInt(0);
-        TestoDescrizione.Text = stmt.GetTextString(1);
+        TestoDescrizione.Text = stmt.GetText(1);
         VisualizzatoreImmagine.Source = ToBitmapImage(stmt.GetBlob(2).ToArray());
     }
 

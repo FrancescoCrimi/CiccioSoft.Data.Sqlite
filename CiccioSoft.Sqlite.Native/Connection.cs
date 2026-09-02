@@ -270,6 +270,11 @@ public sealed unsafe class Connection : IDisposable
         return Prepare(sql, PrepareFlags.None);
     }
 
+    public Statement Prepare(ReadOnlySpan<byte> sql)
+    {
+        return Prepare(sql, PrepareFlags.None);
+    }
+
     /// <summary>
     /// Compiles an SQL statement using <c>sqlite3_prepare_v3</c>, enabling explicit prepare flags.
     /// </summary>
@@ -281,17 +286,22 @@ public sealed unsafe class Connection : IDisposable
     public Statement Prepare(string sql, PrepareFlags prepareFlags = PrepareFlags.None)
     {
         ThrowIfInvalid();
-
         using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
+        return Prepare(utf8Buffer.AsSpan(), prepareFlags);
+    }
 
-        fixed (byte* pBuf = utf8Buffer)
+    public Statement Prepare(ReadOnlySpan<byte> sql, PrepareFlags prepareFlags = PrepareFlags.None)
+    {
+        ThrowIfInvalid();
+
+        fixed (byte* pBuf = sql)
         {
             // Chiamata nativa
             sqlite3_stmt* pStmt = default;
             var result = (ResultCode)NativeMethods.sqlite3_prepare_v3(
                 (sqlite3*)_handle.DangerousGetHandle(),
                 pBuf,
-                utf8Buffer.Length, // Lunghezza esatta dei dati
+                sql.Length, // Lunghezza esatta dei dati
                 (uint)prepareFlags,
                 &pStmt,
                 null);
@@ -307,6 +317,7 @@ public sealed unsafe class Connection : IDisposable
             return new Statement(stmtSafeHandle, _handle);
         }
     }
+
 
     /// <summary>
     /// Compiles the next SQL statement starting from a byte offset within a batch SQL text.

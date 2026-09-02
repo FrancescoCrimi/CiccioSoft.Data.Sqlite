@@ -28,7 +28,7 @@ public sealed class SharedCacheAndConcurrencyTests
         using var reader = ConnectionFactory.OpenSharedMemory(name);
         using var stmt = reader.Prepare("SELECT v FROM t WHERE id = 1;");
         Assert.True(stmt.Step());
-        Assert.Equal("visible", stmt.GetTextString(0));
+        Assert.Equal("visible", stmt.GetText(0));
     }
 
     [Fact]

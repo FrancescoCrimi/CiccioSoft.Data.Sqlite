@@ -38,7 +38,7 @@ public sealed class ConnectionLifecycleTests
         {
             using var stmt = connection.Prepare("SELECT name FROM t WHERE id = 1;");
             Assert.True(stmt.Step());
-            Assert.Equal("persisted", stmt.GetTextString(0));
+            Assert.Equal("persisted", stmt.GetText(0));
         }
     }
 

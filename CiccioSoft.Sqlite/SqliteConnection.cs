@@ -25,7 +25,7 @@ public sealed class SqliteConnection : IDisposable
 {
     private readonly SqliteConnectionOptions _options;
 
-    private SqliteConnectionPool? _pool;              // null in Native
+    private SqliteConnectionPool? _pool;               // null in Native
     private SingleWriterCoordinator? _coordinator;     // null in Native e in ReadOnly (§11)
     private PooledConnection? _pooled;                 // valorizzato solo in Coordinated/ReadOnly
     private Connection? _native;                       // valorizzato solo in Native

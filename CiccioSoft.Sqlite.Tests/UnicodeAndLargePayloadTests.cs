@@ -32,8 +32,8 @@ public sealed class UnicodeAndLargePayloadTests
 
         using var select = connection.Prepare("SELECT v FROM t;");
         Assert.True(select.Step());
-        Assert.Equal(value, select.GetTextString(0));
-        Assert.Equal(Encoding.UTF8.GetBytes(value), select.GetText(0).ToArray());
+        Assert.Equal(value, select.GetText(0));
+        Assert.Equal(Encoding.UTF8.GetBytes(value), select.GetTextAsSpan(0).ToArray());
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public sealed class UnicodeAndLargePayloadTests
         using var select = connection.Prepare("SELECT length(v), v FROM t;");
         Assert.True(select.Step());
         Assert.Equal(large.Length, select.GetInt(0));
-        Assert.Equal(large, select.GetTextString(1));
+        Assert.Equal(large, select.GetText(1));
     }
 
     [Fact]

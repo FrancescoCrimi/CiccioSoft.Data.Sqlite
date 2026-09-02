@@ -330,7 +330,7 @@ public sealed unsafe class Statement : IDisposable
         return rtn;
     }
 
-    public ReadOnlySpan<byte> GetText(int index)
+    public ReadOnlySpan<byte> GetTextAsSpan(int index)
     {
         ThrowIfInvalid();
         if (index < 0)
@@ -359,7 +359,7 @@ public sealed unsafe class Statement : IDisposable
     /// <see cref="string.Empty"/> if the database value is an empty string.
     /// </returns>
     /// <exception cref="System.Exception">Thrown if the column cannot be read or the statement is in an invalid state.</exception>
-    public string? GetTextString(int index)
+    public string? GetText(int index)
     {
         ThrowIfInvalid();
         if (index < 0)

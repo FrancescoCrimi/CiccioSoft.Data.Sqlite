@@ -43,8 +43,8 @@ public sealed class BackupTests
         using var stmt = verify.Prepare("SELECT COUNT(*), MIN(sku), MAX(sku) FROM inventory;");
         Assert.True(stmt.Step());
         Assert.Equal(3, stmt.GetInt(0));
-        Assert.Equal("A-1", stmt.GetTextString(1));
-        Assert.Equal("C-3", stmt.GetTextString(2));
+        Assert.Equal("A-1", stmt.GetText(1));
+        Assert.Equal("C-3", stmt.GetText(2));
     }
 
     [Fact]
