@@ -56,7 +56,7 @@ public sealed class StatementBindAndColumnTests
 
         Assert.Equal(SqliteType.Null, select.GetColumnType(5));
         Assert.Null(select.GetTextString(5));
-        Assert.True(select.GetText(5).IsEmpty);
+        Assert.True(select.GetTextAsSpan(5).IsEmpty);
         Assert.True(select.GetBlob(5).IsEmpty);
     }
 
@@ -97,7 +97,8 @@ public sealed class StatementBindAndColumnTests
         Assert.Equal(0, select.GetInt(2));
         Assert.Equal(string.Empty, select.GetTextString(3));
         Assert.Equal(SqliteType.Text, select.GetColumnType(3));
-        Assert.True(select.GetText(3).IsEmpty);
+        Assert.False(select.GetTextAsSpan(3).IsEmpty);
+        Assert.Equal(1, select.GetTextAsSpan(3).Length);
     }
 
     [Fact]
@@ -327,7 +328,7 @@ public sealed class StatementBindAndColumnTests
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetLong(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetDouble(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetTextString(index));
-        Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetText(index));
+        Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetTextAsSpan(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetBlob(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetColumnType(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetColumnName(index));
@@ -360,7 +361,7 @@ public sealed class StatementBindAndColumnTests
         Assert.True(stmt.Step());
 
         string? asString = stmt.GetTextString(0);
-        ReadOnlySpan<byte> asSpan = stmt.GetText(0);
+        ReadOnlySpan<byte> asSpan = stmt.GetTextAsSpan(0);
 
         Assert.Equal("café ☕", asString);
         Assert.Equal(Encoding.UTF8.GetBytes("café ☕"), asSpan.ToArray());

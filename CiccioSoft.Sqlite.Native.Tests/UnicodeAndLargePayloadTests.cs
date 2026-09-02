@@ -33,7 +33,7 @@ public sealed class UnicodeAndLargePayloadTests
         using var select = connection.Prepare("SELECT v FROM t;");
         Assert.True(select.Step());
         Assert.Equal(value, select.GetTextString(0));
-        Assert.Equal(Encoding.UTF8.GetBytes(value), select.GetText(0).ToArray());
+        Assert.Equal(Encoding.UTF8.GetBytes(value), select.GetTextAsSpan(0).ToArray());
     }
 
     [Fact]

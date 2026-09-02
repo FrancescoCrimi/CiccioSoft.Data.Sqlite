@@ -323,8 +323,13 @@ public sealed unsafe class Statement : IDisposable
         return rtn;
     }
 
-    public ReadOnlySpan<byte> GetText(int index)
+    public ReadOnlySpan<byte> GetTextAsSpan(int index)
     {
+    //     return GetText(index);
+    // }
+
+    // public ReadOnlySpan<byte> GetText(int index)
+    // {
         ThrowIfInvalid();
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");

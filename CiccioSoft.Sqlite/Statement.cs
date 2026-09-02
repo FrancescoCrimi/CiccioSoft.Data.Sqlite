@@ -159,7 +159,7 @@ public sealed class Statement : IDisposable
     {
         EnsureNotDisposed();
         _session.Gate.Wait();
-        try { return _native.GetText(index); }
+        try { return _native.GetTextAsSpan(index); }
         finally { _session.Gate.Release(); }
     }
 

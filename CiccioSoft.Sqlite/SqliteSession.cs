@@ -30,7 +30,20 @@ public sealed class SqliteSession : IDisposable
     /// <summary>
     /// Indicates whether the session can still be used by the pool.
     /// </summary>
-    public bool IsValid() => Volatile.Read(ref _disposed) == 0;
+    public bool IsValid()
+    {
+        // return Volatile.Read(ref _disposed) == 0;
+        try
+        {
+            // Execute a lightweight query to test the connection
+            Native.Execute("SELECT 1");
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     internal bool TryAcquireLease()
     {

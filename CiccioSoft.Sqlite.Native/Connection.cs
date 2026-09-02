@@ -117,37 +117,6 @@ public sealed unsafe class Connection : IDisposable
         }
     }
 
-    public void Execute(ReadOnlySpan<byte> sql)
-    {
-        ThrowIfInvalid();
-
-        fixed (byte* pBuf = sql)
-        {
-            var result = (ResultCode)NativeMethods.sqlite3_exec(
-                (sqlite3*)_handle.DangerousGetHandle(),
-                pBuf,
-                null,
-                null,
-                null);
-            GC.KeepAlive(_handle);
-            CheckResult(result);
-        }
-    }
-
-    /// <summary>
-    /// One-Step Query Execution Interface.
-    /// </summary>
-    /// <param name="sql">The SQL string to execute (e.g., 'CREATE TABLE', 'INSERT', 'VACUUM').</param>
-    /// <exception cref="ObjectDisposedException">Thrown if the database connection is closed.</exception>
-    /// <exception cref="Exception">Thrown if SQLite returns an error during execution.</exception>
-    public void Execute(string sql)
-    {
-        ThrowIfInvalid();
-
-        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
-        Execute(utf8Buffer.AsSpan());
-    }
-
     /// <summary>
     /// Begins a new root transaction on this logical connection.
     /// </summary>
@@ -185,6 +154,37 @@ public sealed unsafe class Connection : IDisposable
             transaction.MarkFailed();
             ClearRootTransaction(transaction);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// One-Step Query Execution Interface.
+    /// </summary>
+    /// <param name="sql">The SQL string to execute (e.g., 'CREATE TABLE', 'INSERT', 'VACUUM').</param>
+    /// <exception cref="ObjectDisposedException">Thrown if the database connection is closed.</exception>
+    /// <exception cref="Exception">Thrown if SQLite returns an error during execution.</exception>
+    public void Execute(string sql)
+    {
+        ThrowIfInvalid();
+
+        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
+        Execute(utf8Buffer.AsSpan());
+    }
+
+    public void Execute(ReadOnlySpan<byte> sql)
+    {
+        ThrowIfInvalid();
+
+        fixed (byte* pBuf = sql)
+        {
+            var result = (ResultCode)NativeMethods.sqlite3_exec(
+                (sqlite3*)_handle.DangerousGetHandle(),
+                pBuf,
+                null,
+                null,
+                null);
+            GC.KeepAlive(_handle);
+            CheckResult(result);
         }
     }
 

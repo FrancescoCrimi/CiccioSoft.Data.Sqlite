@@ -8,7 +8,7 @@
     "debugger_configurations":
     [
         {
-            "name": "Test1",
+            "name": "Example",
             "type": "netcoredbg",
             "request": "launch",
             "program": "${folder}/CiccioSoft.Interop.Sqlite.Example/bin/Debug/net10.0/CiccioSoft.Interop.Sqlite.Example.exe",
@@ -20,13 +20,13 @@
             "stopAtEntry": false
         },
         {
-            "name": "Single",
+            "name": "Test1",
             "type": "netcoredbg",
             "request": "launch",
-            "program": "${folder}/CiccioSoft.Data.Sqlite.Tests/bin/Debug/net10.0/CiccioSoft.Data.Sqlite.Tests.exe",
+            "program": "${folder}/CiccioSoft.Data.Sqlite.Tests.Extra/bin/Debug/net10.0/CiccioSoft.Data.Sqlite.Tests.Extra.exe",
             "args": [
-                "-filter", 
-                "//CiccioSoft.Data.Sqlite/SqliteCommandTest/ExecuteReader_throws_on_error",
+                "-filter",
+                "//CiccioSoft.Data.Sqlite/SqliteConnectionPoolTest/Rent_evicts_a_dead_session_found_in_the_bag_and_creates_a_fresh_one",
                 "-parallel",
                 "none"
             ],
@@ -34,13 +34,13 @@
             "stopAtEntry": false
         },
         {
-            "name": "Test3",
+            "name": "Test2",
             "type": "netcoredbg",
             "request": "launch",
-            "program": "${folder}/CiccioSoft.Sqlite.Tests/bin/Debug/net10.0/CiccioSoft.Sqlite.Tests.exe",
+            "program": "${folder}/CiccioSoft.Sqlite.Native.Tests/bin/Debug/net10.0/CiccioSoft.Sqlite.Native.Tests.exe",
             "args": [
                 "-filter", 
-                "//CiccioSoft.Sqlite.Tests/DisposalLifecycleTests/Connection_UseAfterDispose_ThrowsObjectDisposedException",
+                "//CiccioSoft.Sqlite.Native.Tests/ConnectionEmptyStringTests/Prepare_EmptyString_ReturnsNullWithoutCrashing",
                 "-parallel",
                 "none"
             ],

@@ -78,7 +78,7 @@ internal ref struct Utf8CStringBuffer
         {
             _buffer = stackStorage[..1];
             _buffer[0] = 0;
-            Length = 0;
+            Length = 1;
             return;
         }
 

@@ -67,7 +67,7 @@ public sealed class DisposalLifecycleTests
         Assert.Throws<ObjectDisposedException>(() => stmt.GetInt(0));
         Assert.Throws<ObjectDisposedException>(() => stmt.GetLong(0));
         Assert.Throws<ObjectDisposedException>(() => stmt.GetDouble(0));
-        Assert.Throws<ObjectDisposedException>(() => stmt.GetText(0));
+        Assert.Throws<ObjectDisposedException>(() => stmt.GetTextAsSpan(0));
         Assert.Throws<ObjectDisposedException>(() => stmt.GetTextString(0));
         Assert.Throws<ObjectDisposedException>(() => stmt.GetBlob(0));
         Assert.Throws<ObjectDisposedException>(() => stmt.GetColumnType(0));
