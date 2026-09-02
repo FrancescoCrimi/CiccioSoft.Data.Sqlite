@@ -165,7 +165,7 @@ public sealed class SqliteDataReader : DbDataReader
         {
             SqliteType.Integer => (char)Stmt.GetInt(ordinal),
             SqliteType.Real => (char)Convert.ToInt32(Stmt.GetDouble(ordinal), CultureInfo.InvariantCulture),
-            SqliteType.Text => (Stmt.GetTextString(ordinal) ?? throw new InvalidOperationException(Resources.CalledOnNullValue(ordinal)))[0],
+            SqliteType.Text => (Stmt.GetText(ordinal) ?? throw new InvalidOperationException(Resources.CalledOnNullValue(ordinal)))[0],
             _ => throw new InvalidCastException(),
         };
     }
@@ -562,7 +562,7 @@ public sealed class SqliteDataReader : DbDataReader
 
         return IsDBNull(ordinal)
             ? throw new InvalidOperationException(Resources.CalledOnNullValue(ordinal))
-            : Stmt.GetTextString(ordinal)!;
+            : Stmt.GetText(ordinal)!;
     }
 
     public override Stream GetStream(int ordinal)
@@ -602,7 +602,7 @@ public sealed class SqliteDataReader : DbDataReader
         {
             SqliteType.Integer => Stmt.GetLong(ordinal),
             SqliteType.Real => Stmt.GetDouble(ordinal),
-            SqliteType.Text => Stmt.GetTextString(ordinal) ?? string.Empty,
+            SqliteType.Text => Stmt.GetText(ordinal) ?? string.Empty,
             SqliteType.Blob => Stmt.GetBlob(ordinal).ToArray(),
             _ => DBNull.Value,
         };
@@ -1108,7 +1108,7 @@ public sealed class SqliteDataReader : DbDataReader
             return false;
         }
 
-        string? sqliteTypeName = stmt.GetTextString(0);
+        string? sqliteTypeName = stmt.GetText(0);
         inferredType = sqliteTypeName?.ToLowerInvariant() switch
         {
             "integer" => SqliteType.Integer,

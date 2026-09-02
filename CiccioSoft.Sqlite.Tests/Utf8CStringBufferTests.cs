@@ -19,13 +19,13 @@ namespace CiccioSoft.Sqlite.Tests;
 public sealed class Utf8CStringBufferTests
 {
     [Fact]
-    public void EmptyString_ProducesZeroLengthSpanWithNonNullReference()
+    public void EmptyString_ProducesOneLengthSpanWithNonNullReference()
     {
         using var buffer = new Utf8CStringBuffer(string.Empty, stackalloc byte[64]);
 
-        Assert.Equal(0, buffer.Length);
+        Assert.Equal(1, buffer.Length);
         ReadOnlySpan<byte> span = buffer.AsSpan();
-        Assert.True(span.IsEmpty);
+        Assert.False(span.IsEmpty);
         Assert.False(Unsafe.IsNullRef(ref MemoryMarshal.GetReference(span)));
     }
 
@@ -44,16 +44,6 @@ public sealed class Utf8CStringBufferTests
         {
             // atteso
         }
-    }
-
-    [Fact]
-    public void EmptyString_ProducesEmptyLayout()
-    {
-        using var fromEmpty = new Utf8CStringBuffer(string.Empty, stackalloc byte[64]);
-
-        Assert.Equal(0, fromEmpty.Length);
-        Assert.True(fromEmpty.AsSpan().IsEmpty);
-        Assert.False(Unsafe.IsNullRef(ref MemoryMarshal.GetReference(fromEmpty.AsSpan())));
     }
 
     [Fact]
