@@ -18,17 +18,6 @@ namespace CiccioSoft.Sqlite.Tests;
 /// </summary>
 public sealed class Utf8CStringBufferTests
 {
-    // [Fact]
-    // public void EmptyString_ProducesZeroLengthSpanWithNonNullReference()
-    // {
-    //     using var buffer = new Utf8CStringBuffer(string.Empty, stackalloc byte[64]);
-
-    //     Assert.Equal(0, buffer.Length);
-    //     ReadOnlySpan<byte> span = buffer.AsSpan();
-    //     Assert.True(span.IsEmpty);
-    //     Assert.False(Unsafe.IsNullRef(ref MemoryMarshal.GetReference(span)));
-    // }
-
     [Fact]
     public void EmptyString_ProducesOneLengthSpanWithNonNullReference()
     {
@@ -55,26 +44,6 @@ public sealed class Utf8CStringBufferTests
         {
             // atteso
         }
-    }
-
-    // [Fact]
-    // public void EmptyString_ProducesEmptyLayout()
-    // {
-    //     using var fromEmpty = new Utf8CStringBuffer(string.Empty, stackalloc byte[64]);
-
-    //     Assert.Equal(0, fromEmpty.Length);
-    //     Assert.True(fromEmpty.AsSpan().IsEmpty);
-    //     Assert.False(Unsafe.IsNullRef(ref MemoryMarshal.GetReference(fromEmpty.AsSpan())));
-    // }
-
-    [Fact]
-    public void EmptyString_ProducesEmptyLayout()
-    {
-        using var fromEmpty = new Utf8CStringBuffer(string.Empty, stackalloc byte[64]);
-
-        Assert.Equal(1, fromEmpty.Length);
-        Assert.False(fromEmpty.AsSpan().IsEmpty);
-        Assert.False(Unsafe.IsNullRef(ref MemoryMarshal.GetReference(fromEmpty.AsSpan())));
     }
 
     [Fact]
