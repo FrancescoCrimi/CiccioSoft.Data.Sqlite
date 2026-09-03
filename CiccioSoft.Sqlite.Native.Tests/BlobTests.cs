@@ -12,7 +12,7 @@ namespace CiccioSoft.Sqlite.Tests;
 
 public sealed class BlobTests
 {
-    private static (SqliteConnection Connection, long RowId) CreateBlobRow(int size)
+    private static (Connection Connection, long RowId) CreateBlobRow(int size)
     {
         var connection = ConnectionFactory.OpenMemory();
         connection.Execute("CREATE TABLE files (id INTEGER PRIMARY KEY, payload BLOB);");

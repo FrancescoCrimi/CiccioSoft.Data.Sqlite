@@ -6,13 +6,14 @@
   </Configurations>
 
   <Project Path="CiccioSoft.Sqlite.Native/CiccioSoft.Sqlite.Native.csproj" />
+  <Project Path="CiccioSoft.Sqlite.Native.Benchmark/CiccioSoft.Sqlite.Native.Benchmark.csproj" />
   <Project Path="CiccioSoft.Sqlite.Native.Example/CiccioSoft.Sqlite.Native.Example.csproj" />
   <Project Path="CiccioSoft.Sqlite.Native.WpfExample/CiccioSoft.Sqlite.Native.WpfExample.csproj" />
-
-  <Project Path="CiccioSoft.Sqlite.Tests/CiccioSoft.Sqlite.Tests.csproj" />
-  <Project Path="CiccioSoft.Sqlite.Benchmark/CiccioSoft.Sqlite.Benchmark.csproj" />
+  <Project Path="CiccioSoft.Sqlite.Native.Tests/CiccioSoft.Sqlite.Native.Tests.csproj" />
 
   <Project Path="CiccioSoft.Sqlite/CiccioSoft.Sqlite.csproj" />
+  <Project Path="CiccioSoft.Sqlite.Benchmark/CiccioSoft.Sqlite.Benchmark.csproj" />
+  <Project Path="CiccioSoft.Sqlite.Tests/CiccioSoft.Sqlite.Tests.csproj" />
 
   <Project Path="CiccioSoft.Data.Sqlite/CiccioSoft.Data.Sqlite.csproj" />
   <Project Path="CiccioSoft.Data.Sqlite.Tests/CiccioSoft.Data.Sqlite.Tests.csproj" />
