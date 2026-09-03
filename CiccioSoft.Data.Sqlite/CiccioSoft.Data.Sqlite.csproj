@@ -6,42 +6,11 @@
     <Nullable>enable</Nullable>
 
     <PackageTags>SQLite;Data;ADO.NET</PackageTags>
-    <PackageProjectUrl>https://docs.microsoft.com/dotnet/standard/data/sqlite/</PackageProjectUrl>
-    <Description>
-CiccioSoft.Data.Sqlite is a lightweight ADO.NET provider for SQLite.
-
-Commonly Used Types:
-CiccioSoft.Data.Sqlite.SqliteCommand
-CiccioSoft.Data.Sqlite.SqliteConnection
-CiccioSoft.Data.Sqlite.SqliteConnectionStringBuilder
-CiccioSoft.Data.Sqlite.SqliteDataReader
-CiccioSoft.Data.Sqlite.SqliteException
-CiccioSoft.Data.Sqlite.SqliteFactory
-CiccioSoft.Data.Sqlite.SqliteParameter
-CiccioSoft.Data.Sqlite.SqliteTransaction
-    </Description>
-  
+    <Description>CiccioSoft.Data.Sqlite is a lightweight ADO.NET provider for SQLite.    </Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../CiccioSoft.Sqlite/CiccioSoft.Sqlite.csproj" />
-    <!-- <Compile Remove="MySqlConnectionStringBuilder.cs" /> -->
-    <!-- <None Include="MySqlConnectionStringBuilder.cs" /> -->
+    <ProjectReference Include="../CiccioSoft.Sqlite.Native/CiccioSoft.Sqlite.Native.csproj" />
   </ItemGroup>
-
-<!-- <ItemGroup>
-  <EmbeddedResource Update="Properties\Resources.resx">
-    <Generator>ResXFileCodeGenerator</Generator>
-    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-  </EmbeddedResource>
-</ItemGroup>
-
-<ItemGroup>
-  <Compile Update="Properties\Resources.Designer.cs">
-    <DesignTime>True</DesignTime>
-    <Autogen>True</Autogen>
-    <DependentUpon>Resources.resx</DependentUpon>
-  </Compile>
-</ItemGroup> -->
 
 </Project>

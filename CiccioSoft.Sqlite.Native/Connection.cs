@@ -109,6 +109,44 @@ public sealed unsafe class Connection : IDisposable
         }
     }
 
+    private static Connection Open(ReadOnlySpan<byte> filename, OpenFlags flags, ReadOnlySpan<byte> vfs)
+    {
+        return OpenCore(filename, flags, vfs);
+    }
+
+
+    private static Connection OpenCore(ReadOnlySpan<byte> filename, OpenFlags flags, ReadOnlySpan<byte> vfs)
+    {
+        flags |= OpenFlags.Uri;
+        flags |= OpenFlags.Exrescode;
+
+        fixed (byte* pFilename = filename, pVfs = vfs)
+        {
+            sqlite3* pDb = default;
+            var result = (ResultCode)NativeMethods.sqlite3_open_v2(
+                pFilename,
+                &pDb,
+                (int)flags,
+                pVfs);
+            var handle = new ConnectionSafeHandle(pDb);
+
+            if (result != ResultCode.OK)
+            {
+                var exception = Exception.CreateException(
+                    handle,
+                    result,
+                    $"{nameof(Connection)}.{nameof(Open)}");
+
+                handle.Dispose();
+                throw exception;
+            }
+
+            return new Connection(handle);
+        }
+    }
+
+
+
     /// <summary>
     /// One-Step Query Execution Interface.
     /// </summary>
