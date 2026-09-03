@@ -62,17 +62,19 @@ internal ref struct Utf8CStringBuffer
     /// <see cref="ArrayPool{T}.Shared"/> is used instead, and returned by <see cref="Dispose"/>.
     /// </param>
     /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="stackStorage"/> has a length less than 1.</exception>
     public Utf8CStringBuffer(string text, Span<byte> stackStorage)
     {
-        ArgumentNullException.ThrowIfNull(text);
-
         if (stackStorage.Length < 1)
             throw new ArgumentException(
                 "stackStorage must provide at least 1 byte for the null terminator, even for an empty string.",
                 nameof(stackStorage));
 
-        _poolArray = null;
+        if (text == null)
+        {
+            _buffer = Span<byte>.Empty;
+            Length = 0;
+            return;
+        }
 
         if (text.Length == 0)
         {
@@ -81,6 +83,8 @@ internal ref struct Utf8CStringBuffer
             Length = 1;
             return;
         }
+
+        _poolArray = null;
 
         // Compute the maximum space needed in UTF-8 bytes (+1 for the null terminator).
         // Note: GetMaxByteCount(text.Length) could theoretically overflow for strings whose
