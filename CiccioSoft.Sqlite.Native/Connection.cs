@@ -69,7 +69,6 @@ public sealed unsafe class Connection : IDisposable
     /// </summary>
     /// <param name="filename">The path (or URI) to the database file.</param>
     /// <param name="flags">The SQLite open flags (for example <c>SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE</c>).</param>
-    /// <param name="useUri">If true, <c>SQLITE_OPEN_URI</c> is enforced to allow URI filenames.</param>
     /// <param name="vfs">Optional VFS module name. Use <c>null</c> to use SQLite default VFS.</param>
     /// <returns>A new <see cref="Connection"/> connection.</returns>
     /// <exception cref="Exception">Thrown if the database cannot be opened.</exception>
@@ -81,21 +80,19 @@ public sealed unsafe class Connection : IDisposable
             throw new ArgumentException(
                 "The path contains characters that are invalid for the current operating system.",
                 nameof(filename));
-        
 
-        string vfsName = vfs ?? string.Empty;
+        vfs = vfs is "" ? null : vfs;
+
         flags |= OpenFlags.Uri;
         flags |= OpenFlags.Exrescode;
 
         using var filenameBuffer = new Utf8CStringBuffer(filename, stackalloc byte[512]);
-        using var vfsBuffer = new Utf8CStringBuffer(vfsName, stackalloc byte[512]);
+        using var vfsBuffer = new Utf8CStringBuffer(vfs!, stackalloc byte[512]);
 
-        fixed (byte* pFilename = filenameBuffer, pVfsBuffer = vfsBuffer)
+        fixed (byte* pFilename = filenameBuffer, pVfs = vfsBuffer)
         {
-            byte* pVfs = vfsName.Length == 0 ? null : pVfsBuffer;
-
-            sqlite3* pDb = null;
-            ResultCode result = (ResultCode)NativeMethods.sqlite3_open_v2(
+            sqlite3* pDb = default;
+            var result = (ResultCode)NativeMethods.sqlite3_open_v2(
                 pFilename,
                 &pDb,
                 (int)flags,
@@ -104,7 +101,7 @@ public sealed unsafe class Connection : IDisposable
 
             if (result != ResultCode.OK)
             {
-                Exception exception = Exception.CreateException(
+                var exception = Exception.CreateException(
                     handle,
                     result,
                     $"{nameof(Connection)}.{nameof(Open)}");
@@ -166,15 +163,18 @@ public sealed unsafe class Connection : IDisposable
     public void Execute(string sql)
     {
         ThrowIfInvalid();
-
         using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
-        Execute(utf8Buffer.AsSpan());
+        ExecuteCore(utf8Buffer.AsSpan());
     }
 
     public void Execute(ReadOnlySpan<byte> sql)
     {
         ThrowIfInvalid();
+        ExecuteCore(sql);
+    }
 
+    private void ExecuteCore(ReadOnlySpan<byte> sql)
+    {
         fixed (byte* pBuf = sql)
         {
             var result = (ResultCode)NativeMethods.sqlite3_exec(
@@ -189,18 +189,6 @@ public sealed unsafe class Connection : IDisposable
     }
 
     /// <summary>
-    /// Compiling An SQL Statement.
-    /// </summary>
-    /// <param name="sql">The SQL query string to compile.</param>
-    /// <returns>A new <see cref="Statement"/> instance wrapping the compiled statement.</returns>
-    /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
-    /// <exception cref="Exception">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
-    public Statement Prepare(string sql)
-    {
-        return Prepare(sql, PrepareFlags.None);
-    }
-
-    /// <summary>
     /// Compiles an SQL statement using <c>sqlite3_prepare_v3</c>, enabling explicit prepare flags.
     /// </summary>
     /// <param name="sql">The SQL query string to compile.</param>
@@ -211,17 +199,26 @@ public sealed unsafe class Connection : IDisposable
     public Statement Prepare(string sql, PrepareFlags prepareFlags = PrepareFlags.None)
     {
         ThrowIfInvalid();
-
         using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
+        return PrepareCore(utf8Buffer.AsSpan(), prepareFlags);
+    }
 
-        fixed (byte* pBuf = utf8Buffer)
+    public Statement Prepare(ReadOnlySpan<byte> sql, PrepareFlags prepareFlags = PrepareFlags.None)
+    {
+        ThrowIfInvalid();
+        return PrepareCore(sql, prepareFlags);
+    }
+
+    public Statement PrepareCore(ReadOnlySpan<byte> sql, PrepareFlags prepareFlags = PrepareFlags.None)
+    {
+        fixed (byte* pBuf = sql)
         {
             // Chiamata nativa
             sqlite3_stmt* pStmt = default;
             var result = (ResultCode)NativeMethods.sqlite3_prepare_v3(
                 (sqlite3*)_handle.DangerousGetHandle(),
                 pBuf,
-                utf8Buffer.Length, // Lunghezza esatta dei dati
+                sql.Length, // Lunghezza esatta dei dati
                 (uint)prepareFlags,
                 &pStmt,
                 null);
@@ -627,7 +624,6 @@ public sealed unsafe class Connection : IDisposable
         return Blob.Open(this, tableName, columnName, rowId, readWrite, databaseName);
     }
 
-
     #region Private Methods
 
 
@@ -642,17 +638,6 @@ public sealed unsafe class Connection : IDisposable
                 _rootTransaction = null;
             }
         }
-    }
-
-    private static string GetBeginSql(TransactionMode mode)
-    {
-        return mode switch
-        {
-            TransactionMode.Deferred => "BEGIN DEFERRED;",
-            TransactionMode.Immediate => "BEGIN IMMEDIATE;",
-            TransactionMode.Exclusive => "BEGIN EXCLUSIVE;",
-            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "The transaction mode is not supported.")
-        };
     }
 
     internal void ThrowIfInvalid()
@@ -671,6 +656,17 @@ public sealed unsafe class Connection : IDisposable
     private void ThrowException(ResultCode result, [CallerMemberName] string caller = "")
     {
         throw Exception.CreateException(_handle, result, $"{nameof(Connection)}.{caller}");
+    }
+
+    private static string GetBeginSql(TransactionMode mode)
+    {
+        return mode switch
+        {
+            TransactionMode.Deferred => "BEGIN DEFERRED;",
+            TransactionMode.Immediate => "BEGIN IMMEDIATE;",
+            TransactionMode.Exclusive => "BEGIN EXCLUSIVE;",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "The transaction mode is not supported.")
+        };
     }
 
     #endregion

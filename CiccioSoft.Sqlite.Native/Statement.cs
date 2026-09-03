@@ -30,6 +30,7 @@ public sealed unsafe class Statement : IDisposable
 {
     private readonly StatementSafeHandle _handle;
     private readonly Connection _connection;
+    private readonly bool _isReadOnly;
 
     internal Statement(StatementSafeHandle handle, Connection connection)
     {
@@ -37,6 +38,8 @@ public sealed unsafe class Statement : IDisposable
         ArgumentNullException.ThrowIfNull(connection);
         _handle = handle;
         _connection = connection;
+        _isReadOnly = NativeMethods.sqlite3_stmt_readonly((sqlite3_stmt*)handle.DangerousGetHandle()) != 0;
+        GC.KeepAlive(handle);
     }
 
 
@@ -415,9 +418,7 @@ public sealed unsafe class Statement : IDisposable
     public bool IsReadOnly()
     {
         ThrowIfInvalid();
-        var rtn = NativeMethods.sqlite3_stmt_readonly((sqlite3_stmt*)_handle.DangerousGetHandle()) != 0;
-        GC.KeepAlive(_handle);
-        return rtn;
+        return _isReadOnly;
     }
 
     /// <summary>
