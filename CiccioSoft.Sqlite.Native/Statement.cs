@@ -548,8 +548,6 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        // Alloca la memoria base nello stack
-        // 512 byte bastano per la maggior parte delle stringhe standard
         using var utf8Buffer = new Utf8CStringBuffer(text, stackalloc byte[1024]);
         BindTextCore(index, utf8Buffer.AsSpan());
     }
