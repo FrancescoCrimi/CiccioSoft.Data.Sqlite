@@ -38,7 +38,6 @@ public sealed class DisposalLifecycleTests
         Assert.Throws<ObjectDisposedException>(() => connection.ExtendedErrCode());
         Assert.Throws<ObjectDisposedException>(() => connection.GetLastErrorOffset());
         Assert.Throws<ObjectDisposedException>(() => connection.BusyTimeout(1000));
-        Assert.Throws<ObjectDisposedException>(() => connection.ExtendedResultCodes(true));
         Assert.Throws<ObjectDisposedException>(() => connection.Interrupt());
         Assert.Throws<ObjectDisposedException>(() =>
             connection.GetTableColumnMetadata("t", "id", out _, out _, out _, out _, out _));

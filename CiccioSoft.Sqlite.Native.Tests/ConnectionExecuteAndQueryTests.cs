@@ -167,15 +167,6 @@ public sealed class ConnectionExecuteAndQueryTests
     }
 
     [Fact]
-    public void ExtendedResultCodes_EnableDisable_DoesNotThrow()
-    {
-        using var connection = ConnectionFactory.OpenMemory();
-        connection.ExtendedResultCodes(enabled: true);
-        connection.ExtendedResultCodes(enabled: false);
-        connection.ExtendedResultCodes(enabled: true);
-    }
-
-    [Fact]
     public void ExtendedErrCode_AfterConstraint_ReportsConstraintFamily()
     {
         using var connection = ConnectionFactory.OpenMemory();

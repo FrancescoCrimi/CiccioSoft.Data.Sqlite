@@ -451,20 +451,6 @@ public sealed unsafe class Connection : IDisposable
     }
 
     /// <summary>
-    /// Enables or disables extended result codes for this connection.
-    /// </summary>
-    /// <param name="enabled">True to enable extended result codes.</param>
-    public void ExtendedResultCodes(bool enabled)
-    {
-        ThrowIfInvalid();
-        var result = (ResultCode)NativeMethods.sqlite3_extended_result_codes((sqlite3*)_handle.DangerousGetHandle(), enabled ? 1 : 0);
-        GC.KeepAlive(_handle);
-        if (result == ResultCode.OK)
-            return;
-        CheckResult(result);
-    }
-
-    /// <summary>
     /// Interrupts any pending operation running on this connection.
     /// </summary>
     public void Interrupt()
