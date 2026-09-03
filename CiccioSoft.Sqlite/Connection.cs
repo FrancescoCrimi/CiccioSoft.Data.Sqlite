@@ -64,61 +64,72 @@ public sealed unsafe class Connection : IDisposable
     /// </summary>
     /// <param name="filename">The path (or URI) to the database file.</param>
     /// <param name="flags">The SQLite open flags (for example <c>SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE</c>).</param>
-    /// <param name="useUri">If true, <c>SQLITE_OPEN_URI</c> is enforced to allow URI filenames.</param>
     /// <param name="vfs">Optional VFS module name. Use <c>null</c> to use SQLite default VFS.</param>
     /// <returns>A new <see cref="Connection"/> connection.</returns>
     /// <exception cref="Exception">Thrown if the database cannot be opened.</exception>
-    public static Connection Open(string filename, OpenFlags flags, bool useUri = false, string? vfs = null)
+    public static Connection Open(string filename, OpenFlags flags, string? vfs = null)
     {
-        // Controllo immediato sul null
         ArgumentNullException.ThrowIfNull(filename);
-        // Controllo multipiattaforma sui caratteri non validi (Es. | < > * in Windows)
+
         if (filename.IndexOfAny(Path.GetInvalidPathChars()) != -1)
-            throw new ArgumentException("Il percorso contiene caratteri non validi per il sistema operativo corrente.", nameof(filename));
+            throw new ArgumentException(
+                "The path contains characters that are invalid for the current operating system.",
+                nameof(filename));
 
-        string vfsSafe = vfs ?? string.Empty;
+        vfs = vfs is "" ? null : vfs;
 
-        OpenFlags openFlags = useUri ? flags | OpenFlags.Uri : flags;
-        openFlags |= OpenFlags.Exrescode;
+        flags |= OpenFlags.Uri;
+        flags |= OpenFlags.Exrescode;
 
         using var filenameBuffer = new Utf8CStringBuffer(filename, stackalloc byte[512]);
-        using var vfsBuffer = new Utf8CStringBuffer(vfsSafe, stackalloc byte[512]);
+        using var vfsBuffer = new Utf8CStringBuffer(vfs!, stackalloc byte[512]);
 
-        fixed (byte* pFilenameRaw = filenameBuffer, pVfsRaw = vfsBuffer)
+        fixed (byte* pFilename = filenameBuffer, pVfs = vfsBuffer)
         {
-            // SOLUZIONE DEL BUG: Se il parametro originale C# era nullo/vuoto, 
-            // passiamo un puntatore 'null' effettivo a SQLite, altrimenti usiamo pVfsRaw.
-            byte* pVfs = vfsSafe.Length == 0 ? null : pVfsRaw;
-
-            // 1. Chiamata nativa
             sqlite3* pDb = default;
-            var result = (ResultCode)NativeMethods.sqlite3_open_v2(pFilenameRaw, &pDb, (int)openFlags, pVfs);
-            var connectionSafeHandle = new ConnectionSafeHandle(pDb);
+            var result = (ResultCode)NativeMethods.sqlite3_open_v2(
+                pFilename,
+                &pDb,
+                (int)flags,
+                pVfs);
+            var handle = new ConnectionSafeHandle(pDb);
 
-            // Se l'apertura fallisce, Dobbiamo COMUNQUE recuperare l'errore 
-            // PRIMA di chiudere l'handle, altrimenti pDb diventa invalido.
             if (result != ResultCode.OK)
             {
-                // 2. Estraiamo il messaggio nativo MENTRE l'handle è ancora vivo
-                var ex = Exception.CreateException(connectionSafeHandle, result, $"{nameof(Connection)}.Open");
+                var exception = Exception.CreateException(
+                    handle,
+                    result,
+                    $"{nameof(Connection)}.{nameof(Open)}");
 
-                // 3. Ora che abbiamo i dati, liberiamo IMMEDIATAMENTE l'handle per evitare leak
-                connectionSafeHandle.Dispose();
-
-                // 4. Creiamo e lanciamo l'eccezione (dbHandle è già chiuso in sicurezza)
-                // throw new EngineException(result, errorMessage, "Connection Open");
-                throw ex;
+                handle.Dispose();
+                throw exception;
             }
 
-            // Se tutto è andato bene, incapsuliamo l'handle sicuro
-            return new Connection(connectionSafeHandle);
+            return new Connection(handle);
         }
+    }
+
+    /// <summary>
+    /// One-Step Query Execution Interface.
+    /// </summary>
+    /// <param name="sql">The SQL string to execute (e.g., 'CREATE TABLE', 'INSERT', 'VACUUM').</param>
+    /// <exception cref="ObjectDisposedException">Thrown if the database connection is closed.</exception>
+    /// <exception cref="Exception">Thrown if SQLite returns an error during execution.</exception>
+    public void Execute(string sql)
+    {
+        ThrowIfInvalid();
+        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
+        ExecuteCore(utf8Buffer.AsSpan());
     }
 
     public void Execute(ReadOnlySpan<byte> sql)
     {
         ThrowIfInvalid();
+        ExecuteCore(sql);
+    }
 
+    private void ExecuteCore(ReadOnlySpan<byte> sql)
+    {
         fixed (byte* pBuf = sql)
         {
             var result = (ResultCode)NativeMethods.sqlite3_exec(
@@ -133,32 +144,6 @@ public sealed unsafe class Connection : IDisposable
     }
 
     /// <summary>
-    /// One-Step Query Execution Interface.
-    /// </summary>
-    /// <param name="sql">The SQL string to execute (e.g., 'CREATE TABLE', 'INSERT', 'VACUUM').</param>
-    /// <exception cref="ObjectDisposedException">Thrown if the database connection is closed.</exception>
-    /// <exception cref="Exception">Thrown if SQLite returns an error during execution.</exception>
-    public void Execute(string sql)
-    {
-        ThrowIfInvalid();
-
-        using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
-        Execute(utf8Buffer.AsSpan());
-    }
-
-    /// <summary>
-    /// Compiling An SQL Statement.
-    /// </summary>
-    /// <param name="sql">The SQL query string to compile.</param>
-    /// <returns>A new <see cref="Statement"/> instance wrapping the compiled statement.</returns>
-    /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
-    /// <exception cref="Exception">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
-    public Statement Prepare(string sql)
-    {
-        return Prepare(sql, PrepareFlags.None);
-    }
-
-    /// <summary>
     /// Compiles an SQL statement using <c>sqlite3_prepare_v3</c>, enabling explicit prepare flags.
     /// </summary>
     /// <param name="sql">The SQL query string to compile.</param>
@@ -169,17 +154,26 @@ public sealed unsafe class Connection : IDisposable
     public Statement Prepare(string sql, PrepareFlags prepareFlags = PrepareFlags.None)
     {
         ThrowIfInvalid();
-
         using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
+        return PrepareCore(utf8Buffer.AsSpan(), prepareFlags);
+    }
 
-        fixed (byte* pBuf = utf8Buffer)
+    public Statement Prepare(ReadOnlySpan<byte> sql, PrepareFlags prepareFlags = PrepareFlags.None)
+    {
+        ThrowIfInvalid();
+        return PrepareCore(sql, prepareFlags);
+    }
+
+    public Statement PrepareCore(ReadOnlySpan<byte> sql, PrepareFlags prepareFlags = PrepareFlags.None)
+    {
+        fixed (byte* pBuf = sql)
         {
             // Chiamata nativa
             sqlite3_stmt* pStmt = default;
             var result = (ResultCode)NativeMethods.sqlite3_prepare_v3(
                 (sqlite3*)_handle.DangerousGetHandle(),
                 pBuf,
-                utf8Buffer.Length, // Lunghezza esatta dei dati
+                sql.Length, // Lunghezza esatta dei dati
                 (uint)prepareFlags,
                 &pStmt,
                 null);

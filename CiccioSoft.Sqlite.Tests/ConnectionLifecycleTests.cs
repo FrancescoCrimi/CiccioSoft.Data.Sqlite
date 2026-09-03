@@ -69,8 +69,7 @@ public sealed class ConnectionLifecycleTests
     {
         using var connection = Connection.Open(
             "file:lifecycle_uri?mode=memory&cache=shared",
-            OpenFlags.ReadWrite | OpenFlags.Create,
-            useUri: true);
+            OpenFlags.ReadWrite | OpenFlags.Create);
 
         connection.Execute("CREATE TABLE t (id INTEGER);");
         connection.Execute("INSERT INTO t VALUES (42);");

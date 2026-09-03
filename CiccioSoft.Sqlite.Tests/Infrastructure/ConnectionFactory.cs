@@ -24,8 +24,7 @@ internal static class ConnectionFactory
     public static Connection OpenSharedMemory(string name)
         => Connection.Open(
             $"file:{name}?mode=memory&cache=shared",
-            OpenFlags.ReadWrite | OpenFlags.Create,
-            useUri: true);
+            OpenFlags.ReadWrite | OpenFlags.Create);
 
     public static Connection OpenWithSchema(string ddl)
     {
