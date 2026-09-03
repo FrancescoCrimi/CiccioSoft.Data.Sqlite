@@ -37,7 +37,7 @@ public sealed class ConnectionExecuteAndQueryTests
 
         using var stmt = connection.Prepare("SELECT v FROM t;");
         Assert.True(stmt.Step());
-        Assert.Equal("span", stmt.GetTextString(0));
+        Assert.Equal("span", stmt.GetText(0));
     }
 
     [Fact]

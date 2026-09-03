@@ -23,10 +23,10 @@
             "name": "Test1",
             "type": "netcoredbg",
             "request": "launch",
-            "program": "${folder}/CiccioSoft.Data.Sqlite.Tests.Extra/bin/Debug/net10.0/CiccioSoft.Data.Sqlite.Tests.Extra.exe",
+            "program": "${folder}/CiccioSoft.Sqlite.Native.Tests/bin/Debug/net10.0/CiccioSoft.Sqlite.Native.Tests.exe",
             "args": [
                 "-filter",
-                "//CiccioSoft.Data.Sqlite/SqliteConnectionPoolTest/Rent_evicts_a_dead_session_found_in_the_bag_and_creates_a_fresh_one",
+                "//CiccioSoft.Sqlite.Native.Tests/StatementBindAndColumnTests/BindBlob_RealEmptySpan_BindsEmptyBlobNotSqlNull",
                 "-parallel",
                 "none"
             ],
@@ -40,7 +40,7 @@
             "program": "${folder}/CiccioSoft.Sqlite.Native.Tests/bin/Debug/net10.0/CiccioSoft.Sqlite.Native.Tests.exe",
             "args": [
                 "-filter", 
-                "//CiccioSoft.Sqlite.Native.Tests/ConnectionEmptyStringTests/Prepare_EmptyString_ReturnsNullWithoutCrashing",
+                "//CiccioSoft.Sqlite.Native.Tests/StatementBindAndColumnTests/BindText_RealEmptySpan_BindsEmptyTextNotSqlNull",
                 "-parallel",
                 "none"
             ],

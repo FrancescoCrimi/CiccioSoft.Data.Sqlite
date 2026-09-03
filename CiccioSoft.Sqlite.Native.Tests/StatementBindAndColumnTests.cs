@@ -47,7 +47,7 @@ public sealed class StatementBindAndColumnTests
         Assert.Equal(42, select.GetInt(0));
         Assert.Equal(long.MaxValue, select.GetLong(1));
         Assert.Equal(3.141592653589793, select.GetDouble(2), precision: 10);
-        Assert.Equal("hello", select.GetTextString(3));
+        Assert.Equal("hello", select.GetText(3));
         Assert.Equal(SqliteType.Text, select.GetColumnType(3));
 
         ReadOnlySpan<byte> blob = select.GetBlob(4);
@@ -55,7 +55,7 @@ public sealed class StatementBindAndColumnTests
         Assert.Equal(SqliteType.Blob, select.GetColumnType(4));
 
         Assert.Equal(SqliteType.Null, select.GetColumnType(5));
-        Assert.Null(select.GetTextString(5));
+        Assert.Null(select.GetText(5));
         Assert.True(select.GetTextAsSpan(5).IsEmpty);
         Assert.True(select.GetBlob(5).IsEmpty);
     }
@@ -75,7 +75,7 @@ public sealed class StatementBindAndColumnTests
         using var select = connection.Prepare("SELECT v IS NULL, typeof(v) FROM t;");
         Assert.True(select.Step());
         Assert.Equal(1, select.GetInt(0));
-        Assert.Equal("null", select.GetTextString(1), ignoreCase: true);
+        Assert.Equal("null", select.GetText(1), ignoreCase: true);
     }
 
     [Fact]
@@ -93,9 +93,9 @@ public sealed class StatementBindAndColumnTests
         using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v), v FROM t;");
         Assert.True(select.Step());
         Assert.Equal(0, select.GetInt(0));
-        Assert.Equal("text", select.GetTextString(1), ignoreCase: true);
+        Assert.Equal("text", select.GetText(1), ignoreCase: true);
         Assert.Equal(0, select.GetInt(2));
-        Assert.Equal(string.Empty, select.GetTextString(3));
+        Assert.Equal(string.Empty, select.GetText(3));
         Assert.Equal(SqliteType.Text, select.GetColumnType(3));
         Assert.False(select.GetTextAsSpan(3).IsEmpty);
         Assert.Equal(1, select.GetTextAsSpan(3).Length);
@@ -154,11 +154,15 @@ public sealed class StatementBindAndColumnTests
             insert.Step();
         }
 
-        using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v) FROM t;");
+        using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v), v FROM t;");
         Assert.True(select.Step());
-        Assert.Equal(0, select.GetInt(0));
-        Assert.Equal("text", select.GetTextString(1), ignoreCase: true);
+        Assert.Equal(1, select.GetInt(0));
+        Assert.Equal("null", select.GetText(1), ignoreCase: true);
         Assert.Equal(0, select.GetInt(2));
+        Assert.Null(select.GetText(3));
+        Assert.Equal(SqliteType.Null, select.GetColumnType(3));
+        Assert.True(select.GetTextAsSpan(3).IsEmpty);
+        Assert.Equal(0, select.GetTextAsSpan(3).Length);
     }
 
     [Fact]
@@ -196,7 +200,7 @@ public sealed class StatementBindAndColumnTests
     }
 
     [Fact]
-    public void BindBlob_RealEmptySpan_BindsEmptyBlobNotSqlNull()
+    public void BindBlob_RealEmptySpan_BindsEmptyBlobAsNull()
     {
         using var connection = ConnectionFactory.OpenMemory();
         connection.Execute("CREATE TABLE t (v BLOB);");
@@ -212,10 +216,10 @@ public sealed class StatementBindAndColumnTests
 
         using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v), v FROM t;");
         Assert.True(select.Step());
-        Assert.Equal(0, select.GetInt(0));
-        Assert.Equal("blob", select.GetTextString(1), ignoreCase: true);
+        Assert.Equal(1, select.GetInt(0));
+        Assert.Equal("null", select.GetText(1), ignoreCase: true);
         Assert.Equal(0, select.GetInt(2));
-        Assert.Equal(SqliteType.Blob, select.GetColumnType(3));
+        Assert.Equal(SqliteType.Null, select.GetColumnType(3));
         Assert.True(select.GetBlob(3).IsEmpty);
     }
 
@@ -238,9 +242,9 @@ public sealed class StatementBindAndColumnTests
 
         using var select = connection.Prepare("SELECT v FROM t ORDER BY rowid;");
         Assert.True(select.Step());
-        Assert.Equal(string.Empty, select.GetTextString(0));
+        Assert.Equal(string.Empty, select.GetText(0));
         Assert.True(select.Step());
-        Assert.Equal("after-empty", select.GetTextString(0));
+        Assert.Equal("after-empty", select.GetText(0));
         Assert.False(select.Step());
     }
 
@@ -258,7 +262,7 @@ public sealed class StatementBindAndColumnTests
 
         using var select = connection.Prepare("SELECT v FROM t;");
         Assert.True(select.Step());
-        Assert.Equal("ok", select.GetTextString(0));
+        Assert.Equal("ok", select.GetText(0));
     }
 
     [Fact]
@@ -286,7 +290,7 @@ public sealed class StatementBindAndColumnTests
         using var select = connection.Prepare("SELECT id, name FROM t;");
         Assert.True(select.Step());
         Assert.Equal(9, select.GetInt(0));
-        Assert.Equal("Ada", select.GetTextString(1));
+        Assert.Equal("Ada", select.GetText(1));
     }
 
     [Fact]
@@ -327,7 +331,7 @@ public sealed class StatementBindAndColumnTests
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetInt(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetLong(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetDouble(index));
-        Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetTextString(index));
+        Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetText(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetTextAsSpan(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetBlob(index));
         Assert.Throws<ArgumentOutOfRangeException>(() => stmt.GetColumnType(index));
@@ -360,7 +364,7 @@ public sealed class StatementBindAndColumnTests
         using var stmt = connection.Prepare("SELECT 'café ☕';");
         Assert.True(stmt.Step());
 
-        string? asString = stmt.GetTextString(0);
+        string? asString = stmt.GetText(0);
         ReadOnlySpan<byte> asSpan = stmt.GetTextAsSpan(0);
 
         Assert.Equal("café ☕", asString);

@@ -108,7 +108,7 @@ public class ReadString
             while (stmt.Step())
             {
                 long id = stmt.GetLong(0);
-                string name = stmt.GetTextString(1);
+                string name = stmt.GetText(1);
                 double score = stmt.GetDouble(2);
                 _consumer.Consume(id);
                 _consumer.Consume(name);

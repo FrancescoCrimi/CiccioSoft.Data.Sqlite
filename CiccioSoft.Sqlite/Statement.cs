@@ -153,7 +153,7 @@ public sealed class Statement : IDisposable
 
     public double GetDouble(int index) => ExecuteWithSessionGate(() => _native.GetDouble(index));
 
-    public string? GetText(int index) => ExecuteWithSessionGate(() => _native.GetTextString(index));
+    public string? GetText(int index) => ExecuteWithSessionGate(() => _native.GetText(index));
 
     public ReadOnlySpan<byte> GetTextBytes(int index)
     {

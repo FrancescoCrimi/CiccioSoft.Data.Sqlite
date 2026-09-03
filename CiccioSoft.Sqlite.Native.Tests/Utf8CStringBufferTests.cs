@@ -30,20 +30,10 @@ public sealed class Utf8CStringBufferTests
     }
 
     [Fact]
-    public void NullString_ThrowsArgumentNullException()
+    public void NullString_ProducesEmptySpam()
     {
-        // Il costruttore primario tratta null come errore di programmazione: la distinzione
-        // tra SQL NULL e stringa vuota è responsabilità del chiamante (vedi Statement.BindText),
-        // che deve instradare i valori null verso un binding NULL prima di raggiungere l'helper.
-        try
-        {
-            _ = new Utf8CStringBuffer(null!, stackalloc byte[64]);
-            Assert.Fail("Expected ArgumentNullException.");
-        }
-        catch (ArgumentNullException)
-        {
-            // atteso
-        }
+        using var buffer = new Utf8CStringBuffer(null!, stackalloc byte[64]);
+        Assert.Equal(buffer.AsSpan(), ReadOnlySpan<byte>.Empty);
     }
 
     [Fact]

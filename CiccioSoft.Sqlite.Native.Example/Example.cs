@@ -295,7 +295,7 @@ public class Example
             while (stmt.Step())
             {
                 int id = stmt.GetInt(0);
-                string? name = stmt.GetTextString(1);
+                string? name = stmt.GetText(1);
                 int age = stmt.GetInt(2);
                 Console.WriteLine($"   - Utente: {id} - {name}, {age} anni");
             }
