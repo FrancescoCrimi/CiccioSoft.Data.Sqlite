@@ -154,11 +154,15 @@ public sealed class StatementBindAndColumnTests
             insert.Step();
         }
 
-        using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v) FROM t;");
+        using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v), v FROM t;");
         Assert.True(select.Step());
-        Assert.Equal(0, select.GetInt(0));
-        Assert.Equal("text", select.GetText(1), ignoreCase: true);
+        Assert.Equal(1, select.GetInt(0));
+        Assert.Equal("null", select.GetText(1), ignoreCase: true);
         Assert.Equal(0, select.GetInt(2));
+        Assert.Null(select.GetText(3));
+        Assert.Equal(SqliteType.Null, select.GetColumnType(3));
+        Assert.True(select.GetTextAsSpan(3).IsEmpty);
+        Assert.Equal(0, select.GetTextAsSpan(3).Length);
     }
 
     [Fact]
@@ -212,10 +216,10 @@ public sealed class StatementBindAndColumnTests
 
         using var select = connection.Prepare("SELECT v IS NULL, typeof(v), length(v), v FROM t;");
         Assert.True(select.Step());
-        Assert.Equal(0, select.GetInt(0));
-        Assert.Equal("blob", select.GetText(1), ignoreCase: true);
+        Assert.Equal(1, select.GetInt(0));
+        Assert.Equal("null", select.GetText(1), ignoreCase: true);
         Assert.Equal(0, select.GetInt(2));
-        Assert.Equal(SqliteType.Blob, select.GetColumnType(3));
+        Assert.Equal(SqliteType.Null, select.GetColumnType(3));
         Assert.True(select.GetBlob(3).IsEmpty);
     }
 

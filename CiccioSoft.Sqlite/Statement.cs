@@ -324,11 +324,6 @@ public sealed unsafe class Statement : IDisposable
 
     public ReadOnlySpan<byte> GetTextAsSpan(int index)
     {
-        //     return GetText(index);
-        // }
-
-        // public ReadOnlySpan<byte> GetText(int index)
-        // {
         ThrowIfInvalid();
         if (index < 0)
             throw new ArgumentOutOfRangeException(nameof(index), "Column index cannot be negative.");
@@ -345,11 +340,6 @@ public sealed unsafe class Statement : IDisposable
 
         return new ReadOnlySpan<byte>(pText, byteCount);
     }
-
-    // public string? GetTextString(int index)
-    // {
-    //     return GetTextString(index);
-    // }
 
     /// <summary>
     /// Retrieves the value of a result column as a managed string, distinguishing between NULL and empty values.
@@ -545,20 +535,28 @@ public sealed unsafe class Statement : IDisposable
         CheckBindResult(result, index);
     }
 
-    public void BindText(int index, ReadOnlySpan<byte> text)
+    /// <summary>
+    /// Binds a string value to a prepared statement parameter at the specified index.
+    /// </summary>
+    /// <param name="index">The 1-based index of the parameter to bind.</param>
+    /// <param name="text">The string value to bind. If null, a SQL NULL is bound instead.</param>
+    /// <exception cref="System.Exception">Thrown if the binding fails or the statement is invalid.</exception>
+    public void BindText(int index, string text)
     {
-        // Distingue lo span default/null dallo span vuoto reale. (implicit conversion da null)
-        if (Unsafe.IsNullRef(ref MemoryMarshal.GetReference(text)))
-        {
-            BindNull(index);
-            return;
-        }
-
         ThrowIfInvalid();
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        // span reale, anche se Length == 0 -> bind normale con lunghezza 0.
+        using var utf8Buffer = new Utf8CStringBuffer(text, stackalloc byte[1024]);
+        BindText(index, utf8Buffer.AsSpan());
+    }
+
+    public void BindText(int index, ReadOnlySpan<byte> text)
+    {
+        ThrowIfInvalid();
+        if (index < 1)
+            throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
+
         var res = (ResultCode)BindTextCore(index, text);
         CheckBindResult(res, index);
     }
@@ -566,30 +564,8 @@ public sealed unsafe class Statement : IDisposable
     /// <summary>
     /// Esegue il pinning di <paramref name="text"/> e invoca <c>sqlite3_bind_text</c>.
     /// </summary>
-    /// <remarks>
-    /// <b>Attenzione (bug class: empty-span-becomes-NULL):</b> <c>fixed (byte* p = span)</c> viene
-    /// desugarato dal compilatore in una chiamata a <c>Span&lt;T&gt;.GetPinnableReference()</c>, la cui
-    /// implementazione BCL ritorna sempre un riferimento nullo quando <c>Length == 0</c> —
-    /// indipendentemente dal fatto che lo span sia realmente non-default e punti a memoria valida.
-    /// Di conseguenza un <c>fixed</c> diretto su uno span vuoto (ma non-default) passerebbe a SQLite
-    /// un puntatore <c>NULL</c>, che l'API C interpreta come bind di <c>NULL</c> invece che di
-    /// stringa/blob vuota (vedi documentazione <c>sqlite3_bind_text</c>: puntatore NULL ⇒ NULL,
-    /// il parametro lunghezza viene ignorato). Per lo span vuoto usiamo quindi un buffer sentinella
-    /// statico, mai scritto e mai dereferenziato (n == 0), solo per garantire un puntatore non-null.
-    /// </remarks>
     private ResultCode BindTextCore(int index, ReadOnlySpan<byte> text)
     {
-        if (text.Length == 0)
-        {
-            fixed (byte* pBuf = s_emptySentinel)
-            {
-                var res = (ResultCode)NativeMethods.sqlite3_bind_text(
-                    (sqlite3_stmt*)_handle.DangerousGetHandle(), index, pBuf, 0, NativeMethods.SQLITE_TRANSIENT);
-                GC.KeepAlive(_handle);
-                return res;
-            }
-        }
-
         fixed (byte* pBuf = text)
         {
             // Usiamo SQLITE_TRANSIENT (IntPtr(-1)) perché il buffer stackalloc/pool
@@ -606,43 +582,6 @@ public sealed unsafe class Statement : IDisposable
     }
 
     /// <summary>
-    /// Buffer sentinella condiviso, di 1 byte, mai scritto: serve esclusivamente a fornire un
-    /// indirizzo non-null e stabile da passare a SQLite quando si effettua il bind di una stringa
-    /// o di un blob realmente vuoti (span non-default, Length == 0). Poiché in questi casi la
-    /// lunghezza passata a SQLite è sempre 0, il contenuto del buffer non viene mai letto:
-    /// l'unica proprietà richiesta è "puntatore != NULL". Thread-safe per costruzione (sola lettura
-    /// dell'indirizzo, mai scritto), zero allocazioni per singola chiamata di bind.
-    /// </summary>
-    private static readonly byte[] s_emptySentinel = new byte[1];
-
-    /// <summary>
-    /// Binds a string value to a prepared statement parameter at the specified index.
-    /// </summary>
-    /// <param name="index">The 1-based index of the parameter to bind.</param>
-    /// <param name="text">The string value to bind. If null, a SQL NULL is bound instead.</param>
-    /// <exception cref="System.Exception">Thrown if the binding fails or the statement is invalid.</exception>
-    public void BindText(int index, string text)
-    {
-        // Se la stringa è nulla, bindiamo NULL.
-        // Una stringa vuota deve restare una stringa vuota, non SQL NULL.
-        if (text is null)
-        {
-            BindNull(index);
-            return;
-        }
-
-        ThrowIfInvalid();
-        if (index < 1)
-            throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
-
-
-        // Alloca la memoria base nello stack
-        // 512 byte bastano per la maggior parte delle stringhe standard
-        using var utf8Buffer = new Utf8CStringBuffer(text, stackalloc byte[1024]);
-        BindText(index, utf8Buffer.AsSpan());
-    }
-
-    /// <summary>
     /// Binds a binary large object (BLOB) to a prepared statement parameter at the specified index.
     /// </summary>
     /// <param name="index">The 1-based index of the parameter to bind.</param>
@@ -653,37 +592,9 @@ public sealed unsafe class Statement : IDisposable
     /// <exception cref="System.Exception">Thrown if the binding fails or the statement is in an invalid state.</exception>
     public void BindBlob(int index, ReadOnlySpan<byte> data)
     {
-        // Distingue lo span default/null dallo span vuoto reale. (implicit conversion da null)
-        if (Unsafe.IsNullRef(ref MemoryMarshal.GetReference(data)))
-        {
-            BindNull(index);
-            return;
-        }
-
         ThrowIfInvalid();
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
-
-        var res = (ResultCode)BindBlobCore(index, data);
-        CheckBindResult(res, index);
-    }
-
-    /// <summary>
-    /// Esegue il pinning di <paramref name="data"/> e invoca <c>sqlite3_bind_blob</c>.
-    /// Vedi il commento su <see cref="BindTextCore"/> per il razionale del caso Length == 0.
-    /// </summary>
-    private ResultCode BindBlobCore(int index, ReadOnlySpan<byte> data)
-    {
-        if (data.Length == 0)
-        {
-            fixed (byte* pData = s_emptySentinel)
-            {
-                var res = (ResultCode)NativeMethods.sqlite3_bind_blob(
-                    (sqlite3_stmt*)_handle.DangerousGetHandle(), index, pData, 0, NativeMethods.SQLITE_TRANSIENT);
-                GC.KeepAlive(_handle);
-                return res;
-            }
-        }
 
         fixed (byte* pData = data)
         {
@@ -694,7 +605,7 @@ public sealed unsafe class Statement : IDisposable
                 data.Length,
                 NativeMethods.SQLITE_TRANSIENT);
             GC.KeepAlive(_handle);
-            return res;
+            CheckBindResult(res, index);
         }
     }
 
