@@ -30,15 +30,12 @@ public sealed unsafe class Statement : IDisposable
 {
     private readonly StatementSafeHandle _handle;
     private readonly ConnectionSafeHandle _connectionSafeHandle;
-
-    // Invariante I9 (Tier 0 §13): calcolato una sola volta qui, mai ricalcolato a ogni
-    // interrogazione — sqlite3_stmt_readonly() non cambia mai per la vita di uno statement
-    // già compilato, quindi richiamarlo ripetutamente sarebbe solo un costo nativo evitabile,
-    // oltre a violare il contratto di stabilità che StatementCache (§11) assume.
     private readonly bool _isReadOnly;
 
     internal Statement(StatementSafeHandle handle, ConnectionSafeHandle connectionSafeHandle)
     {
+        ArgumentNullException.ThrowIfNull(handle);
+        ArgumentNullException.ThrowIfNull(connectionSafeHandle);
         _handle = handle;
         _connectionSafeHandle = connectionSafeHandle;
         _isReadOnly = NativeMethods.sqlite3_stmt_readonly((sqlite3_stmt*)handle.DangerousGetHandle()) != 0;
@@ -65,7 +62,6 @@ public sealed unsafe class Statement : IDisposable
         GC.KeepAlive(_handle);
         if (res == ResultCode.Row) return true;
         if (res == ResultCode.Done) return false;
-        // throw new EngineException(res, _connectionSafeHandle, $"SQLite {GetType().Name}.Step");
         throw ThrowException(res);
     }
 
@@ -417,8 +413,7 @@ public sealed unsafe class Statement : IDisposable
     }
 
     /// <summary>
-    /// Indica se questo statement compilato è di sola lettura (Invariante I9): calcolato
-    /// una sola volta alla preparazione, mai ricalcolato — vedi il campo <c>_isReadOnly</c>.
+    /// Returns <c>true</c> if this prepared statement is read-only.
     /// </summary>
     public bool IsReadOnly()
     {
@@ -554,10 +549,8 @@ public sealed unsafe class Statement : IDisposable
         if (index < 1)
             throw new ArgumentOutOfRangeException(nameof(index), "SQLite bind parameter index must be 1 or greater.");
 
-        // Alloca la memoria base nello stack
-        // 512 byte bastano per la maggior parte delle stringhe standard
         using var utf8Buffer = new Utf8CStringBuffer(text, stackalloc byte[1024]);
-        BindText(index, utf8Buffer.AsSpan());
+        BindTextCore(index, utf8Buffer.AsSpan());
     }
 
     public void BindText(int index, ReadOnlySpan<byte> text)
@@ -595,8 +588,7 @@ public sealed unsafe class Statement : IDisposable
     /// </summary>
     /// <param name="index">The 1-based index of the parameter to bind.</param>
     /// <param name="data">
-    /// The binary data to bind as a <see cref="ReadOnlySpan{Byte}"/>. A default/uninitialized span
-    /// binds a SQL NULL; a real span of length 0 binds an empty (zero-length) BLOB, not NULL.
+    /// The binary data to bind as a <see cref="ReadOnlySpan{Byte}"/>.
     /// </param>
     /// <exception cref="System.Exception">Thrown if the binding fails or the statement is in an invalid state.</exception>
     public void BindBlob(int index, ReadOnlySpan<byte> data)
@@ -614,7 +606,7 @@ public sealed unsafe class Statement : IDisposable
                 data.Length,
                 NativeMethods.SQLITE_TRANSIENT);
             GC.KeepAlive(_handle);
-        CheckBindResult(res, index);
+            CheckBindResult(res, index);
         }
     }
 

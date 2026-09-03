@@ -53,9 +53,13 @@ public sealed unsafe class Connection : IDisposable
     // né transita mai per gli stati Leased/Poisoned di ConnectionPhysicalState.
     private Connection(ConnectionSafeHandle handle)
     {
+        ArgumentNullException.ThrowIfNull(handle);
         _handle = handle;
     }
 
+    /// <summary>
+    /// Gets the native connection safe handle owned by this physical connection.
+    /// </summary>
     internal ConnectionSafeHandle Handle => _handle;
 
     /// <summary>
@@ -83,52 +87,51 @@ public sealed unsafe class Connection : IDisposable
     /// <exception cref="Exception">Thrown if the database cannot be opened.</exception>
     public static Connection Open(string filename, OpenFlags flags, string? vfs = null)
     {
-        // Controllo immediato sul null
         ArgumentNullException.ThrowIfNull(filename);
 
-        // Controllo multipiattaforma sui caratteri non validi (Es. | < > * in Windows)
         if (filename.IndexOfAny(Path.GetInvalidPathChars()) != -1)
             throw new ArgumentException(
-                "Il percorso contiene caratteri non validi per il sistema operativo corrente.",
+                "The path contains characters that are invalid for the current operating system.",
                 nameof(filename));
 
-        string vfsSafe = vfs ?? string.Empty;
+        vfs = vfs is "" ? null : vfs;
 
-        // flag da attivare sempre
         flags |= OpenFlags.Uri;
         flags |= OpenFlags.Exrescode;
 
         using var filenameBuffer = new Utf8CStringBuffer(filename, stackalloc byte[512]);
-        using var vfsBuffer = new Utf8CStringBuffer(vfsSafe, stackalloc byte[512]);
+        using var vfsBuffer = new Utf8CStringBuffer(vfs!, stackalloc byte[512]);
 
-        fixed (byte* pFilenameRaw = filenameBuffer, pVfsRaw = vfsBuffer)
+        fixed (byte* pFilename = filenameBuffer, pVfs = vfsBuffer)
         {
-            // SOLUZIONE DEL BUG: Se il parametro originale C# era nullo/vuoto, 
-            // passiamo un puntatore 'null' effettivo a SQLite, altrimenti usiamo pVfsRaw.
-            byte* pVfs = vfsSafe.Length == 0 ? null : pVfsRaw;
-
             // 1. Chiamata nativa
             sqlite3* pDb = default;
-            var result = (ResultCode)NativeMethods.sqlite3_open_v2(pFilenameRaw, &pDb, (int)flags, pVfs);
-            var connectionSafeHandle = new ConnectionSafeHandle(pDb);
+            var result = (ResultCode)NativeMethods.sqlite3_open_v2(
+                pFilename,
+                &pDb,
+                (int)flags,
+                pVfs);
+            var handle = new ConnectionSafeHandle(pDb);
 
             // Se l'apertura fallisce, Dobbiamo COMUNQUE recuperare l'errore 
             // PRIMA di chiudere l'handle, altrimenti pDb diventa invalido.
             if (result != ResultCode.OK)
             {
                 // 2. Estraiamo il messaggio nativo MENTRE l'handle è ancora vivo
-                var ex = Exception.CreateException(connectionSafeHandle, result, $"{nameof(Connection)}.Open");
+                var exception = Exception.CreateException(
+                    handle,
+                    result,
+                    $"{nameof(Connection)}.{nameof(Open)}");
 
                 // 3. Ora che abbiamo i dati, liberiamo IMMEDIATAMENTE l'handle per evitare leak
-                connectionSafeHandle.Dispose();
+                handle.Dispose();
 
                 // 4. Creiamo e lanciamo l'eccezione (dbHandle è già chiuso in sicurezza)
-                // throw new EngineException(result, errorMessage, "Connection Open");
-                throw ex;
+                throw exception;
             }
 
             // Se tutto è andato bene, incapsuliamo l'handle sicuro
-            var conn = new Connection(connectionSafeHandle);
+            var conn = new Connection(handle);
             conn.Configure();
             return conn;
         }
@@ -236,15 +239,18 @@ public sealed unsafe class Connection : IDisposable
     public void Execute(string sql)
     {
         ThrowIfInvalid();
-
         using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
-        Execute(utf8Buffer.AsSpan());
+        ExecuteCore(utf8Buffer.AsSpan());
     }
 
     public void Execute(ReadOnlySpan<byte> sql)
     {
         ThrowIfInvalid();
+        ExecuteCore(sql);
+    }
 
+    private void ExecuteCore(ReadOnlySpan<byte> sql)
+    {
         fixed (byte* pBuf = sql)
         {
             var result = (ResultCode)NativeMethods.sqlite3_exec(
@@ -259,23 +265,6 @@ public sealed unsafe class Connection : IDisposable
     }
 
     /// <summary>
-    /// Compiling An SQL Statement.
-    /// </summary>
-    /// <param name="sql">The SQL query string to compile.</param>
-    /// <returns>A new <see cref="Statement"/> instance wrapping the compiled statement.</returns>
-    /// <exception cref="ObjectDisposedException">Thrown if the database connection is no longer valid.</exception>
-    /// <exception cref="Exception">Thrown if the SQL syntax is invalid or the statement cannot be prepared.</exception>
-    public Statement Prepare(string sql)
-    {
-        return Prepare(sql, PrepareFlags.None);
-    }
-
-    public Statement Prepare(ReadOnlySpan<byte> sql)
-    {
-        return Prepare(sql, PrepareFlags.None);
-    }
-
-    /// <summary>
     /// Compiles an SQL statement using <c>sqlite3_prepare_v3</c>, enabling explicit prepare flags.
     /// </summary>
     /// <param name="sql">The SQL query string to compile.</param>
@@ -287,13 +276,17 @@ public sealed unsafe class Connection : IDisposable
     {
         ThrowIfInvalid();
         using var utf8Buffer = new Utf8CStringBuffer(sql, stackalloc byte[1024]);
-        return Prepare(utf8Buffer.AsSpan(), prepareFlags);
+        return PrepareCore(utf8Buffer.AsSpan(), prepareFlags);
     }
 
     public Statement Prepare(ReadOnlySpan<byte> sql, PrepareFlags prepareFlags = PrepareFlags.None)
     {
         ThrowIfInvalid();
+        return PrepareCore(sql, prepareFlags);
+    }
 
+    public Statement PrepareCore(ReadOnlySpan<byte> sql, PrepareFlags prepareFlags = PrepareFlags.None)
+    {
         fixed (byte* pBuf = sql)
         {
             // Chiamata nativa
@@ -317,7 +310,6 @@ public sealed unsafe class Connection : IDisposable
             return new Statement(stmtSafeHandle, _handle);
         }
     }
-
 
     /// <summary>
     /// Compiles the next SQL statement starting from a byte offset within a batch SQL text.
