@@ -1,13 +1,13 @@
 | Method                | Mean     | Error    | StdDev   | Ratio | Allocated | Alloc Ratio |
 |---------------------- |---------:|---------:|---------:|------:|----------:|------------:|
-| ReadSpan_SQLitePCL    | 82.96 ms | 0.366 ms | 0.342 ms |  1.00 |     160 B |        1.00 |
-| ReadSpan_Interop      | 39.37 ms | 0.068 ms | 0.057 ms |  0.47 |      72 B |        0.45 |
+| ReadSpan_SQLitePCL    | 81.99 ms | 0.207 ms | 0.184 ms |  1.00 |     104 B |        1.00 |
+| ReadSpan_Interop      | 38.94 ms | 0.203 ms | 0.159 ms |  0.47 |      72 B |        0.69 |
 |---------------------- |---------:|---------:|---------:|------:|----------:|------------:|
-| ReadString_SQLitePCL  | 93.74 ms | 0.254 ms | 0.225 ms |  1.00 |   9.16 MB |        1.00 |
-| ReadString_Interop    | 49.50 ms | 0.166 ms | 0.155 ms |  0.53 |   9.16 MB |        1.00 |
+| ReadString_SQLitePCL  | 93.46 ms | 0.350 ms | 0.310 ms |  1.00 |   9.16 MB |        1.00 |
+| ReadString_Interop    | 49.89 ms | 0.091 ms | 0.080 ms |  0.53 |   9.16 MB |        1.00 |
 |---------------------- |---------:|---------:|---------:|------:|----------:|------------:|
-| WriteSpan_SQLitePCL   | 190.7 ms | 1.14 ms  | 0.95 ms  |  1.00 |     232 B |        1.00 |
-| WriteSpan_Interop     | 140.7 ms | 0.53 ms  | 0.47 ms  |  0.74 |      72 B |        0.31 |
+| WriteSpan_SQLitePCL   | 191.1 ms |  1.05 ms |  0.88 ms |  1.00 |     232 B |        1.00 |
+| WriteSpan_Interop     | 144.2 ms |  1.26 ms |  1.12 ms |  0.75 |      72 B |        0.31 |
 |---------------------- |---------:|---------:|---------:|------:|----------:|------------:|
-| WriteString_SQLitePCL | 200.0 ms | 0.79 ms  | 0.62 ms  |  1.00 |     232 B |        1.00 |
-| WriteString_Interop   | 161.0 ms | 0.61 ms  | 0.57 ms  |  0.81 |      72 B |        0.31 |
+| WriteString_SQLitePCL | 195.8 ms |  1.28 ms |  1.13 ms |  1.00 |     232 B |        1.00 |
+| WriteString_Interop   | 156.3 ms |  1.37 ms |  1.28 ms |  0.80 |      72 B |        0.31 |

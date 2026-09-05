@@ -15,7 +15,7 @@ public class ReadString
 {
     public const int RowCount = 100_000;
     public const string TestString = "User_Performance_Test_String_12345";
-    public const string DbFile = @"C:\Users\franc\Dev\CiccioSoft.Sqlite\CiccioSoft.Sqlite.Benchmark\read.db";
+    public const string DbFile = @"C:\Users\franc\Dev\CiccioSoft.Sqlite\read.db";
     // public const string DbFile = ":memory:";
 
     private sqlite3 _db1;

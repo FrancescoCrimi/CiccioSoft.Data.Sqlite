@@ -12,7 +12,7 @@ namespace CiccioSoft.Sqlite.Benchmark;
 
 public class WriteSpan
 {
-    private const string DbFile = @"C:\Users\franc\Dev\CiccioSoft.Sqlite\CiccioSoft.Sqlite.Benchmark\write.db";
+    private const string DbFile = @"C:\Users\franc\Dev\CiccioSoft.Sqlite\write.db";
     private const int RowCount = 100_000; // Ridotto a 100k perché BenchmarkDotNet esegue i test molte volte
     private static ReadOnlySpan<byte> TestString => "User_Performance_Test_String_12345"u8;
 
