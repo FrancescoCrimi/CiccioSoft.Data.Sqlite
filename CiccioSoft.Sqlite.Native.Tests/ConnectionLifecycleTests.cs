@@ -58,7 +58,7 @@ public sealed class ConnectionLifecycleTests
     public void Open_DefaultFlags_CreateReadWrite()
     {
         using var temp = new TempDatabase();
-        using var connection = Connection.Open(temp.Path);
+        using var connection = Connection.Open(temp.Path, OpenFlags.ReadWrite | OpenFlags.Create);
 
         Assert.False(connection.DbReadOnly());
         connection.Execute("CREATE TABLE t (id INTEGER);");

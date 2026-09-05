@@ -51,7 +51,7 @@ public class Example
 
         if (File.Exists(_dbPath)) File.Delete(_dbPath);
         if (File.Exists(_backupDbPath)) File.Delete(_backupDbPath);
-        var db = Connection.Open(_dbPath);
+        var db = Connection.Open(_dbPath, OpenFlags.ReadWrite | OpenFlags.Create);
 
         ConsoleOutput.Message("Connessione aperta");
         ConsoleOutput.KeyValue("Version", Connection.LibVersion());
@@ -266,7 +266,7 @@ public class Example
     {
         ConsoleOutput.Section("9. Backup");
         ConsoleOutput.Message("Esecuzione Backup...");
-        using (var backupDb = Connection.Open(_backupDbPath))
+        using (var backupDb = Connection.Open(_backupDbPath, OpenFlags.ReadWrite | OpenFlags.Create))
         {
             var backup = db.InitBackup(backupDb);
             ResultCode rc;

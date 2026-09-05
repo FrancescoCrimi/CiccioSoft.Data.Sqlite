@@ -26,7 +26,7 @@ public partial class MainWindow : Window
         try
         {
             NativeLibrary.Configure(NativeSource.SourceGear);
-            _connection = Connection.Open("test.db");
+            _connection = Connection.Open("test.db", OpenFlags.ReadWrite | OpenFlags.Create);
         }
         catch
         {

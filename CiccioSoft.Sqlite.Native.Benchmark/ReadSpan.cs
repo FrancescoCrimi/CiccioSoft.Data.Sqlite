@@ -15,7 +15,7 @@ public class ReadSpan
 {
     public const int RowCount = 100_000;
     public const string TestString = "User_Performance_Test_String_12345";
-    public const string DbFile = @"C:\Users\franc\Dev\CiccioSoft.Sqlite\CiccioSoft.Sqlite.Benchmark\read.db";
+    public const string DbFile = @"C:\Users\franc\Dev\CiccioSoft.Sqlite\read.db";
     // public const string DbFile = ":memory:";
 
     private sqlite3 _db1;
@@ -79,7 +79,7 @@ public class ReadSpan
     public void Setup_Interop()
     {
         NativeLibrary.Configure(NativeSource.SourceGear);
-        _db2 = Connection.Open(DbFile);
+        _db2 = Connection.Open(DbFile, OpenFlags.ReadWrite | OpenFlags.Create);
         _db2.Execute("PRAGMA synchronous = OFF;");
         _db2.Execute("DROP TABLE IF EXISTS Users;");
         _db2.Execute("CREATE TABLE Users (Id INTEGER, Name TEXT, Score REAL);");

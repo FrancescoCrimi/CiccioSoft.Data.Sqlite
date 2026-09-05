@@ -49,17 +49,6 @@ public sealed unsafe class Connection : IDisposable
     internal ConnectionSafeHandle Handle => _handle;
 
     /// <summary>
-    /// Opening A New Database Connection.
-    /// </summary>
-    /// <param name="filename">The path to the database file to be opened.</param>
-    /// <returns>A new <see cref="Connection"/> instance representing the database connection.</returns>
-    /// <exception cref="Exception">Thrown if the database cannot be opened.</exception>
-    public static Connection Open(string filename)
-    {
-        return Open(filename, OpenFlags.ReadWrite | OpenFlags.Create);
-    }
-
-    /// <summary>
     /// Opening A New Database Connection with explicit <c>sqlite3_open_v2</c> flags.
     /// </summary>
     /// <param name="filename">The path (or URI) to the database file.</param>
@@ -144,8 +133,6 @@ public sealed unsafe class Connection : IDisposable
             return new Connection(handle);
         }
     }
-
-
 
     /// <summary>
     /// One-Step Query Execution Interface.
